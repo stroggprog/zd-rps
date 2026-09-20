@@ -80,9 +80,10 @@ Paths are overridable for testing or packaging:
 
 ## Development
 
-There is no test suite. Verification is typecheck + build + lint:
+Verification is unit tests + typecheck + build + lint:
 
 ```sh
+npm run test -w server           # Vitest: SentenceStream, OrderedAudio, normalizeChat, buildLlmMessages/attributeReply
 npm run typecheck -w server
 npm run build -w @zd-rps/web    # tsc -b && vite build
 npm run lint -w @zd-rps/web     # oxlint

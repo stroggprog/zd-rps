@@ -12,7 +12,7 @@
 - Server build: `npm run build -w server` → `node dist/index.js` (workspace must be `-w server` from root; running it inside `server/` fails)
 - Web build: `npm run build -w @zd-rps/web` (tsc -b && vite build)
 - Web lint: `npm run lint -w @zd-rps/web` (oxlint)
-- There is **no test suite**. Verification = typecheck + build + lint + curl/SSE smoke tests.
+- Server unit tests: `npm run test -w server` (Vitest; `server/test/*.test.ts`, run with `vitest run`). No coverage/CI. Test targets are the deterministic modules (`SentenceStream` in `server/src/streaming.ts`, `OrderedAudio` in `server/src/orderedAudio.ts`, `normalizeChat` in `server/src/store.ts`, `buildLlmMessages`/`attributeReply` in `server/src/pipeline.ts`). Verification = typecheck + build + lint + tests + curl/SSE smoke tests.
 
 ## Layout
 - npm workspaces `server/` (Express, ESM — imports end in `.js`) and `web/` (React+Vite, extensionless imports). No shared package: `web/src/lib/types.ts` mirrors `server/src/types.ts` by hand — keep them in sync.
@@ -27,7 +27,7 @@
 ## Message pipeline quirks (high-value)
 - `POST /api/chats/:id/messages` is **SSE**, not JSON. Events: `speaker`, `sentence`, `audio`, `done`, `error`; body `{ content, audioEnabled }`. Client side: `api.chats.messageStream` in `web/src/lib/api.ts`.
 - All validation (chat exists, text non-empty, resolve LLM connection) must happen BEFORE SSE headers are set — after that you cannot return an error status; emit an `error` event instead (`asyncHandler` can't help after headers).
-- Sentence splitting + speaker-prefix strip + ordered per-sentence TTS queue live in `server/src/routes/chats.ts`. Audio events must emit in index order (emitted via `flushAudio`/`nextEmit`, and the stream only closes after pending TTS resolves). Do not resean the `ttsResults` map after `flushAudio` deletes entries — keep `emittedClips`.
+- Sentence splitting + speaker-prefix strip + ordered per-sentence TTS queue. Logic lives in `server/src/streaming.ts` (`SentenceStream`) and `server/src/orderedAudio.ts` (`OrderedAudio`, unit-tested); `server/src/routes/chats.ts` wires them to SSE/TTS. Audio events must emit in index order (the queue only advances past a slot when its `finish` arrives, and `waitIdle` gates stream close). `SentenceStream.onSentence` emits trimmed, prefix-stripped text and guarantees exactly the final sentence has `isLast: true`.
 - `ChatRuntime.disableThinking` (default true) sends `think: false` to Ollama. Reasoning models (user's `gemma4:26b`) otherwise burn `num_predict` on the CoT `thinking` block and return empty content.
 - No context-window management: `buildLlmMessages(ctx, historyTail)` is always called with `historyTail = 0` — the full history is sent every turn; `maxTokens` is the generation budget only.
 - Voice cloning (TTS) is cached in-memory per (connection × character) in `voices.ts`; cloning is slow — the first sentence of a streamed reply triggers it. LLM inference + TTS against the user's services are slow; allow generous timeouts in smoke tests.

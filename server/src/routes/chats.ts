@@ -15,6 +15,8 @@ import { DIR } from '../paths.js';
 import { getConfig } from '../config.js';
 import { buildLlmMessages, streamLlm, USER_NAME } from '../pipeline.js';
 import { synthesizeCharacterSpeech, audioExt } from '../ttsService.js';
+import { SentenceStream } from '../streaming.js';
+import { OrderedAudio, type AudioResult } from '../orderedAudio.js';
 import { ApiError, asString, ensureDir, now, uuid } from '../util.js';
 import { asyncHandler, idParam, readJsonBody } from './helpers.js';
 
@@ -26,9 +28,6 @@ function resolveKindConnection(kind: 'llm' | 'stt' | 'tts', runtimeValue: Id | n
   if (!conn) throw new ApiError(`No ${kind.toUpperCase()} connection selected. Configure one and set it as default.`, 400);
   return conn;
 }
-
-/** Splits at the first sentence boundary (. … ! ?) followed by whitespace or end of buffer. */
-const SENT_SPLIT = /^.*?(?:[.?!…]{1,3})(?=\s|$)/s;
 
 function listSummary(chat: Chat) {
   return {
@@ -265,43 +264,17 @@ export function chatsRouter(ctx: AppContext): Router {
 
       const activeNames = activeChars.map((c) => c.name);
       const assistantId = uuid();
-      const PREFIX = /^\s*([A-Za-z0-9 _.'-]{1,60}):/s;
-      let raw = '';
-      let stripped = false;
-      let speakerName: string | null = null;
       let speaker: SpeakerSnapshot | null = null;
       let speakerChar: Character | null = null;
       const sentences: string[] = [];
-      let sentenceIndex = 0;
-
-      const ttsResults = new Map<number, { text: string; path: string }>();
+      const audioQueue = new OrderedAudio();
       const emittedClips: MessageAudio[] = [];
-      let nextEmit = 0;
-      let pendingTts = 0;
-      let resolvePending: (() => void) | null = null;
-
-      const waitPending = (): Promise<void> =>
-        pendingTts === 0 ? Promise.resolve() : new Promise((r) => { resolvePending = r; });
-
-      const flushAudio = () => {
-        while (ttsResults.has(nextEmit)) {
-          const r = ttsResults.get(nextEmit)!;
-          ttsResults.delete(nextEmit);
-          const idx = nextEmit;
-          nextEmit++;
-          if (res.writableEnded) continue;
-          if (r.path) {
-            const clip: MessageAudio = { id: `${assistantId}-${idx}`, text: r.text, path: r.path, ts: now() };
-            emittedClips.push(clip);
-            send('audio', { index: idx, ...clip });
-          }
-        }
-      };
 
       const resolveSpeaker = () => {
         if (speaker) return;
+        const speakerName = stream.speaker;
         speakerChar = speakerName
-          ? activeChars.find((c) => c.name.toLowerCase() === speakerName!.toLowerCase()) ?? null
+          ? activeChars.find((c) => c.name.toLowerCase() === speakerName.toLowerCase()) ?? null
           : activeChars.length === 1
             ? activeChars[0]
             : null;
@@ -314,57 +287,48 @@ export function chatsRouter(ctx: AppContext): Router {
         send('speaker', { name: speaker.name, characterId: speaker.characterId });
       };
 
+      const emitAudio = (index: number, result: AudioResult) => {
+        if (res.writableEnded || !result.path) return;
+        const clip: MessageAudio = { id: `${assistantId}-${index}`, text: result.text, path: result.path, ts: now() };
+        emittedClips.push(clip);
+        send('audio', { index, ...clip });
+      };
+
       const handleSentence = (sentence: string, isLast: boolean) => {
         const trimmed = sentence.trim();
         if (!trimmed) return;
         resolveSpeaker();
-        const idx = sentenceIndex++;
+        const idx = audioQueue.submit();
         sentences.push(trimmed);
         send('sentence', { index: idx, text: trimmed, isLast });
-        if (!(audioEnabled && ttsConn && speakerChar && /[\p{L}\p{N}]/u.test(trimmed))) return;
-        if (!(speakerChar.voiceSamplePath || ttsConn.modelOrVoice)) return;
-        pendingTts++;
+        const canSpeak =
+          audioEnabled &&
+          ttsConn &&
+          speakerChar &&
+          (speakerChar.voiceSamplePath || ttsConn.modelOrVoice) &&
+          /[\p{L}\p{N}]/u.test(trimmed);
+        if (!canSpeak) {
+          audioQueue.finish(idx, { text: trimmed, path: '' }, emitAudio);
+          return;
+        }
         void (async () => {
           try {
             const audio = await synthesizeCharacterSpeech(ttsConn!, speakerChar!, trimmed, ctx.voiceCache);
             await ensureDir(DIR.audio);
             const filename = `${assistantId}-${idx}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
             await fs.writeFile(path.join(DIR.audio, filename), audio);
-            ttsResults.set(idx, { text: trimmed, path: `/media/audio/${filename}` });
+            audioQueue.finish(idx, { text: trimmed, path: `/media/audio/${filename}` }, emitAudio);
           } catch (err) {
             console.warn('[sentence-tts]', (err as Error).message);
-            ttsResults.set(idx, { text: trimmed, path: '' });
-          } finally {
-            pendingTts -= 1;
-            if (pendingTts === 0 && resolvePending) {
-              const r = resolvePending;
-              resolvePending = null;
-              r();
-            }
-            flushAudio();
+            audioQueue.finish(idx, { text: trimmed, path: '' }, emitAudio);
           }
         })();
       };
 
-      const processDelta = (delta: string) => {
-        raw += delta;
-        if (!stripped) {
-          const m = PREFIX.exec(raw);
-          if (m && activeNames.some((n) => n.toLowerCase() === m[1].trim().toLowerCase())) {
-            speakerName = m[1].trim();
-            stripped = true;
-            raw = raw.slice(m[0].length);
-          } else if (raw.length > 200) {
-            stripped = true;
-          }
-        }
-        for (;;) {
-          const m = SENT_SPLIT.exec(raw);
-          if (!m) break;
-          handleSentence(m[0], false);
-          raw = raw.slice(m[0].length);
-        }
-      };
+      const stream = new SentenceStream({
+        activeNames,
+        onSentence: handleSentence,
+      });
 
       let streamError: Error | null = null;
       try {
@@ -377,13 +341,13 @@ export function chatsRouter(ctx: AppContext): Router {
             maxTokens: chatWithUser.runtime.maxTokens,
             disableThinking: chatWithUser.runtime.disableThinking,
           },
-          { onDelta: processDelta, ctrl },
+          { onDelta: (delta) => stream.push(delta), ctrl },
         );
       } catch (err) {
         streamError = err as Error;
       }
-      if (raw.trim()) handleSentence(raw, true);
-      else if (sentences.length === 0) {
+      stream.finish();
+      if (sentences.length === 0) {
         const message = streamError
           ? streamError.message
           : 'The LLM returned no content. Try again or raise "Max tokens" in the chat settings.';
@@ -391,8 +355,7 @@ export function chatsRouter(ctx: AppContext): Router {
         res.end();
         return;
       }
-      await waitPending();
-      flushAudio();
+      await audioQueue.waitIdle();
       resolveSpeaker();
 
       const finalMsg: ChatMessage = {
