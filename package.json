@@ -1,0 +1,16 @@
+{
+  "name": "zd-rps",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chat-bot middleware: Node/Express + AI backends (LLM, STT, TTS)",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c blue,green \"npm run dev -w server\" \"npm run dev -w web\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
