@@ -4,6 +4,7 @@ import type { Chat, Character, ChatContext, Lorebook, RemovedParticipant } from 
 
 const amy: Character = {
   id: 'c-amy',
+  kind: 'character',
   name: 'Amy',
   description: 'A curious wanderer.',
   personality: 'Playful',
@@ -27,6 +28,7 @@ function context(chat: Partial<Chat> = {}, extra: Partial<ChatContext> = {}): Ch
       removedParticipants: [],
       lorebookIds: [],
       scenarioId: null,
+      narratorId: null,
       messages: [],
       runtime: {
         temperature: 0.8,

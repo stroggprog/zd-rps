@@ -13,6 +13,8 @@ Multiple characters can be used in each chat, and characters can be added/remove
 - **Lorebooks** — SillyTavern-style keyword-scanning world knowledge, injected into the LLM prompt when relevant.
 - **Scenarios** — reusable opening scenes: system setup + first message + alternate greetings.
 - **Streaming replies** — the LLM reply streams in sentence-sized chunks; each sentence is sent to TTS and played back in order when ready, with a replay chip left under the message.
+- **Speech vs narration** — dialogue (in double quotes) is spoken by the speaking character's voice, narration by the chat's narrator voice. Paragraph breaks between narration and speech are enforced server-side even when the model ignores the formatting contract, and the live bubble shows the transition as the reply streams.
+- **Narrators** — any character can be made a narrator; each chat picks one, and narration is voiced by it (falling back to the character's voice when none is set).
 - **Speech input** — record and transcribe via STT into the input box.
 - **Voice cloning** — TTS can clone a character's uploaded voice sample; clones are cached per connection.
 
@@ -79,7 +81,7 @@ Paths are overridable for testing or packaging:
 - `POST /api/connections/:id/test` — verify + fetch models/voices
 - `POST /api/connections/defaults` — set default LLM/STT/TTS
 - `POST /api/characters/import`, `GET /api/characters/:id/export` — SillyTavern cards
-- `POST /api/chats/:id/messages` — **Server-Sent Events** stream: `speaker`, `sentence`, `audio`, `done`, `error` events (`{ content, audioEnabled }` body)
+- `POST /api/chats/:id/messages` — **Server-Sent Events** stream: `speaker`, `sentence` (`{ index, text, isLast, isSpeech }`), `audio`, `done`, `error` events (`{ content, audioEnabled }` body)
 - `POST /api/audio/stt` (multipart) → transcript; `POST /api/audio/tts` (`{ text, characterId?, connectionId? }`) → `{ audioPath }`
 
 ## Development
@@ -87,7 +89,7 @@ Paths are overridable for testing or packaging:
 Verification is unit tests + typecheck + build + lint:
 
 ```sh
-npm run test -w server           # Vitest: SentenceStream, OrderedAudio, normalizeChat, buildLlmMessages/attributeReply
+npm run test -w server           # Vitest: SentenceStream, OrderedAudio, QuotationTracker, SpeechFormatter, normalizeChat, buildLlmMessages/attributeReply
 npm run typecheck -w server
 npm run build -w @zd-rps/web    # tsc -b && vite build
 npm run lint -w @zd-rps/web     # oxlint

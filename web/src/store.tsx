@@ -53,11 +53,13 @@ export interface AppState {
     participantIds: string[]
     lorebookIds: string[]
     scenarioId: string | null
+    narratorId?: string | null
   }) => Promise<Chat>
   deleteChat: (id: string) => Promise<void>
   sendMessage: (content: string, opts?: { audio?: boolean }) => Promise<void>
   addParticipants: (ids: string[]) => Promise<void>
   removeParticipant: (characterId: string) => Promise<void>
+  setNarrator: (narratorId: string | null) => Promise<void>
   patchRuntime: (patch: Partial<Chat['runtime']>) => Promise<void>
   setConnectionDefault: (kind: 'llm' | 'stt' | 'tts', connectionId: string | null) => Promise<void>
   refreshChat: () => Promise<void>
@@ -187,7 +189,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [refreshAll])
 
   const createChat = useCallback(
-    async (payload: { title?: string; participantIds: string[]; lorebookIds: string[]; scenarioId: string | null }) => {
+    async (payload: {
+      title?: string
+      participantIds: string[]
+      lorebookIds: string[]
+      scenarioId: string | null
+      narratorId?: string | null
+    }) => {
       const created = await api.chats.create(payload)
       await refreshAll()
       setOverlay('none')
@@ -256,6 +264,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             : prev,
         )
 
+      let lastSpeech: boolean | null = null
       try {
         await api.chats.messageStream(
           selectedChatId,
@@ -264,11 +273,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           {
             onSpeaker: (name, characterId) =>
               updateStream((m) => ({ ...m, speaker: { ...m.speaker, name, characterId } })),
-            onSentence: (sentence) =>
+            onSentence: (sentence, isSpeech) => {
+              const sep = lastSpeech === null ? '' : isSpeech === lastSpeech ? ' ' : '\n\n'
+              lastSpeech = isSpeech
               updateStream((m) => ({
                 ...m,
-                content: m.content ? `${m.content} ${sentence}` : sentence,
-              })),
+                content: m.content ? `${m.content}${sep}${sentence}` : sentence,
+              }))
+            },
             onAudio: (clip) => {
               enqueueAudio(clip.path)
               updateStream((m) => ({ ...m, audio: [...m.audio, clip] }))
@@ -327,6 +339,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [selectedChatId, refreshChat],
   )
 
+  const setNarrator = useCallback(
+    async (narratorId: string | null) => {
+      if (!selectedChatId || !chat) return
+      const updated = await api.chats.patch(selectedChatId, { narratorId })
+      setChat((prev) => {
+        if (!prev) return prev
+        const narrator = narratorId ? characters.find((ch) => ch.id === narratorId) ?? null : null
+        return { ...prev, chat: updated, narrator }
+      })
+    },
+    [selectedChatId, chat, characters],
+  )
+
   const patchRuntime = useCallback(
     async (patch: Partial<Chat['runtime']>) => {
       if (!selectedChatId || !chat) return
@@ -375,6 +400,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sendMessage,
       addParticipants,
       removeParticipant,
+      setNarrator,
       patchRuntime,
       setConnectionDefault,
       refreshChat,
@@ -409,6 +435,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sendMessage,
       addParticipants,
       removeParticipant,
+      setNarrator,
       patchRuntime,
       setConnectionDefault,
       refreshChat,

@@ -26,6 +26,7 @@ export function normalizeChat(chat: Chat): Chat {
     removedParticipants: Array.isArray(chat.removedParticipants) ? chat.removedParticipants : [],
     lorebookIds: Array.isArray(chat.lorebookIds) ? chat.lorebookIds : [],
     scenarioId: typeof chat.scenarioId === 'string' ? chat.scenarioId : null,
+    narratorId: typeof chat.narratorId === 'string' ? chat.narratorId : null,
     messages: Array.isArray(chat.messages)
       ? chat.messages.map((m) => ({
           ...m,
@@ -36,6 +37,25 @@ export function normalizeChat(chat: Chat): Chat {
         }))
       : [],
     runtime: { ...DEFAULT_RUNTIME, ...(chat.runtime ?? {}) },
+  };
+}
+
+export function normalizeCharacter(character: Character): Character {
+  return {
+    ...character,
+    kind: character.kind === 'narrator' ? 'narrator' : 'character',
+    name: typeof character.name === 'string' ? character.name : '',
+    description: typeof character.description === 'string' ? character.description : '',
+    personality: typeof character.personality === 'string' ? character.personality : '',
+    system_prompt: typeof character.system_prompt === 'string' ? character.system_prompt : '',
+    post_history_instructions:
+      typeof character.post_history_instructions === 'string' ? character.post_history_instructions : '',
+    mes_example: typeof character.mes_example === 'string' ? character.mes_example : '',
+    tags: Array.isArray(character.tags) ? character.tags : [],
+    avatarPath: typeof character.avatarPath === 'string' ? character.avatarPath : null,
+    voiceSamplePath: typeof character.voiceSamplePath === 'string' ? character.voiceSamplePath : null,
+    voiceSampleTranscript:
+      typeof character.voiceSampleTranscript === 'string' ? character.voiceSampleTranscript : null,
   };
 }
 
@@ -142,7 +162,7 @@ export interface DataStore {
 
 export function createStore(): DataStore {
   return {
-    characters: new JsonCollection<Character>(DIR.characters, 'character'),
+    characters: new JsonCollection<Character>(DIR.characters, 'character', 'name' as keyof Character, normalizeCharacter),
     lorebooks: new JsonCollection<Lorebook>(DIR.lorebooks, 'lorebook'),
     scenarios: new JsonCollection<Scenario>(DIR.scenarios, 'scenario'),
     chats: new JsonCollection<Chat>(DIR.chats, 'chat', 'title' as keyof Chat, normalizeChat),

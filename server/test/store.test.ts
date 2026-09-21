@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeChat } from '../src/store.js';
-import type { Chat } from '../src/types.js';
+import { normalizeChat, normalizeCharacter } from '../src/store.js';
+import type { Chat, Character } from '../src/types.js';
 
 function bareChat(overrides: Partial<Chat> = {}): Chat {
   return {
@@ -8,9 +8,10 @@ function bareChat(overrides: Partial<Chat> = {}): Chat {
     title: 'Chat',
     participantIds: ['c1'],
     removedParticipants: [],
-    lorebookIds: [],
-    scenarioId: null,
-    messages: [],
+lorebookIds: [],
+      scenarioId: null,
+      narratorId: null,
+      messages: [],
     runtime: {
       temperature: 0.8,
       topP: 0.95,
@@ -107,5 +108,47 @@ describe('normalizeChat', () => {
     );
     expect(normalized.participantIds).toEqual([]);
     expect(normalized.lorebookIds).toEqual([]);
+    expect(normalized.narratorId).toBeNull();
+  });
+
+  it('keeps a persisted narratorId and defaults missing one to null', () => {
+    expect(normalizeChat(bareChat()).narratorId).toBeNull();
+    expect(normalizeChat(bareChat({ narratorId: 'c-narr' })).narratorId).toBe('c-narr');
+  });
+});
+
+describe('normalizeCharacter', () => {
+  const bare = (over: Partial<Character> = {}): Character => ({
+    kind: 'character',
+    name: 'Amy',
+    description: '',
+    personality: '',
+    system_prompt: '',
+    post_history_instructions: '',
+    mes_example: '',
+    tags: [],
+    avatarPath: null,
+    voiceSamplePath: null,
+    voiceSampleTranscript: null,
+    created: '',
+    updated: '',
+    id: 'c1',
+    ...over,
+  });
+
+  it('defaults missing kind to character', () => {
+    expect(normalizeCharacter(bare({ kind: undefined as unknown as Character['kind'] })).kind).toBe('character');
+  });
+
+  it('preserves narrator kind', () => {
+    expect(normalizeCharacter(bare({ kind: 'narrator' })).kind).toBe('narrator');
+  });
+
+  it('coerces bad optional fields to safe defaults', () => {
+    const n = normalizeCharacter(
+      bare({ name: undefined as unknown as string, avatarPath: undefined as unknown as string | null }),
+    );
+    expect(n.name).toBe('');
+    expect(n.avatarPath).toBeNull();
   });
 });

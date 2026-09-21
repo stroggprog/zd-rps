@@ -5,6 +5,7 @@ import type { Character, ImportDraft } from '../lib/types'
 
 interface Draft {
   id: string | null
+  kind: 'character' | 'narrator'
   name: string
   description: string
   personality: string
@@ -17,6 +18,7 @@ interface Draft {
 function emptyDraft(): Draft {
   return {
     id: null,
+    kind: 'character',
     name: '',
     description: '',
     personality: '',
@@ -28,7 +30,7 @@ function emptyDraft(): Draft {
 }
 
 function toDraft(c: Character): Draft {
-  return { ...c, id: c.id, tags: c.tags.join(', ') }
+  return { ...c, id: c.id, kind: c.kind, tags: c.tags.join(', ') }
 }
 
 export function CharacterEditor() {
@@ -83,21 +85,22 @@ export function CharacterEditor() {
     }
   }
 
-  const save = async () => {
+  const save = async (): Promise<Character | null> => {
     if (!draft || !draft.name.trim()) {
       setError('Character name is required')
-      return
+      return null
     }
     setSaving(true)
     setError(null)
     try {
       const payload: Partial<Character> = {
+        kind: draft.kind,
         name: draft.name,
-        description: draft.description,
-        personality: draft.personality,
-        system_prompt: draft.system_prompt,
-        post_history_instructions: draft.post_history_instructions,
-        mes_example: draft.mes_example,
+        description: draft.kind === 'narrator' ? '' : draft.description,
+        personality: draft.kind === 'narrator' ? '' : draft.personality,
+        system_prompt: draft.kind === 'narrator' ? '' : draft.system_prompt,
+        post_history_instructions: draft.kind === 'narrator' ? '' : draft.post_history_instructions,
+        mes_example: draft.kind === 'narrator' ? '' : draft.mes_example,
         tags: draft.tags.split(',').map((t) => t.trim()).filter(Boolean),
       }
       const saved = draft.id
@@ -105,8 +108,10 @@ export function CharacterEditor() {
         : await api.characters.create(payload)
       setDraft(toDraft(saved))
       await refreshAll()
+      return saved
     } catch (e) {
       setError((e as Error).message)
+      return null
     } finally {
       setSaving(false)
     }
@@ -119,10 +124,18 @@ export function CharacterEditor() {
     await refreshAll()
   }
 
-  const uploadAvatar = async (file: File, id: string) => {
+  /** Returns the saved character for the open draft, creating it first if needed (narrator media can attach before first save). */
+  const ensureSaved = async (): Promise<Character | null> => {
+    if (draft?.id) return characters.find((c) => c.id === draft.id) ?? null
+    return save()
+  }
+
+  const uploadAvatar = async (file: File) => {
     setError(null)
     try {
-      const saved = await api.characters.uploadAvatar(id, file)
+      const target = await ensureSaved()
+      if (!target) return
+      const saved = await api.characters.uploadAvatar(target.id, file)
       setDraft(toDraft(saved))
       await refreshAll()
     } catch (e) {
@@ -130,13 +143,15 @@ export function CharacterEditor() {
     }
   }
 
-  const uploadVoice = async (id: string) => {
+  const uploadVoice = async () => {
     const file = voiceInput.current?.files?.[0]
     if (!file) return
     const transcript = voiceText.current?.value ?? ''
     setError(null)
     try {
-      const saved = await api.characters.uploadVoice(id, file, transcript)
+      const target = await ensureSaved()
+      if (!target) return
+      const saved = await api.characters.uploadVoice(target.id, file, transcript)
       setDraft(toDraft(saved))
       await refreshAll()
     } catch (e) {
@@ -144,7 +159,8 @@ export function CharacterEditor() {
     }
   }
 
-  const activeCharacter = draft?.id ? characters.find((c) => c.id === draft.id) : null
+  const activeCharacter = draft?.id ? characters.find((c) => c.id === draft.id) ?? null : null
+  const showMedia = !!activeCharacter || draft?.kind === 'narrator'
 
   return (
     <div className="overlay-wrap">
@@ -158,6 +174,9 @@ export function CharacterEditor() {
             <div className="row" style={{ marginBottom: 8 }}>
               <button className="primary" onClick={() => { setDraft(emptyDraft()); setImported(null) }}>
                 ＋ New character
+              </button>
+              <button onClick={() => { setDraft({ ...emptyDraft(), kind: 'narrator' }); setImported(null) }}>
+                ＋ New Narrator
               </button>
               <button onClick={pickImport} disabled={importing}>
                 {importing ? 'Importing…' : 'Import card (PNG/JSON)'}
@@ -183,6 +202,7 @@ export function CharacterEditor() {
                 >
                   {c.avatarPath ? <img src={c.avatarPath} alt="" /> : <div className="avatar" />}
                   <span className="grow">{c.name}</span>
+                  {c.kind === 'narrator' && <span className="tag">narrator</span>}
                   {c.voiceSamplePath && <span className="tag">🎤</span>}
                 </div>
               ))}
@@ -193,40 +213,59 @@ export function CharacterEditor() {
           <div>
             {draft && (
               <div className="form-grid">
-                <div className="field">
-                  <label>Name</label>
-                  <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-                </div>
-                <div className="field">
-                  <label>Tags (comma-separated)</label>
-                  <input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} />
-                </div>
-                <div className="field full">
-                  <label>Description</label>
-                  <textarea rows={3} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
-                </div>
-                <div className="field full">
-                  <label>Personality</label>
-                  <textarea rows={3} value={draft.personality} onChange={(e) => setDraft({ ...draft, personality: e.target.value })} />
-                </div>
-                <div className="field full">
-                  <label>System prompt</label>
-                  <textarea rows={5} value={draft.system_prompt} onChange={(e) => setDraft({ ...draft, system_prompt: e.target.value })} />
-                </div>
-                <div className="field full">
-                  <label>Post-history instructions (system note)</label>
-                  <textarea rows={3} value={draft.post_history_instructions} onChange={(e) => setDraft({ ...draft, post_history_instructions: e.target.value })} />
-                </div>
-                <div className="field full">
-                  <label>Example dialogue (mes_example)</label>
-                  <textarea rows={5} value={draft.mes_example} onChange={(e) => setDraft({ ...draft, mes_example: e.target.value })} />
-                </div>
+                  <div className="field">
+                    <label>Type</label>
+                    <select
+                      value={draft.kind}
+                      onChange={(e) => setDraft({ ...draft, kind: e.target.value === 'narrator' ? 'narrator' : 'character' })}
+                    >
+                      <option value="character">Character</option>
+                      <option value="narrator">Narrator</option>
+                    </select>
+                  </div>
+                  {draft.kind === 'narrator' && (
+                    <div className="field full">
+                      <span className="hint">Narrators are simple — just a name, image and voice. Their speaking role comes later.</span>
+                    </div>
+                  )}
+                  <div className="field">
+                    <label>Name</label>
+                    <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+                  </div>
+                  <div className="field">
+                    <label>Tags (comma-separated)</label>
+                    <input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} />
+                  </div>
+                  {draft.kind === 'character' && (
+                    <>
+                      <div className="field full">
+                        <label>Description</label>
+                        <textarea rows={3} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+                      </div>
+                      <div className="field full">
+                        <label>Personality</label>
+                        <textarea rows={3} value={draft.personality} onChange={(e) => setDraft({ ...draft, personality: e.target.value })} />
+                      </div>
+                      <div className="field full">
+                        <label>System prompt</label>
+                        <textarea rows={5} value={draft.system_prompt} onChange={(e) => setDraft({ ...draft, system_prompt: e.target.value })} />
+                      </div>
+                      <div className="field full">
+                        <label>Post-history instructions (system note)</label>
+                        <textarea rows={3} value={draft.post_history_instructions} onChange={(e) => setDraft({ ...draft, post_history_instructions: e.target.value })} />
+                      </div>
+                      <div className="field full">
+                        <label>Example dialogue (mes_example)</label>
+                        <textarea rows={5} value={draft.mes_example} onChange={(e) => setDraft({ ...draft, mes_example: e.target.value })} />
+                      </div>
+                    </>
+                  )}
 
-                {activeCharacter && (
+                {showMedia && (
                   <>
                     <div className="field">
                       <label>Avatar</label>
-                      {activeCharacter.avatarPath && <img src={activeCharacter.avatarPath} className="avatar-big" alt="" />}
+                      {activeCharacter?.avatarPath && <img src={activeCharacter.avatarPath} className="avatar-big" alt="" />}
                       <div className="row">
                         <button onClick={() => avatarInput.current?.click()}>Upload</button>
                         <input
@@ -236,7 +275,7 @@ export function CharacterEditor() {
                           style={{ display: 'none' }}
                           onChange={(e) => {
                             const f = e.target.files?.[0]
-                            if (f) void uploadAvatar(f, activeCharacter.id)
+                            if (f) void uploadAvatar(f)
                             e.target.value = ''
                           }}
                         />
@@ -244,7 +283,7 @@ export function CharacterEditor() {
                     </div>
                     <div className="field">
                       <label>Voice sample (WAV)</label>
-                      {activeCharacter.voiceSamplePath && (
+                      {activeCharacter?.voiceSamplePath && (
                         <audio src={activeCharacter.voiceSamplePath} controls style={{ width: '100%' }} />
                       )}
                       <div className="row">
@@ -252,13 +291,13 @@ export function CharacterEditor() {
                       </div>
                       <input
                         ref={voiceText}
-                        defaultValue={activeCharacter.voiceSampleTranscript ?? ''}
+                        defaultValue={activeCharacter?.voiceSampleTranscript ?? ''}
                         placeholder="Transcript of the sample (recommended)"
                         style={{ marginTop: 6 }}
                       />
                       <div className="row" style={{ marginTop: 6 }}>
-                        <button onClick={() => void uploadVoice(activeCharacter.id)}>Save sample</button>
-                        {activeCharacter.voiceSamplePath && (
+                        <button onClick={() => void uploadVoice()}>Save sample</button>
+                        {activeCharacter?.voiceSamplePath && (
                           <button className="danger" onClick={() => void api.characters.removeVoice(activeCharacter.id).then(async (s) => { setDraft(toDraft(s)); await refreshAll() })}>
                             Remove
                           </button>

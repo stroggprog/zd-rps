@@ -116,6 +116,7 @@ export const api = {
       participantIds: string[]
       lorebookIds: string[]
       scenarioId: string | null
+      narratorId?: string | null
     }) => http<Chat>('/api/chats', jsonInit('POST', payload)),
     remove: (id: string) => http<void>(`/api/chats/${id}`, { method: 'DELETE' }),
     patch: (id: string, payload: Partial<Chat>) =>
@@ -142,7 +143,7 @@ export const api = {
 
 export interface MessageStreamHandlers {
   onSpeaker?: (name: string, characterId: string | null) => void
-  onSentence?: (sentence: string) => void
+  onSentence?: (sentence: string, isSpeech: boolean) => void
   onAudio?: (clip: MessageAudio) => void
   onDone?: (chat: Chat) => void
 }
@@ -195,8 +196,8 @@ function sseMessage(
             return null
           }
           case 'sentence': {
-            const d = data as { text?: string }
-            if (d.text) handlers.onSentence?.(d.text)
+            const d = data as { text?: string; isSpeech?: boolean }
+            if (d.text) handlers.onSentence?.(d.text, d.isSpeech ?? false)
             return null
           }
           case 'audio': {

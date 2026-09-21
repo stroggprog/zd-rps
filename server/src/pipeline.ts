@@ -56,6 +56,14 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMess
   if (activeCharacters.length > 1) {
     systemParts.push(`When you reply, start with the speaking character's name followed by a colon, e.g. "${names[0]}: ...".`);
   }
+  systemParts.push(
+    `Formatting (required): ` +
+      `Write all speech in double quotes, e.g. "Spoken like a leader." ` +
+      `Separate speech from narration, and narration from speech, with a blank line (a paragraph break). ` +
+      `Never put line breaks inside speech. ` +
+      `Use single quotes only for quotations or borrowed terms, never for speech. ` +
+      `Mark emphasis with _underscores_, bold with **asterisks**, and bullet points as "* item" with one per line.`,
+  );
   for (const character of activeCharacters) {
     systemParts.push(`${characterBlock(character)}\n`);
   }

@@ -97,6 +97,7 @@ export function charactersRouter(ctx: AppContext): Router {
     asyncHandler(async (req, res) => {
       const body = readJsonBody<Partial<Character>>(req);
       const character = characters.create({
+        kind: body.kind === 'narrator' ? 'narrator' : 'character',
         name: asString(body.name, 'Unnamed'),
         description: asString(body.description),
         personality: asString(body.personality),
@@ -118,6 +119,7 @@ export function charactersRouter(ctx: AppContext): Router {
       const current = characters.getOrThrow(idParam(req));
       const body = readJsonBody<Partial<Character>>(req);
       const updated = characters.update(idParam(req), {
+        kind: body.kind !== undefined ? (body.kind === 'narrator' ? 'narrator' : 'character') : undefined,
         name: body.name !== undefined ? asString(body.name, current.name) : undefined,
         description: body.description !== undefined ? asString(body.description) : undefined,
         personality: body.personality !== undefined ? asString(body.personality) : undefined,
@@ -234,6 +236,7 @@ export function charactersRouter(ctx: AppContext): Router {
 
       const character = characters.create({
         ...payload.character,
+        kind: 'character',
         name,
         avatarPath: null,
         voiceSamplePath: null,

@@ -6,7 +6,10 @@ export interface Stamped {
   updated: string;
 }
 
+export type CharacterKind = 'character' | 'narrator';
+
 export interface Character extends Stamped {
+  kind: CharacterKind;
   name: string;
   description: string;
   personality: string;
@@ -103,6 +106,7 @@ export interface Chat extends Stamped {
   removedParticipants: RemovedParticipant[];
   lorebookIds: Id[];
   scenarioId: Id | null;
+  narratorId: Id | null;
   messages: ChatMessage[];
   runtime: ChatRuntime;
 }

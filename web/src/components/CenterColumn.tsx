@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useApp } from '../store'
+import { useApp, enqueueAudio } from '../store'
 import { api } from '../lib/api'
 import type { ChatMessage } from '../lib/types'
 
@@ -8,13 +8,7 @@ async function speakViaApi(message: ChatMessage) {
     message.content,
     message.speaker.characterId ?? undefined,
   )
-  const audio = new Audio(audioPath)
-  void audio.play()
-}
-
-function playPath(path: string) {
-  const audio = new Audio(path)
-  void audio.play()
+  enqueueAudio(audioPath)
 }
 
 export function CenterColumn() {
@@ -39,8 +33,10 @@ export function CenterColumn() {
   const messages = chat.chat.messages
 
   const play = (message: ChatMessage) => {
-    if (message.audioPath) {
-      playPath(message.audioPath)
+    if (message.audio.length > 0) {
+      for (const clip of message.audio) enqueueAudio(clip.path)
+    } else if (message.audioPath) {
+      enqueueAudio(message.audioPath)
     } else {
       void speakViaApi(message)
     }
@@ -74,14 +70,16 @@ export function CenterColumn() {
                 </div>
                 {!isUser && message.audio.length > 0 && (
                   <div className="chips">
-                    {message.audio.map((clip) => (
+                    {message.audio.map((clip, i) => (
                       <button
                         key={clip.id}
                         className="chip"
                         title={clip.text}
-                        onClick={() => playPath(clip.path)}
+                        aria-label={`Play audio clip ${i + 1}`}
+                        onClick={() => enqueueAudio(clip.path)}
                       >
-                        ▶ sentence
+                        <span className="chip-icon" aria-hidden>🔊</span>
+                        <span>{i + 1}</span>
                       </button>
                     ))}
                   </div>

@@ -9,8 +9,15 @@
 /** Name followed by a colon at the very start of the buffer. */
 const PREFIX = /^\s*([A-Za-z0-9 _.'-]{1,60}):/s;
 
-/** First sentence boundary (`.`, `!`, `?`, `…`) followed by space or end-of-buffer. */
-const SENT_SPLIT = /^.*?(?:[.?!…]{1,3})(?=\s|$)/s;
+/**
+ * First sentence boundary (`.`, `!`, `?`, `…`), optionally followed by one or
+ * more closing quotes/asterisks/underscores (e.g. `."`, `!*`, `.**`, `._`),
+ * then whitespace or end-of-buffer — or directly followed by an uppercase
+ * letter, which handles prose like "instantly.The" where a space was dropped.
+ * Closing markers are consumed so narration ending in emphasis does not merge
+ * into the following speech paragraph.
+ */
+const SENT_SPLIT = /^.*?(?:[.?!…]{1,3})(?:["'\u201D\u2019»*_)\]}]*(?=\s|$)|(?=[A-Z]))/s;
 
 /** After this many buffered characters without a matching prefix, stop looking. */
 const NO_PREFIX_CUTOFF = 200;

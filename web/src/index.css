@@ -148,6 +148,35 @@ label {
   color: var(--muted);
   margin: 4px 0 10px;
 }
+.section {
+  margin: 4px 0 10px;
+}
+.section h3 {
+  margin: 0;
+}
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.section-toggle:hover {
+  color: var(--accent);
+}
+.section-toggle .chevron {
+  color: var(--muted);
+}
+.section-body {
+  margin-top: 8px;
+}
 
 .bottombar {
   display: flex;
@@ -239,6 +268,13 @@ label {
   background: var(--bg2);
   color: var(--text);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.chip-icon {
+  font-size: 10px;
+  line-height: 1;
 }
 .chip:hover {
   border-color: var(--accent);

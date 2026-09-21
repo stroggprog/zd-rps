@@ -49,7 +49,7 @@ export function NewChatWizard() {
 
         {step === 0 && (
           <div className="participant-pick">
-            {characters.map((character) => (
+            {characters.filter((c) => c.kind === 'character').map((character) => (
               <div
                 key={character.id}
                 className={`pick-item${participantIds.includes(character.id) ? ' selected' : ''}`}
@@ -60,7 +60,7 @@ export function NewChatWizard() {
                 {participantIds.includes(character.id) && <span className="tag">✓</span>}
               </div>
             ))}
-            {characters.length === 0 && (
+            {characters.filter((c) => c.kind === 'character').length === 0 && (
               <div className="hint">
                 No characters yet — create them under the Characters menu, or import a SillyTavern card there.
               </div>

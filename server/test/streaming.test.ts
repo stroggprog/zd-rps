@@ -30,6 +30,38 @@ describe('SentenceStream', () => {
     expect(sentences.map((s) => s.text).join(' ')).toBe('pi is 3.14. Next');
   });
 
+  it('keeps a dot followed by an asterisk (markdown italics) as a split boundary', () => {
+    const { sentences } = collect(
+      ['Amy'],
+      ['*She rolls her eyes, huffing.*\n\n"You\'re obsessed, aren\'t you? You are."'],
+    );
+    expect(sentences.map((s) => s.text)).toEqual([
+      '*She rolls her eyes, huffing.*',
+      '"You\'re obsessed, aren\'t you?',
+      'You are."',
+    ]);
+  });
+
+  it('does not merge a quote-less sentence with a following quoted one', () => {
+    const { sentences } = collect(['Amy'], ['A. "B." C']);
+    expect(sentences.map((s) => s.text)).toEqual(['A.', '"B."', 'C']);
+  });
+
+  it('keeps a trailing closing quote attached to its sentence', () => {
+    const { sentences } = collect(['Amy'], ['She said, "Fine." Then left.']);
+    expect(sentences.map((s) => s.text)).toEqual(['She said, "Fine."', 'Then left.']);
+  });
+
+  it('splits at a period directly followed by an uppercase letter (dropped space)', () => {
+    const { sentences } = collect(['Amy'], ["*Amy's expression shifts instantly.The playful glint is gone."]);
+    expect(sentences.map((s) => s.text)).toEqual(["*Amy's expression shifts instantly.", 'The playful glint is gone.']);
+  });
+
+  it('does not merge emphasis- or bold-ending narration into following speech', () => {
+    const { sentences } = collect(['Amy'], ['He was stunned._\n"Finally!" It worked.**']);
+    expect(sentences.map((s) => s.text)).toEqual(['He was stunned._', '"Finally!"', 'It worked.**']);
+  });
+
   it('strips a matching "Name: " prefix and attributes the speaker', () => {
     const { sentences, speaker } = collect(['Amy'], ['Amy: Hello there. How are you?']);
     expect(speaker).toBe('Amy');
