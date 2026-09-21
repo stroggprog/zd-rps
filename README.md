@@ -2,6 +2,10 @@
 
 Single-user, localhost roleplay-chat app: a Node/Express middleware that wires LLM, speech-to-text, and text-to-speech backends behind a React/Vite chat UI. Everything is stored as JSON files on disk — no database, no accounts.
 
+## Concept
+
+Multiple characters can be used in each chat, and characters can be added/removed on the fly. Character descriptions and personality are separated from Scenario and Lorebooks, so when starting a chat you can select any characters, any lorebooks (multiple) and any scenario. New lorebooks and Scenarios can be created independantly ready for future use.
+
 ## Features
 
 - **Chats with characters** — add/remove characters mid-chat, per-chat runtime settings (temperature, top-p, max tokens, LLM/TTS connection, instant-reply mode).
