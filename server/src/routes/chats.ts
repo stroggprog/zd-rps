@@ -32,7 +32,7 @@ function resolveKindConnection(kind: 'llm' | 'stt' | 'tts', runtimeValue: Id | n
   return conn;
 }
 
-function listSummary(chat: Chat) {
+function listSummary(ctx: AppContext, chat: Chat) {
   return {
     id: chat.id,
     title: chat.title,
@@ -41,7 +41,7 @@ function listSummary(chat: Chat) {
     messageCount: chat.messages.length,
     participantCount: chat.participantIds.length,
     avatarPaths: chat.participantIds
-      .map((pid) => chat.messages.find((m) => m.speaker.characterId === pid)?.speaker.avatarPath ?? null)
+      .map((pid) => ctx.store.characters.get(pid)?.avatarPath ?? null)
       .slice(0, 4),
   };
 }
@@ -53,7 +53,7 @@ export function chatsRouter(ctx: AppContext): Router {
   router.get(
     '/',
     asyncHandler(async (_req, res) => {
-      res.json([...chats.list()].sort((a, b) => b.updated.localeCompare(a.updated)).map(listSummary));
+      res.json([...chats.list()].sort((a, b) => b.updated.localeCompare(a.updated)).map((c) => listSummary(ctx, c)));
     }),
   );
 

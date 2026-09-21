@@ -1,7 +1,16 @@
 import { useApp } from '../store'
 
 export function LeftColumn() {
-  const { viewerImages, viewerIndex, setViewer, chats, selectedChatId, selectChat } = useApp()
+  const { viewerImages, viewerIndex, setViewer, chats, selectedChatId, selectChat, deleteChat, setError } = useApp()
+
+  const removeChat = async (id: string) => {
+    if (!window.confirm('Delete this chat?')) return
+    try {
+      await deleteChat(id)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
   const image = viewerIndex >= 0 ? viewerImages[viewerIndex] : null
 
   return (
@@ -54,6 +63,16 @@ export function LeftColumn() {
                 {c.messageCount} msg · {c.participantCount} participant{c.participantCount === 1 ? '' : 's'}
               </div>
             </div>
+            <button
+              className="danger chat-delete"
+              title="Delete chat"
+              onClick={(e) => {
+                e.stopPropagation()
+                void removeChat(c.id)
+              }}
+            >
+              ✕
+            </button>
           </div>
         ))}
         {chats.length === 0 && <div className="hint">No chats yet. Use the ☰ menu to start one.</div>}

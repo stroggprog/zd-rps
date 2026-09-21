@@ -585,6 +585,23 @@ label {
 .pick-item .grow {
   flex: 1;
 }
+button.chat-delete {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  line-height: 1;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pick-item:hover button.chat-delete,
+.pick-item.selected button.chat-delete {
+  opacity: 0.75;
+}
+button.chat-delete:hover {
+  opacity: 1 !important;
+}
 .mic-live {
   color: var(--danger);
   font-weight: 700;
