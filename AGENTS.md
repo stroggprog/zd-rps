@@ -16,7 +16,7 @@
 
 ## Layout
 - npm workspaces `server/` (Express, ESM — imports end in `.js`) and `web/` (React+Vite, extensionless imports). No shared package: `web/src/lib/types.ts` mirrors `server/src/types.ts` by hand — keep them in sync.
-- `PLAN.md` is the design doc but is partially stale (e.g. it predates SSE streaming, `audio` chips, `disableThinking`, `/api/connections/defaults`). Trust the code over PLAN.md.
+- `PLAN.md` is gone. `README.md` is the canonical overview; trust the code (and this file) over any design notes.
 - Server entry `server/src/index.ts`: static `web/dist` + `/media`, multer memory storage on `/api`, `express.json({ limit: '5mb' })`.
 
 ## Data & config (gitignored, auto-created)
