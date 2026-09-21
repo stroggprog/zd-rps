@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeChat, normalizeCharacter } from '../src/store.js';
-import type { Chat, Character } from '../src/types.js';
+import { normalizeChat, normalizeCharacter, normalizeNarrator } from '../src/store.js';
+import type { Chat, Character, Narrator } from '../src/types.js';
 
 function bareChat(overrides: Partial<Chat> = {}): Chat {
   return {
@@ -119,7 +119,6 @@ describe('normalizeChat', () => {
 
 describe('normalizeCharacter', () => {
   const bare = (over: Partial<Character> = {}): Character => ({
-    kind: 'character',
     name: 'Amy',
     description: '',
     personality: '',
@@ -136,19 +135,34 @@ describe('normalizeCharacter', () => {
     ...over,
   });
 
-  it('defaults missing kind to character', () => {
-    expect(normalizeCharacter(bare({ kind: undefined as unknown as Character['kind'] })).kind).toBe('character');
-  });
-
-  it('preserves narrator kind', () => {
-    expect(normalizeCharacter(bare({ kind: 'narrator' })).kind).toBe('narrator');
-  });
-
   it('coerces bad optional fields to safe defaults', () => {
     const n = normalizeCharacter(
       bare({ name: undefined as unknown as string, avatarPath: undefined as unknown as string | null }),
     );
     expect(n.name).toBe('');
     expect(n.avatarPath).toBeNull();
+  });
+});
+
+describe('normalizeNarrator', () => {
+  const bare = (over: Partial<Narrator> = {}): Narrator => ({
+    id: 'n1',
+    name: 'The Narrator',
+    avatarPath: null,
+    voiceSamplePath: null,
+    voiceSampleTranscript: null,
+    created: '',
+    updated: '',
+    ...over,
+  });
+
+  it('keeps media and defaults missing voice transcript to null', () => {
+    const n = normalizeNarrator(
+      bare({ avatarPath: '/media/narrators/n1/avatar.png', voiceSamplePath: undefined as unknown as string | null }),
+    );
+    expect(n.name).toBe('The Narrator');
+    expect(n.avatarPath).toBe('/media/narrators/n1/avatar.png');
+    expect(n.voiceSamplePath).toBeNull();
+    expect(n.voiceSampleTranscript).toBeNull();
   });
 });

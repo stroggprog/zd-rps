@@ -7,6 +7,7 @@ import type {
   ImportDraft,
   Lorebook,
   MessageAudio,
+  Narrator,
   ProviderInfo,
   Scenario,
   TestResult,
@@ -90,6 +91,27 @@ export const api = {
     removeVoice: (id: string) =>
       http<Character>(`/api/characters/${id}/voice`, { method: 'DELETE' }),
     exportUrl: (id: string) => `/api/characters/${id}/export`,
+  },
+
+  narrators: {
+    list: () => http<Narrator[]>('/api/narrators'),
+    create: (n: Partial<Narrator>) => http<Narrator>('/api/narrators', jsonInit('POST', n)),
+    update: (id: string, n: Partial<Narrator>) =>
+      http<Narrator>(`/api/narrators/${id}`, jsonInit('PUT', n)),
+    remove: (id: string) => http<void>(`/api/narrators/${id}`, { method: 'DELETE' }),
+    uploadAvatar: (id: string, file: File) => {
+      const form = new FormData()
+      form.append('avatar', file)
+      return http<Narrator>(`/api/narrators/${id}/avatar`, { method: 'POST', body: form })
+    },
+    removeAvatar: (id: string) => http<Narrator>(`/api/narrators/${id}/avatar`, { method: 'DELETE' }),
+    uploadVoice: (id: string, file: File, transcript: string) => {
+      const form = new FormData()
+      form.append('sample', file)
+      form.append('transcript', transcript)
+      return http<Narrator>(`/api/narrators/${id}/voice`, { method: 'POST', body: form })
+    },
+    removeVoice: (id: string) => http<Narrator>(`/api/narrators/${id}/voice`, { method: 'DELETE' }),
   },
 
   lorebooks: {

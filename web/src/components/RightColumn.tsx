@@ -31,7 +31,7 @@ function Section({
 }
 
 export function RightColumn() {
-  const { chat, characters, connections, addParticipants, removeParticipant, setNarrator, patchRuntime, busy, openOverlay } = useApp()
+  const { chat, characters, connections, narrators, addParticipants, removeParticipant, setNarrator, patchRuntime, busy, openOverlay } = useApp()
   const [showPicker, setShowPicker] = useState(false)
   const [showNarratorPicker, setShowNarratorPicker] = useState(false)
   const [open, setOpen] = useState({ runtime: true, scenario: false, lorebooks: false })
@@ -48,8 +48,7 @@ export function RightColumn() {
   const { chat: c, characters: active, lorebooks, scenario, narrator } = chat
   const llmConnections = connections.filter((x) => x.kind === 'llm')
   const ttsConnections = connections.filter((x) => x.kind === 'tts')
-  const narrators = characters.filter((ch) => ch.kind === 'narrator')
-  const inactive = characters.filter((ch) => !c.participantIds.includes(ch.id) && ch.kind === 'character')
+  const inactive = characters.filter((ch) => !c.participantIds.includes(ch.id))
 
   return (
     <aside className="column right">

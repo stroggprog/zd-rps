@@ -18,6 +18,7 @@ export function TopBar() {
       </button>
       <button onClick={() => openOverlay('config')}>Configuration</button>
       <button onClick={() => openOverlay('characters')}>Characters</button>
+      <button onClick={() => openOverlay('narrators')}>Narrators</button>
       <button onClick={() => openOverlay('lorebooks')}>Lorebooks</button>
       <button onClick={() => openOverlay('scenarios')}>Scenarios</button>
     </header>

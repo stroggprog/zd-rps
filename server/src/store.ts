@@ -1,6 +1,6 @@
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { readFile, readdir, rm, mkdir, copyFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Character, Chat, Lorebook, MessageAudio, Scenario, Stamped } from './types.js';
+import type { Character, Chat, Lorebook, MessageAudio, Narrator, Scenario, Stamped } from './types.js';
 import type { Id } from './types.js';
 import { DIR } from './paths.js';
 import { atomicWrite, ensureDir, lookup, now, uuid } from './util.js';
@@ -43,7 +43,6 @@ export function normalizeChat(chat: Chat): Chat {
 export function normalizeCharacter(character: Character): Character {
   return {
     ...character,
-    kind: character.kind === 'narrator' ? 'narrator' : 'character',
     name: typeof character.name === 'string' ? character.name : '',
     description: typeof character.description === 'string' ? character.description : '',
     personality: typeof character.personality === 'string' ? character.personality : '',
@@ -57,6 +56,80 @@ export function normalizeCharacter(character: Character): Character {
     voiceSampleTranscript:
       typeof character.voiceSampleTranscript === 'string' ? character.voiceSampleTranscript : null,
   };
+}
+
+export function normalizeNarrator(narrator: Narrator): Narrator {
+  return {
+    ...narrator,
+    name: typeof narrator.name === 'string' ? narrator.name : '',
+    avatarPath: typeof narrator.avatarPath === 'string' ? narrator.avatarPath : null,
+    voiceSamplePath: typeof narrator.voiceSamplePath === 'string' ? narrator.voiceSamplePath : null,
+    voiceSampleTranscript:
+      typeof narrator.voiceSampleTranscript === 'string' ? narrator.voiceSampleTranscript : null,
+  };
+}
+
+/**
+ * One-time migration from the legacy design where narrators were characters
+ * with `kind: 'narrator'`. Moves each such character to `DIR.narrators` under
+ * the same id (so `chat.narratorId` references keep working), copying avatar
+ * and voice-sample files and rewriting the /media/... paths. Run before the
+ * collections load. Idempotent: a character without `kind` is left alone.
+ */
+export async function migrateLegacyNarrators(): Promise<void> {
+  let files: string[] = [];
+  try {
+    files = await readdir(DIR.characters);
+  } catch {
+    return;
+  }
+  for (const entry of files) {
+    let id: string;
+    let charPath: string;
+    if (entry.endsWith('.json')) {
+      id = entry.replace(/\.json$/, '');
+      charPath = path.join(DIR.characters, entry);
+    } else {
+      id = entry;
+      charPath = path.join(DIR.characters, entry, 'character.json');
+    }
+    const srcDir = path.join(DIR.characters, id);
+    let raw: Record<string, unknown>;
+    try {
+      raw = JSON.parse(await readFile(charPath, 'utf8')) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    if (raw.kind !== 'narrator') continue;
+    const destDir = path.join(DIR.narrators, id);
+    await ensureDir(destDir);
+
+    const moveMedia = async (sourceName: string, targetName: string): Promise<string | null> => {
+      try {
+        await copyFile(path.join(srcDir, sourceName), path.join(destDir, targetName));
+        return `/media/narrators/${id}/${targetName}`;
+      } catch {
+        return null;
+      }
+    };
+
+    const n: Narrator = {
+      id,
+      name: typeof raw.name === 'string' ? raw.name : '',
+      avatarPath: await moveMedia('avatar.png', 'avatar.png'),
+      voiceSamplePath: await moveMedia('voice-sample.wav', 'voice-sample.wav'),
+      voiceSampleTranscript:
+        typeof raw.voiceSampleTranscript === 'string' ? raw.voiceSampleTranscript : null,
+      created: typeof raw.created === 'string' ? raw.created : now(),
+      updated: now(),
+    };
+    await atomicWrite(path.join(DIR.narrators, `${id}.json`), JSON.stringify(n, null, 2));
+    if (charPath !== path.join(srcDir, 'character.json')) {
+      await rm(charPath, { force: true });
+    }
+    await rm(srcDir, { recursive: true, force: true });
+    console.log(`[store] migrated narrator "${n.name}" from characters/ to narrators/`);
+  }
 }
 
 export class JsonCollection<T extends Stamped> {
@@ -155,6 +228,7 @@ export class JsonCollection<T extends Stamped> {
 
 export interface DataStore {
   characters: JsonCollection<Character>;
+  narrators: JsonCollection<Narrator>;
   lorebooks: JsonCollection<Lorebook>;
   scenarios: JsonCollection<Scenario>;
   chats: JsonCollection<Chat>;
@@ -163,6 +237,7 @@ export interface DataStore {
 export function createStore(): DataStore {
   return {
     characters: new JsonCollection<Character>(DIR.characters, 'character', 'name' as keyof Character, normalizeCharacter),
+    narrators: new JsonCollection<Narrator>(DIR.narrators, 'narrator', 'name' as keyof Narrator, normalizeNarrator),
     lorebooks: new JsonCollection<Lorebook>(DIR.lorebooks, 'lorebook'),
     scenarios: new JsonCollection<Scenario>(DIR.scenarios, 'scenario'),
     chats: new JsonCollection<Chat>(DIR.chats, 'chat', 'title' as keyof Chat, normalizeChat),
@@ -170,8 +245,10 @@ export function createStore(): DataStore {
 }
 
 export async function loadStore(store: DataStore): Promise<void> {
+  await migrateLegacyNarrators();
   await Promise.all([
     store.characters.load(),
+    store.narrators.load(),
     store.lorebooks.load(),
     store.scenarios.load(),
     store.chats.load(),

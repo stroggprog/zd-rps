@@ -7,6 +7,7 @@ import { RightColumn } from './components/RightColumn'
 import { NewChatWizard } from './components/NewChatWizard'
 import { ConfigEditor } from './components/ConfigEditor'
 import { CharacterEditor } from './components/CharacterEditor'
+import { NarratorEditor } from './components/NarratorEditor'
 import { LorebookEditor } from './components/LorebookEditor'
 import { ScenarioEditor } from './components/ScenarioEditor'
 
@@ -29,6 +30,7 @@ function Shell() {
       {overlay === 'new-chat' && <NewChatWizard />}
       {overlay === 'config' && <ConfigEditor />}
       {overlay === 'characters' && <CharacterEditor />}
+      {overlay === 'narrators' && <NarratorEditor />}
       {overlay === 'lorebooks' && <LorebookEditor />}
       {overlay === 'scenarios' && <ScenarioEditor />}
     </div>

@@ -6,10 +6,7 @@ export interface Stamped {
   updated: string;
 }
 
-export type CharacterKind = 'character' | 'narrator';
-
 export interface Character extends Stamped {
-  kind: CharacterKind;
   name: string;
   description: string;
   personality: string;
@@ -18,6 +15,21 @@ export interface Character extends Stamped {
   mes_example: string;
   tags: string[];
   avatarPath: string | null;
+  voiceSamplePath: string | null;
+  voiceSampleTranscript: string | null;
+}
+
+export interface Narrator extends Stamped {
+  name: string;
+  avatarPath: string | null;
+  voiceSamplePath: string | null;
+  voiceSampleTranscript: string | null;
+}
+
+/** Minimal shape both characters and narrators expose for TTS synthesis. */
+export interface VoiceSubject {
+  id: string;
+  name: string;
   voiceSamplePath: string | null;
   voiceSampleTranscript: string | null;
 }

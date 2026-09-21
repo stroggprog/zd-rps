@@ -6,10 +6,7 @@ export interface Stamped {
   updated: string
 }
 
-export type CharacterKind = 'character' | 'narrator'
-
 export interface Character extends Stamped {
-  kind: CharacterKind
   name: string
   description: string
   personality: string
@@ -17,6 +14,13 @@ export interface Character extends Stamped {
   post_history_instructions: string
   mes_example: string
   tags: string[]
+  avatarPath: string | null
+  voiceSamplePath: string | null
+  voiceSampleTranscript: string | null
+}
+
+export interface Narrator extends Stamped {
+  name: string
   avatarPath: string | null
   voiceSamplePath: string | null
   voiceSampleTranscript: string | null
@@ -189,7 +193,7 @@ export interface ChatDetail {
   characters: Character[]
   lorebooks: Lorebook[]
   scenario: Scenario | null
-  narrator: Character | null
+  narrator: Narrator | null
 }
 
 export interface ChatSummary {

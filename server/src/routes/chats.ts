@@ -9,6 +9,7 @@ import type {
   Connection,
   Id,
   MessageAudio,
+  Narrator,
   SpeakerSnapshot,
 } from '../types.js';
 import { DIR } from '../paths.js';
@@ -60,9 +61,7 @@ export function chatsRouter(ctx: AppContext): Router {
     '/:id',
     asyncHandler(async (req, res) => {
       const chat = chats.getOrThrow(idParam(req));
-      const narrator = chat.narratorId
-        ? ctx.store.characters.get(chat.narratorId) ?? null
-        : null;
+      const narrator = chat.narratorId ? ctx.store.narrators.get(chat.narratorId) ?? null : null;
       res.json({
         chat,
         characters: chat.participantIds
@@ -94,8 +93,7 @@ export function chatsRouter(ctx: AppContext): Router {
         ? [...new Set(body.lorebookIds.filter((id) => ctx.store.lorebooks.exists(id)))]
         : [];
       const scenarioId = body.scenarioId && ctx.store.scenarios.exists(body.scenarioId) ? body.scenarioId : null;
-      const narrator = body.narratorId ? ctx.store.characters.get(body.narratorId) : null;
-      const narratorId = narrator?.kind === 'narrator' ? narrator.id : null;
+      const narratorId = body.narratorId && ctx.store.narrators.exists(body.narratorId) ? body.narratorId : null;
       const chat = chats.create({
         title: asString(
           body.title,
@@ -149,8 +147,7 @@ export function chatsRouter(ctx: AppContext): Router {
       }
       let narratorId = current.narratorId;
       if (body.narratorId !== undefined) {
-        const narrator = body.narratorId ? ctx.store.characters.get(body.narratorId) : null;
-        narratorId = narrator?.kind === 'narrator' ? narrator.id : null;
+        narratorId = body.narratorId && ctx.store.narrators.exists(body.narratorId) ? body.narratorId : null;
       }
       const updated = chats.update(idParam(req), {
         title: body.title !== undefined ? asString(body.title, current.title) : undefined,
@@ -249,8 +246,7 @@ export function chatsRouter(ctx: AppContext): Router {
       const activeChars = chatWithUser.participantIds
         .map((pid) => ctx.store.characters.get(pid))
         .filter((c): c is Character => c !== undefined);
-      const narr = chatWithUser.narratorId ? ctx.store.characters.get(chatWithUser.narratorId) ?? null : null;
-      const narratorChar = narr?.kind === 'narrator' ? narr : null;
+      const narratorChar = chatWithUser.narratorId ? ctx.store.narrators.get(chatWithUser.narratorId) ?? null : null;
       const lorebooks = chatWithUser.lorebookIds
         .map((bid) => ctx.store.lorebooks.get(bid))
         .filter((b) => b !== undefined);

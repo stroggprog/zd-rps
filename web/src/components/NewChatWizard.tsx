@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useApp } from '../store'
 
-const STEPS = ['Characters', 'Lorebooks', 'Scenario']
+const STEPS = ['Characters', 'Narrator (optional)', 'Lorebooks', 'Scenario']
 
 export function NewChatWizard() {
-  const { characters, lorebooks, scenarios, closeOverlay, createChat, sending } = useApp()
+  const { characters: people, narrators, lorebooks, scenarios, closeOverlay, createChat, sending } = useApp()
   const [step, setStep] = useState(0)
   const [participantIds, setParticipantIds] = useState<string[]>([])
+  const [narratorId, setNarratorId] = useState<string | null>(null)
   const [lorebookIds, setLorebookIds] = useState<string[]>([])
   const [scenarioId, setScenarioId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
@@ -19,7 +20,7 @@ export function NewChatWizard() {
   const finish = async () => {
     setCreating(true)
     try {
-      await createChat({ title, participantIds, lorebookIds, scenarioId })
+      await createChat({ title, participantIds, narratorId, lorebookIds, scenarioId })
     } finally {
       setCreating(false)
     }
@@ -28,9 +29,7 @@ export function NewChatWizard() {
   const canNext =
     step === 0
       ? participantIds.length > 0
-      : step === 1
-        ? true
-        : true
+      : true
 
   return (
     <div className="overlay-wrap">
@@ -49,27 +48,51 @@ export function NewChatWizard() {
 
         {step === 0 && (
           <div className="participant-pick">
-            {characters.filter((c) => c.kind === 'character').map((character) => (
+            {people.map((person) => (
               <div
-                key={character.id}
-                className={`pick-item${participantIds.includes(character.id) ? ' selected' : ''}`}
-                onClick={() => toggle(participantIds, setParticipantIds, character.id)}
+                key={person.id}
+                className={`pick-item${participantIds.includes(person.id) ? ' selected' : ''}`}
+                onClick={() => toggle(participantIds, setParticipantIds, person.id)}
               >
-                {character.avatarPath ? <img src={character.avatarPath} alt="" /> : <div className="avatar" />}
-                <span className="grow">{character.name}</span>
-                {participantIds.includes(character.id) && <span className="tag">✓</span>}
+                {person.avatarPath ? <img src={person.avatarPath} alt="" /> : <div className="avatar" />}
+                <span className="grow">{person.name}</span>
+                {participantIds.includes(person.id) && <span className="tag">✓</span>}
               </div>
             ))}
-            {characters.filter((c) => c.kind === 'character').length === 0 && (
-              <div className="hint">
-                No characters yet — create them under the Characters menu, or import a SillyTavern card there.
-              </div>
+            {people.length === 0 && (
+              <div className="hint">No characters yet — create them under the Characters menu, or import a SillyTavern card there.</div>
             )}
           </div>
         )}
 
         {step === 1 && (
           <div className="participant-pick">
+            {narrators.map((narrator) => (
+              <div
+                key={narrator.id}
+                className={`pick-item${narratorId === narrator.id ? ' selected' : ''}`}
+                onClick={() => setNarratorId(narratorId === narrator.id ? null : narrator.id)}
+              >
+                {narrator.avatarPath ? <img src={narrator.avatarPath} alt="" /> : <div className="avatar" />}
+                <span className="grow">{narrator.name}</span>
+                {narrator.voiceSamplePath && <span className="tag">🎤</span>}
+                {narratorId === narrator.id && <span className="tag">✓</span>}
+              </div>
+            ))}
+            <div
+              className={`pick-item${narratorId === null ? ' selected' : ''}`}
+              onClick={() => setNarratorId(null)}
+            >
+              <span className="grow">No narrator — I'll narrate it myself</span>
+            </div>
+            {narrators.length === 0 && (
+              <div className="hint">No narrators yet — one is optional, you can add one later.</div>
+            )}
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="pick-list">
             {lorebooks.map((book) => (
               <div
                 key={book.id}
@@ -85,40 +108,32 @@ export function NewChatWizard() {
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div>
+            <label>
+              Scenario (optional)
+              <select value={scenarioId ?? ''} onChange={(e) => setScenarioId(e.target.value || null)}>
+                <option value="">None</option>
+                {scenarios.map((scenario) => (
+                  <option key={scenario.id} value={scenario.id}>
+                    {scenario.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label>
               Chat title (optional)
               <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Leave empty to auto-name" />
             </label>
-            <div className="pick-list" style={{ marginTop: 12 }}>
-              {scenarios.map((scenario) => (
-                <div
-                  key={scenario.id}
-                  className={`pick-item${scenarioId === scenario.id ? ' selected' : ''}`}
-                  onClick={() => setScenarioId(scenario.id)}
-                >
-                  <span className="grow">{scenario.name}</span>
-                  {scenario.first_mes && <span className="tag">opening included</span>}
-                </div>
-              ))}
-              <div
-                className={`pick-item${scenarioId === null ? ' selected' : ''}`}
-                onClick={() => setScenarioId(null)}
-              >
-                <span className="grow">No scenario</span>
-              </div>
-              {scenarios.length === 0 && <div className="hint">No scenarios yet — you can add them later.</div>}
-            </div>
           </div>
         )}
       </div>
-      <div className="overlay-head" style={{ borderTop: '1px solid var(--border)', borderBottom: 'none' }}>
+      <div className="overlay-foot" style={{ borderTop: '1px solid var(--border)', borderBottom: 'none' }}>
         <button disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
           Back
         </button>
         <div style={{ flex: 1 }} />
-        {step < 2 ? (
+        {step < 3 ? (
           <button className="primary" disabled={!canNext} onClick={() => setStep((s) => s + 1)}>
             Next
           </button>

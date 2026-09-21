@@ -9,11 +9,12 @@ import type {
   ChatSummary,
   Connection,
   Lorebook,
+  Narrator,
   ProviderInfo,
   Scenario,
 } from './lib/types'
 
-export type Overlay = 'none' | 'config' | 'characters' | 'lorebooks' | 'scenarios' | 'new-chat'
+export type Overlay = 'none' | 'config' | 'characters' | 'narrators' | 'lorebooks' | 'scenarios' | 'new-chat'
 
 export interface ConnectionDefaults {
   defaultLlm: string | null
@@ -25,6 +26,7 @@ export interface AppState {
   providers: ProviderInfo[]
   connections: Connection[]
   characters: Character[]
+  narrators: Narrator[]
   lorebooks: Lorebook[]
   scenarios: Scenario[]
   chats: ChatSummary[]
@@ -93,6 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     defaultTts: null,
   })
   const [characters, setCharacters] = useState<Character[]>([])
+  const [narrators, setNarrators] = useState<Narrator[]>([])
   const [lorebooks, setLorebooks] = useState<Lorebook[]>([])
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [chats, setChats] = useState<ChatSummary[]>([])
@@ -117,10 +120,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshAll = useCallback(async () => {
     try {
-      const [p, c, ch, l, s, cs, d] = await Promise.all([
+      const [p, c, ch, n, l, s, cs, d] = await Promise.all([
         api.providers(),
         api.connections.list(),
         api.characters.list(),
+        api.narrators.list(),
         api.lorebooks.list(),
         api.scenarios.list(),
         api.chats.list(),
@@ -129,6 +133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setProviders(p)
       setConnections(c)
       setCharacters(ch)
+      setNarrators(n)
       setLorebooks(l)
       setScenarios(s)
       setChats(cs)
@@ -345,11 +350,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const updated = await api.chats.patch(selectedChatId, { narratorId })
       setChat((prev) => {
         if (!prev) return prev
-        const narrator = narratorId ? characters.find((ch) => ch.id === narratorId) ?? null : null
+        const narrator = narratorId ? narrators.find((n) => n.id === narratorId) ?? null : null
         return { ...prev, chat: updated, narrator }
       })
     },
-    [selectedChatId, chat, characters],
+    [selectedChatId, chat, narrators],
   )
 
   const patchRuntime = useCallback(
@@ -374,6 +379,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       providers,
       connections,
       characters,
+      narrators,
       lorebooks,
       scenarios,
       chats,
@@ -409,6 +415,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       providers,
       connections,
       characters,
+      narrators,
       lorebooks,
       scenarios,
       chats,

@@ -14,7 +14,7 @@ Multiple characters can be used in each chat, and characters can be added/remove
 - **Scenarios** — reusable opening scenes: system setup + first message + alternate greetings.
 - **Streaming replies** — the LLM reply streams in sentence-sized chunks; each sentence is sent to TTS and played back in order when ready, with a replay chip left under the message.
 - **Speech vs narration** — dialogue (in double quotes) is spoken by the speaking character's voice, narration by the chat's narrator voice. Paragraph breaks between narration and speech are enforced server-side even when the model ignores the formatting contract, and the live bubble shows the transition as the reply streams.
-- **Narrators** — any character can be made a narrator; each chat picks one, and narration is voiced by it (falling back to the character's voice when none is set).
+- **Narrators** — narrators are their own entity type (managed in the dedicated Narrators editor, separate from characters). Each chat picks one via `narratorId`, and narration is voiced by it (falling back to the character's voice when none is set).
 - **Speech input** — record and transcribe via STT into the input box.
 - **Voice cloning** — TTS can clone a character's uploaded voice sample; clones are cached per connection.
 

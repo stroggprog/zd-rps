@@ -9,6 +9,7 @@ import { DIR, ROOT } from './paths.js';
 import { connectionsRouter } from './routes/connections.js';
 import { catalog } from './providers/factory.js';
 import { charactersRouter } from './routes/characters.js';
+import { narratorsRouter } from './routes/narrators.js';
 import { lorebooksRouter } from './routes/lorebooks.js';
 import { scenariosRouter } from './routes/scenarios.js';
 import { chatsRouter } from './routes/chats.js';
@@ -36,12 +37,14 @@ async function main() {
   });
   app.use('/api/connections', connectionsRouter(ctx));
   app.use('/api/characters', charactersRouter(ctx));
+  app.use('/api/narrators', narratorsRouter(ctx));
   app.use('/api/lorebooks', lorebooksRouter(ctx));
   app.use('/api/scenarios', scenariosRouter(ctx));
   app.use('/api/chats', chatsRouter(ctx));
   app.use('/api/audio', audioRouter(ctx));
 
   app.use('/media/characters', express.static(DIR.characters));
+  app.use('/media/narrators', express.static(DIR.narrators));
   app.use('/media/audio', express.static(DIR.audio));
   app.use('/media/images', express.static(DIR.images));
 

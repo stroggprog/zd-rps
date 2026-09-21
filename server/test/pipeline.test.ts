@@ -4,7 +4,6 @@ import type { Chat, Character, ChatContext, Lorebook, RemovedParticipant } from 
 
 const amy: Character = {
   id: 'c-amy',
-  kind: 'character',
   name: 'Amy',
   description: 'A curious wanderer.',
   personality: 'Playful',

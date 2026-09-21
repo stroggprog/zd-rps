@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Character, Connection } from './types.js';
+import type { Connection, VoiceSubject } from './types.js';
 import { DATA_DIR } from './paths.js';
 import { getTtsProvider } from './providers/factory.js';
 import type { VoiceCache } from './voices.js';
@@ -15,13 +15,13 @@ export function fileForMediaUrl(url: string | null): string | null {
   return resolved;
 }
 
-async function readSample(char: Character): Promise<Buffer> {
-  const file = fileForMediaUrl(char.voiceSamplePath);
-  if (!file) throw new ApiError(`Character "${char.name}" has no voice sample`, 400);
+async function readSample(subject: VoiceSubject): Promise<Buffer> {
+  const file = fileForMediaUrl(subject.voiceSamplePath);
+  if (!file) throw new ApiError(`"${subject.name}" has no voice sample`, 400);
   try {
     return await readFile(file);
   } catch {
-    throw new ApiError(`Voice sample for "${char.name}" is missing on disk`, 500);
+    throw new ApiError(`Voice sample for "${subject.name}" is missing on disk`, 500);
   }
 }
 
@@ -37,7 +37,7 @@ export function audioExt(buffer: Buffer): string {
 
 export async function synthesizeCharacterSpeech(
   conn: Connection,
-  char: Character,
+  subject: VoiceSubject,
   text: string,
   voiceCache: VoiceCache,
 ): Promise<Buffer> {
@@ -46,24 +46,24 @@ export async function synthesizeCharacterSpeech(
   let referenceAudio: Buffer | undefined;
   let referenceText: string | undefined;
 
-  if (char.voiceSamplePath) {
-    const sample = await readSample(char);
+  if (subject.voiceSamplePath) {
+    const sample = await readSample(subject);
     if (provider.cloneVoice) {
-      const cached = voiceCache.get(conn.id, char.id);
+      const cached = voiceCache.get(conn.id, subject.id);
       if (cached && cached.provider === conn.provider) {
         voiceId = cached.voiceId;
       } else {
         voiceId = await provider.cloneVoice(
           conn,
           sample,
-          char.name,
-          char.voiceSampleTranscript ?? undefined,
+          subject.name,
+          subject.voiceSampleTranscript ?? undefined,
         );
-        voiceCache.set(conn.id, char.id, { voiceId, provider: conn.provider });
+        voiceCache.set(conn.id, subject.id, { voiceId, provider: conn.provider });
       }
     } else {
       referenceAudio = sample;
-      referenceText = char.voiceSampleTranscript ?? undefined;
+      referenceText = subject.voiceSampleTranscript ?? undefined;
     }
   }
 

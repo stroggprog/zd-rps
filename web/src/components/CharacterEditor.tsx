@@ -5,7 +5,6 @@ import type { Character, ImportDraft } from '../lib/types'
 
 interface Draft {
   id: string | null
-  kind: 'character' | 'narrator'
   name: string
   description: string
   personality: string
@@ -18,7 +17,6 @@ interface Draft {
 function emptyDraft(): Draft {
   return {
     id: null,
-    kind: 'character',
     name: '',
     description: '',
     personality: '',
@@ -30,7 +28,7 @@ function emptyDraft(): Draft {
 }
 
 function toDraft(c: Character): Draft {
-  return { ...c, id: c.id, kind: c.kind, tags: c.tags.join(', ') }
+  return { ...c, id: c.id, tags: c.tags.join(', ') }
 }
 
 export function CharacterEditor() {
@@ -94,13 +92,12 @@ export function CharacterEditor() {
     setError(null)
     try {
       const payload: Partial<Character> = {
-        kind: draft.kind,
         name: draft.name,
-        description: draft.kind === 'narrator' ? '' : draft.description,
-        personality: draft.kind === 'narrator' ? '' : draft.personality,
-        system_prompt: draft.kind === 'narrator' ? '' : draft.system_prompt,
-        post_history_instructions: draft.kind === 'narrator' ? '' : draft.post_history_instructions,
-        mes_example: draft.kind === 'narrator' ? '' : draft.mes_example,
+        description: draft.description,
+        personality: draft.personality,
+        system_prompt: draft.system_prompt,
+        post_history_instructions: draft.post_history_instructions,
+        mes_example: draft.mes_example,
         tags: draft.tags.split(',').map((t) => t.trim()).filter(Boolean),
       }
       const saved = draft.id
@@ -124,7 +121,7 @@ export function CharacterEditor() {
     await refreshAll()
   }
 
-  /** Returns the saved character for the open draft, creating it first if needed (narrator media can attach before first save). */
+  /** Returns the saved character for the open draft, creating it first if needed (media can attach before first save). */
   const ensureSaved = async (): Promise<Character | null> => {
     if (draft?.id) return characters.find((c) => c.id === draft.id) ?? null
     return save()
@@ -160,7 +157,7 @@ export function CharacterEditor() {
   }
 
   const activeCharacter = draft?.id ? characters.find((c) => c.id === draft.id) ?? null : null
-  const showMedia = !!activeCharacter || draft?.kind === 'narrator'
+  const showMedia = !!activeCharacter
 
   return (
     <div className="overlay-wrap">
@@ -174,9 +171,6 @@ export function CharacterEditor() {
             <div className="row" style={{ marginBottom: 8 }}>
               <button className="primary" onClick={() => { setDraft(emptyDraft()); setImported(null) }}>
                 ＋ New character
-              </button>
-              <button onClick={() => { setDraft({ ...emptyDraft(), kind: 'narrator' }); setImported(null) }}>
-                ＋ New Narrator
               </button>
               <button onClick={pickImport} disabled={importing}>
                 {importing ? 'Importing…' : 'Import card (PNG/JSON)'}
@@ -202,7 +196,6 @@ export function CharacterEditor() {
                 >
                   {c.avatarPath ? <img src={c.avatarPath} alt="" /> : <div className="avatar" />}
                   <span className="grow">{c.name}</span>
-                  {c.kind === 'narrator' && <span className="tag">narrator</span>}
                   {c.voiceSamplePath && <span className="tag">🎤</span>}
                 </div>
               ))}
@@ -214,21 +207,6 @@ export function CharacterEditor() {
             {draft && (
               <div className="form-grid">
                   <div className="field">
-                    <label>Type</label>
-                    <select
-                      value={draft.kind}
-                      onChange={(e) => setDraft({ ...draft, kind: e.target.value === 'narrator' ? 'narrator' : 'character' })}
-                    >
-                      <option value="character">Character</option>
-                      <option value="narrator">Narrator</option>
-                    </select>
-                  </div>
-                  {draft.kind === 'narrator' && (
-                    <div className="field full">
-                      <span className="hint">Narrators are simple — just a name, image and voice. Their speaking role comes later.</span>
-                    </div>
-                  )}
-                  <div className="field">
                     <label>Name</label>
                     <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
                   </div>
@@ -236,30 +214,26 @@ export function CharacterEditor() {
                     <label>Tags (comma-separated)</label>
                     <input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} />
                   </div>
-                  {draft.kind === 'character' && (
-                    <>
-                      <div className="field full">
-                        <label>Description</label>
-                        <textarea rows={3} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
-                      </div>
-                      <div className="field full">
-                        <label>Personality</label>
-                        <textarea rows={3} value={draft.personality} onChange={(e) => setDraft({ ...draft, personality: e.target.value })} />
-                      </div>
-                      <div className="field full">
-                        <label>System prompt</label>
-                        <textarea rows={5} value={draft.system_prompt} onChange={(e) => setDraft({ ...draft, system_prompt: e.target.value })} />
-                      </div>
-                      <div className="field full">
-                        <label>Post-history instructions (system note)</label>
-                        <textarea rows={3} value={draft.post_history_instructions} onChange={(e) => setDraft({ ...draft, post_history_instructions: e.target.value })} />
-                      </div>
-                      <div className="field full">
-                        <label>Example dialogue (mes_example)</label>
-                        <textarea rows={5} value={draft.mes_example} onChange={(e) => setDraft({ ...draft, mes_example: e.target.value })} />
-                      </div>
-                    </>
-                  )}
+                  <div className="field full">
+                    <label>Description</label>
+                    <textarea rows={3} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+                  </div>
+                  <div className="field full">
+                    <label>Personality</label>
+                    <textarea rows={3} value={draft.personality} onChange={(e) => setDraft({ ...draft, personality: e.target.value })} />
+                  </div>
+                  <div className="field full">
+                    <label>System prompt</label>
+                    <textarea rows={5} value={draft.system_prompt} onChange={(e) => setDraft({ ...draft, system_prompt: e.target.value })} />
+                  </div>
+                  <div className="field full">
+                    <label>Post-history instructions (system note)</label>
+                    <textarea rows={3} value={draft.post_history_instructions} onChange={(e) => setDraft({ ...draft, post_history_instructions: e.target.value })} />
+                  </div>
+                  <div className="field full">
+                    <label>Example dialogue (mes_example)</label>
+                    <textarea rows={5} value={draft.mes_example} onChange={(e) => setDraft({ ...draft, mes_example: e.target.value })} />
+                  </div>
 
                 {showMedia && (
                   <>
