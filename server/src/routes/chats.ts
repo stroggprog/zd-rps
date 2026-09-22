@@ -14,7 +14,8 @@ import type {
 } from '../types.js';
 import { DIR } from '../paths.js';
 import { getConfig } from '../config.js';
-import { buildLlmMessages, streamLlm, attributeReply, USER_NAME } from '../pipeline.js';
+import { buildLlmMessages, streamLlm, USER_NAME } from '../pipeline.js';
+import { chatPersona } from '../store.js';
 import { synthesizeCharacterSpeech, audioExt } from '../ttsService.js';
 import { SentenceStream } from '../streaming.js';
 import { QuotationTracker } from '../speech.js';
@@ -72,6 +73,7 @@ export function chatsRouter(ctx: AppContext): Router {
           .filter((b) => b !== undefined),
         scenario: chat.scenarioId ? ctx.store.scenarios.get(chat.scenarioId) ?? null : null,
         narrator,
+        persona: chatPersona(ctx.store, chat),
       });
     }),
   );
@@ -85,6 +87,7 @@ export function chatsRouter(ctx: AppContext): Router {
         lorebookIds?: Id[];
         scenarioId?: Id | null;
         narratorId?: Id | null;
+        personaId?: Id | null;
       }>(req);
       const participantIds = Array.isArray(body.participantIds)
         ? [...new Set(body.participantIds.filter((id) => ctx.store.characters.exists(id)))]
@@ -94,6 +97,11 @@ export function chatsRouter(ctx: AppContext): Router {
         : [];
       const scenarioId = body.scenarioId && ctx.store.scenarios.exists(body.scenarioId) ? body.scenarioId : null;
       const narratorId = body.narratorId && ctx.store.narrators.exists(body.narratorId) ? body.narratorId : null;
+      const personaList = ctx.store.personas.list();
+      const persona =
+        body.personaId && ctx.store.personas.exists(body.personaId)
+          ? ctx.store.personas.get(body.personaId) ?? null
+          : personaList.find((p) => p.name === 'You') ?? personaList[0] ?? null;
       const chat = chats.create({
         title: asString(
           body.title,
@@ -107,6 +115,7 @@ export function chatsRouter(ctx: AppContext): Router {
         lorebookIds,
         scenarioId,
         narratorId,
+        personaId: persona?.id ?? null,
         messages: [],
         runtime: {
           temperature: 0.8,
@@ -211,11 +220,12 @@ export function chatsRouter(ctx: AppContext): Router {
       const text = asString(body.content).trim();
       if (!text) throw new ApiError('Message content is empty', 400);
       const audioEnabled = body.audioEnabled === true;
+      const persona = chatPersona(ctx.store, chat);
 
       const userSnapshot: SpeakerSnapshot = {
         characterId: null,
-        name: USER_NAME,
-        avatarPath: null,
+        name: persona?.name ?? USER_NAME,
+        avatarPath: persona?.avatarPath ?? null,
         voiceSamplePath: null,
       };
 
@@ -259,6 +269,7 @@ export function chatsRouter(ctx: AppContext): Router {
           removed: chatWithUser.removedParticipants,
           lorebooks,
           scenario,
+          persona: chatPersona(ctx.store, chatWithUser),
         },
         0,
       );
@@ -284,11 +295,19 @@ export function chatsRouter(ctx: AppContext): Router {
       const assistantId = uuid();
       let speaker: SpeakerSnapshot | null = null;
       let speakerChar: Character | null = null;
-      const sentences: string[] = [];
+      let emitted = 0;
       const audioQueue = new OrderedAudio();
       const quotation = new QuotationTracker();
       const formatter = new SpeechFormatter();
-      const emittedClips: MessageAudio[] = [];
+
+      // Per-speaker message blocks: the model may hand over to another active
+      // character mid-reply with a "Name: " prefix; every such handover starts a
+      // new message block with its own speaker snapshot, content and clips.
+      const orderedBlocks: string[] = [];
+      const blockSpecs = new Map<string, { speaker: SpeakerSnapshot; content: string; clips: MessageAudio[] }>();
+      let blockId = assistantId;
+      let blockSpeaker: SpeakerSnapshot | null = null;
+      const sentenceOwner = new Map<number, string>();
 
       const resolveSpeaker = () => {
         if (speaker) return;
@@ -304,25 +323,67 @@ export function chatsRouter(ctx: AppContext): Router {
           avatarPath: speakerChar?.avatarPath ?? null,
           voiceSamplePath: speakerChar?.voiceSamplePath ?? null,
         };
-        send('speaker', { name: speaker.name, characterId: speaker.characterId });
       };
+
+      const beginBlock = (snap: SpeakerSnapshot) => {
+        blockSpeechState = null;
+        blockId = uuid();
+        blockSpeaker = snap;
+        orderedBlocks.push(blockId);
+        blockSpecs.set(blockId, { speaker: snap, content: '', clips: [] });
+        send('speaker', { messageId: blockId, name: snap.name, characterId: snap.characterId, avatarPath: snap.avatarPath });
+      };
+
+      let blockSpeechState: boolean | null = null;
 
       const emitAudio = (index: number, result: AudioResult) => {
         if (res.writableEnded || !result.path) return;
         const clip: MessageAudio = { id: `${assistantId}-${index}`, text: result.text, path: result.path, ts: now() };
-        emittedClips.push(clip);
-        send('audio', { index, ...clip });
+        const owner = sentenceOwner.get(index) ?? blockId;
+        send('audio', { messageId: owner, index, ...clip });
+        blockSpecs.get(owner)?.clips.push(clip);
       };
 
       const handleSentence = (sentence: string, isLast: boolean) => {
-        const trimmed = sentence.trim();
+        let trimmed = sentence.trim();
         if (!trimmed) return;
+        // Multi-character replies: "Name: " prefixes mid-reply hand the reply
+        // over to another participant. Strip the prefix from what gets spoken;
+        // the block's speaker snapshot carries the attribution instead.
+        const pm = /^([A-Za-z0-9 _.'-]{1,60}):\s*/.exec(trimmed);
+        if (pm) {
+          const cand = pm[1].trim();
+          const match = activeChars.find((c) => c.name.toLowerCase() === cand.toLowerCase());
+          if (match && (!blockSpeaker || blockSpeaker.name !== match.name)) {
+            beginBlock({
+              characterId: match.id,
+              name: match.name,
+              avatarPath: match.avatarPath,
+              voiceSamplePath: match.voiceSamplePath,
+            });
+          }
+          if (match) {
+            trimmed = trimmed.slice(pm[0].length).trim();
+            if (!trimmed) return;
+          }
+        }
         resolveSpeaker();
+        if (blockSpeaker === null) {
+          beginBlock(
+            speaker ?? { characterId: null, name: 'Assistant', avatarPath: null, voiceSamplePath: null },
+          );
+        }
+        if (blockSpeaker) speakerChar = activeChars.find((c) => c.id === blockSpeaker!.characterId) ?? speakerChar;
         const isSpeech = quotation.isSpeech(trimmed);
         const voiceChar = isSpeech ? speakerChar : narratorChar ?? speakerChar;
         const idx = audioQueue.submit();
-        sentences.push(trimmed);
-        send('sentence', { index: idx, text: trimmed, isLast, isSpeech });
+        sentenceOwner.set(idx, blockId);
+        emitted += 1;
+        const spec = blockSpecs.get(blockId);
+        const sep = blockSpeechState === null ? '' : isSpeech === blockSpeechState ? ' ' : '\n\n';
+        blockSpeechState = isSpeech;
+        if (spec) spec.content = spec.content ? `${spec.content}${sep}${trimmed}` : trimmed;
+        send('sentence', { messageId: blockId, index: idx, text: trimmed, isLast, isSpeech });
         const canSpeak =
           audioEnabled &&
           ttsConn &&
@@ -333,6 +394,7 @@ export function chatsRouter(ctx: AppContext): Router {
           audioQueue.finish(idx, { text: trimmed, path: '' }, emitAudio);
           return;
         }
+        const blockVoice = voiceChar!;
         void (async () => {
           try {
             const audio = await synthesizeCharacterSpeech(ttsConn!, voiceChar!, trimmed, ctx.voiceCache);
@@ -369,7 +431,7 @@ export function chatsRouter(ctx: AppContext): Router {
         streamError = err as Error;
       }
       stream.finish();
-      if (sentences.length === 0) {
+      if (emitted === 0) {
         const message = streamError
           ? streamError.message
           : 'The LLM returned no content. Try again or raise "Max tokens" in the chat settings.';
@@ -378,21 +440,23 @@ export function chatsRouter(ctx: AppContext): Router {
         return;
       }
       await audioQueue.waitIdle();
-      resolveSpeaker();
 
       formatter.finish();
-      const finalMsg: ChatMessage = {
-        id: assistantId,
-        role: 'assistant',
-        speaker: speaker ?? { characterId: null, name: 'Assistant', avatarPath: null, voiceSamplePath: null },
-        content: attributeReply(formatter.text, activeNames).content,
-        audioPath: null,
-        audio: emittedClips,
-        images: [],
-        ts: now(),
-      };
+      const finalBlocks: ChatMessage[] = orderedBlocks.map((id) => {
+        const spec = blockSpecs.get(id)!;
+        return {
+          id,
+          role: 'assistant',
+          speaker: spec.speaker,
+          content: spec.content.trim(),
+          audioPath: null,
+          audio: spec.clips,
+          images: [],
+          ts: now(),
+        };
+      });
       const updated = chats.update(chatWithUser.id, {
-        messages: [...chatWithUser.messages, finalMsg],
+        messages: [...chatWithUser.messages, ...finalBlocks],
       });
       send('done', { chat: updated ?? chats.getOrThrow(chatWithUser.id) });
       res.end();

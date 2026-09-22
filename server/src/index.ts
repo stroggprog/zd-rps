@@ -10,6 +10,7 @@ import { connectionsRouter } from './routes/connections.js';
 import { catalog } from './providers/factory.js';
 import { charactersRouter } from './routes/characters.js';
 import { narratorsRouter } from './routes/narrators.js';
+import { personasRouter } from './routes/personas.js';
 import { lorebooksRouter } from './routes/lorebooks.js';
 import { scenariosRouter } from './routes/scenarios.js';
 import { chatsRouter } from './routes/chats.js';
@@ -38,6 +39,7 @@ async function main() {
   app.use('/api/connections', connectionsRouter(ctx));
   app.use('/api/characters', charactersRouter(ctx));
   app.use('/api/narrators', narratorsRouter(ctx));
+  app.use('/api/personas', personasRouter(ctx));
   app.use('/api/lorebooks', lorebooksRouter(ctx));
   app.use('/api/scenarios', scenariosRouter(ctx));
   app.use('/api/chats', chatsRouter(ctx));
@@ -45,6 +47,7 @@ async function main() {
 
   app.use('/media/characters', express.static(DIR.characters));
   app.use('/media/narrators', express.static(DIR.narrators));
+  app.use('/media/personas', express.static(DIR.personas));
   app.use('/media/audio', express.static(DIR.audio));
   app.use('/media/images', express.static(DIR.images));
 

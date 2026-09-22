@@ -10,11 +10,12 @@ import type {
   Connection,
   Lorebook,
   Narrator,
+  Persona,
   ProviderInfo,
   Scenario,
 } from './lib/types'
 
-export type Overlay = 'none' | 'config' | 'characters' | 'narrators' | 'lorebooks' | 'scenarios' | 'new-chat'
+export type Overlay = 'none' | 'config' | 'characters' | 'narrators' | 'personas' | 'lorebooks' | 'scenarios' | 'new-chat'
 
 export interface ConnectionDefaults {
   defaultLlm: string | null
@@ -27,6 +28,7 @@ export interface AppState {
   connections: Connection[]
   characters: Character[]
   narrators: Narrator[]
+  personas: Persona[]
   lorebooks: Lorebook[]
   scenarios: Scenario[]
   chats: ChatSummary[]
@@ -56,6 +58,7 @@ export interface AppState {
     lorebookIds: string[]
     scenarioId: string | null
     narratorId?: string | null
+    personaId?: string | null
   }) => Promise<Chat>
   deleteChat: (id: string) => Promise<void>
   sendMessage: (content: string, opts?: { audio?: boolean }) => Promise<void>
@@ -96,6 +99,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   })
   const [characters, setCharacters] = useState<Character[]>([])
   const [narrators, setNarrators] = useState<Narrator[]>([])
+  const [personas, setPersonas] = useState<Persona[]>([])
   const [lorebooks, setLorebooks] = useState<Lorebook[]>([])
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [chats, setChats] = useState<ChatSummary[]>([])
@@ -120,11 +124,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshAll = useCallback(async () => {
     try {
-      const [p, c, ch, n, l, s, cs, d] = await Promise.all([
+      const [p, c, ch, n, ps, l, s, cs, d] = await Promise.all([
         api.providers(),
         api.connections.list(),
         api.characters.list(),
         api.narrators.list(),
+        api.personas.list(),
         api.lorebooks.list(),
         api.scenarios.list(),
         api.chats.list(),
@@ -134,6 +139,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setConnections(c)
       setCharacters(ch)
       setNarrators(n)
+      setPersonas(ps)
       setLorebooks(l)
       setScenarios(s)
       setChats(cs)
@@ -200,6 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lorebookIds: string[]
       scenarioId: string | null
       narratorId?: string | null
+      personaId?: string | null
     }) => {
       const created = await api.chats.create(payload)
       await refreshAll()
@@ -237,8 +244,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ts: new Date().toISOString(),
       }
       const streamId = `stream-${Date.now()}`
-      const streamMsg: ChatMessage = {
-        id: streamId,
+      let currentStreamId = streamId
+
+      const placeholderMsg = (id: string): ChatMessage => ({
+        id,
         role: 'assistant',
         speaker: { characterId: null, name: 'Assistant', avatarPath: null, voiceSamplePath: null },
         content: '',
@@ -246,28 +255,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
         audio: [],
         images: [],
         ts: new Date().toISOString(),
-      }
+      })
+
       setChat((prev) =>
         prev
           ? {
               ...prev,
-              chat: { ...prev.chat, messages: [...prev.chat.messages, optimistic, streamMsg] },
+              chat: { ...prev.chat, messages: [...prev.chat.messages, optimistic, placeholderMsg(streamId)] },
             }
           : prev,
       )
 
-      const updateStream = (patch: (m: ChatMessage) => ChatMessage) =>
-        setChat((prev) =>
-          prev
-            ? {
-                ...prev,
-                chat: {
-                  ...prev.chat,
-                  messages: prev.chat.messages.map((m) => (m.id === streamId ? patch(m) : m)),
-                },
-              }
-            : prev,
-        )
+      const updateStream = (patch: (m: ChatMessage) => ChatMessage, msgId?: string | null) =>
+        setChat((prev) => {
+          if (!prev) return prev
+          const target = msgId && prev.chat.messages.some((m) => m.id === msgId) ? msgId : currentStreamId
+          return {
+            ...prev,
+            chat: {
+              ...prev.chat,
+              messages: prev.chat.messages.map((m) => (m.id === target ? patch(m) : m)),
+            },
+          }
+        })
 
       let lastSpeech: boolean | null = null
       try {
@@ -276,19 +286,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
           text,
           opts?.audio ?? audioEnabled,
           {
-            onSpeaker: (name, characterId) =>
-              updateStream((m) => ({ ...m, speaker: { ...m.speaker, name, characterId } })),
-            onSentence: (sentence, isSpeech) => {
+            onSpeaker: (messageId, name, characterId, avatarPath) => {
+              lastSpeech = null
+              if (!messageId) {
+                updateStream((m) => ({ ...m, speaker: { ...m.speaker, name, characterId, avatarPath: avatarPath ?? m.speaker.avatarPath } }))
+                return
+              }
+              currentStreamId = messageId
+              setChat((prev) => {
+                if (!prev) return prev
+                if (prev.chat.messages.some((m) => m.id === messageId)) return prev
+                const msg: ChatMessage = {
+                  id: messageId,
+                  role: 'assistant',
+                  speaker: { characterId: characterId ?? null, name, avatarPath: avatarPath ?? null, voiceSamplePath: null },
+                  content: '',
+                  audioPath: null,
+                  audio: [],
+                  images: [],
+                  ts: new Date().toISOString(),
+                }
+                // If the placeholder bubble is still empty, replace it; otherwise append the new block.
+                const emptyPlaceholder = prev.chat.messages.find((m) => m.id === streamId && !m.content && !m.audio.length)
+                const messages = emptyPlaceholder
+                  ? prev.chat.messages.map((m) => (m.id === streamId ? msg : m))
+                  : [...prev.chat.messages, msg]
+                return { ...prev, chat: { ...prev.chat, messages } }
+              })
+            },
+            onSentence: (messageId, sentence, isSpeech) => {
               const sep = lastSpeech === null ? '' : isSpeech === lastSpeech ? ' ' : '\n\n'
               lastSpeech = isSpeech
               updateStream((m) => ({
                 ...m,
                 content: m.content ? `${m.content}${sep}${sentence}` : sentence,
-              }))
+              }), messageId)
             },
-            onAudio: (clip) => {
-              enqueueAudio(clip.path)
-              updateStream((m) => ({ ...m, audio: [...m.audio, clip] }))
+            onAudio: (messageId, clip) => {
+              if (clip.path) enqueueAudio(clip.path)
+              updateStream((m) => ({ ...m, audio: [...m.audio, clip] }), messageId)
             },
             onDone: (chat) => {
               setChat((prev) => (prev ? { ...prev, chat } : prev))
@@ -380,6 +416,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       connections,
       characters,
       narrators,
+      personas,
       lorebooks,
       scenarios,
       chats,
@@ -416,6 +453,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       connections,
       characters,
       narrators,
+      personas,
       lorebooks,
       scenarios,
       chats,

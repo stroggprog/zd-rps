@@ -18,6 +18,7 @@ export const CONFIG_PATH = process.env.ZD_RPS_CONFIG
 export const DIR = {
   characters: path.join(DATA_DIR, 'characters'),
   narrators: path.join(DATA_DIR, 'narrators'),
+  personas: path.join(DATA_DIR, 'personas'),
   lorebooks: path.join(DATA_DIR, 'lorebooks'),
   scenarios: path.join(DATA_DIR, 'scenarios'),
   chats: path.join(DATA_DIR, 'chats'),

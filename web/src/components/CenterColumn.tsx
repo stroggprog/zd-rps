@@ -50,7 +50,14 @@ export function CenterColumn() {
           return (
             <div key={message.id} className={`message${isUser ? ' user' : ''}`}>
               {message.speaker.avatarPath ? (
-                <img className="avatar" src={message.speaker.avatarPath} alt={message.speaker.name} />
+                <img
+                  className="avatar"
+                  src={message.speaker.avatarPath}
+                  alt={message.speaker.name}
+                  title="View avatar"
+                  style={{ cursor: 'zoom-in' }}
+                  onClick={() => setViewer([message.speaker.avatarPath as string], 0)}
+                />
               ) : (
                 <div className="avatar">{isUser ? 'You' : message.speaker.name.slice(0, 1)}</div>
               )}

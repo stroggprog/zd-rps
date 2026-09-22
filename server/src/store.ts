@@ -1,6 +1,6 @@
 import { readFile, readdir, rm, mkdir, copyFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Character, Chat, Lorebook, MessageAudio, Narrator, Scenario, Stamped } from './types.js';
+import type { Character, Chat, Lorebook, MessageAudio, Narrator, Persona, PersonaGender, Scenario, Stamped } from './types.js';
 import type { Id } from './types.js';
 import { DIR } from './paths.js';
 import { atomicWrite, ensureDir, lookup, now, uuid } from './util.js';
@@ -27,6 +27,7 @@ export function normalizeChat(chat: Chat): Chat {
     lorebookIds: Array.isArray(chat.lorebookIds) ? chat.lorebookIds : [],
     scenarioId: typeof chat.scenarioId === 'string' ? chat.scenarioId : null,
     narratorId: typeof chat.narratorId === 'string' ? chat.narratorId : null,
+    personaId: typeof (chat as { personaId?: unknown }).personaId === 'string' ? (chat as { personaId: Id | null }).personaId : null,
     messages: Array.isArray(chat.messages)
       ? chat.messages.map((m) => ({
           ...m,
@@ -66,6 +67,19 @@ export function normalizeNarrator(narrator: Narrator): Narrator {
     voiceSamplePath: typeof narrator.voiceSamplePath === 'string' ? narrator.voiceSamplePath : null,
     voiceSampleTranscript:
       typeof narrator.voiceSampleTranscript === 'string' ? narrator.voiceSampleTranscript : null,
+  };
+}
+
+const PERSONA_GENDERS: PersonaGender[] = ['male', 'female', 'other'];
+
+export function normalizePersona(persona: Persona): Persona {
+  const gender = (persona as { gender?: unknown }).gender;
+  return {
+    ...persona,
+    name: typeof persona.name === 'string' ? persona.name : '',
+    avatarPath: typeof persona.avatarPath === 'string' ? persona.avatarPath : null,
+    description: typeof persona.description === 'string' ? persona.description : '',
+    gender: PERSONA_GENDERS.includes(gender as PersonaGender) ? (gender as PersonaGender) : 'male',
   };
 }
 
@@ -229,6 +243,7 @@ export class JsonCollection<T extends Stamped> {
 export interface DataStore {
   characters: JsonCollection<Character>;
   narrators: JsonCollection<Narrator>;
+  personas: JsonCollection<Persona>;
   lorebooks: JsonCollection<Lorebook>;
   scenarios: JsonCollection<Scenario>;
   chats: JsonCollection<Chat>;
@@ -238,6 +253,7 @@ export function createStore(): DataStore {
   return {
     characters: new JsonCollection<Character>(DIR.characters, 'character', 'name' as keyof Character, normalizeCharacter),
     narrators: new JsonCollection<Narrator>(DIR.narrators, 'narrator', 'name' as keyof Narrator, normalizeNarrator),
+    personas: new JsonCollection<Persona>(DIR.personas, 'persona', 'name' as keyof Persona, normalizePersona),
     lorebooks: new JsonCollection<Lorebook>(DIR.lorebooks, 'lorebook'),
     scenarios: new JsonCollection<Scenario>(DIR.scenarios, 'scenario'),
     chats: new JsonCollection<Chat>(DIR.chats, 'chat', 'title' as keyof Chat, normalizeChat),
@@ -249,8 +265,26 @@ export async function loadStore(store: DataStore): Promise<void> {
   await Promise.all([
     store.characters.load(),
     store.narrators.load(),
+    store.personas.load(),
     store.lorebooks.load(),
     store.scenarios.load(),
     store.chats.load(),
   ]);
+  if (store.personas.list().length === 0) {
+    store.personas.create({
+      name: 'You',
+      avatarPath: null,
+      description: '',
+      gender: 'male',
+    });
+    console.log('[store] created default persona "You"');
+  }
+}
+
+/** The chat's chosen persona, or the default one, or null when none exists. */
+export function chatPersona(store: DataStore, chat: Chat): Persona | null {
+  const persona = chat.personaId ? store.personas.get(chat.personaId) : undefined;
+  if (persona) return persona;
+  const list = store.personas.list();
+  return list.find((p) => p.name === 'You') ?? list[0] ?? null;
 }

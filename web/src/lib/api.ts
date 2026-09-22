@@ -8,6 +8,7 @@ import type {
   Lorebook,
   MessageAudio,
   Narrator,
+  Persona,
   ProviderInfo,
   Scenario,
   TestResult,
@@ -114,6 +115,20 @@ export const api = {
     removeVoice: (id: string) => http<Narrator>(`/api/narrators/${id}/voice`, { method: 'DELETE' }),
   },
 
+  personas: {
+    list: () => http<Persona[]>('/api/personas'),
+    create: (p: Partial<Persona>) => http<Persona>('/api/personas', jsonInit('POST', p)),
+    update: (id: string, p: Partial<Persona>) =>
+      http<Persona>(`/api/personas/${id}`, jsonInit('PUT', p)),
+    remove: (id: string) => http<void>(`/api/personas/${id}`, { method: 'DELETE' }),
+    uploadAvatar: (id: string, file: File) => {
+      const form = new FormData()
+      form.append('avatar', file)
+      return http<Persona>(`/api/personas/${id}/avatar`, { method: 'POST', body: form })
+    },
+    removeAvatar: (id: string) => http<Persona>(`/api/personas/${id}/avatar`, { method: 'DELETE' }),
+  },
+
   lorebooks: {
     list: () => http<Lorebook[]>('/api/lorebooks'),
     create: (l: Partial<Lorebook>) => http<Lorebook>('/api/lorebooks', jsonInit('POST', l)),
@@ -139,6 +154,7 @@ export const api = {
       lorebookIds: string[]
       scenarioId: string | null
       narratorId?: string | null
+      personaId?: string | null
     }) => http<Chat>('/api/chats', jsonInit('POST', payload)),
     remove: (id: string) => http<void>(`/api/chats/${id}`, { method: 'DELETE' }),
     patch: (id: string, payload: Partial<Chat>) =>
@@ -164,9 +180,14 @@ export const api = {
 }
 
 export interface MessageStreamHandlers {
-  onSpeaker?: (name: string, characterId: string | null) => void
-  onSentence?: (sentence: string, isSpeech: boolean) => void
-  onAudio?: (clip: MessageAudio) => void
+  onSpeaker?: (
+    messageId: string | null,
+    name: string,
+    characterId: string | null,
+    avatarPath: string | null,
+  ) => void
+  onSentence?: (messageId: string | null, sentence: string, isSpeech: boolean) => void
+  onAudio?: (messageId: string | null, clip: MessageAudio) => void
   onDone?: (chat: Chat) => void
 }
 
@@ -213,18 +234,18 @@ function sseMessage(
         }
         switch (event) {
           case 'speaker': {
-            const d = data as { name?: string; characterId?: string | null }
-            if (d.name) handlers.onSpeaker?.(d.name, d.characterId ?? null)
+            const d = data as { messageId?: string | null; name?: string; characterId?: string | null; avatarPath?: string | null }
+            if (d.name) handlers.onSpeaker?.(d.messageId ?? null, d.name, d.characterId ?? null, d.avatarPath ?? null)
             return null
           }
           case 'sentence': {
-            const d = data as { text?: string; isSpeech?: boolean }
-            if (d.text) handlers.onSentence?.(d.text, d.isSpeech ?? false)
+            const d = data as { messageId?: string | null; text?: string; isSpeech?: boolean }
+            if (d.text) handlers.onSentence?.(d.messageId ?? null, d.text, d.isSpeech ?? false)
             return null
           }
           case 'audio': {
-            const clip = data as MessageAudio
-            if (clip && clip.path) handlers.onAudio?.(clip)
+            const d = data as MessageAudio & { messageId?: string | null }
+            if (d && d.path) handlers.onAudio?.(d.messageId ?? null, d)
             return null
           }
           case 'done': {

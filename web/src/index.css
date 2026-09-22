@@ -130,6 +130,12 @@ label {
 .column.left {
   border-right: 1px solid var(--border);
   background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+.column.left .images-block {
+  margin-top: auto !important;
+  padding-top: 24px;
 }
 .column.right {
   border-left: 1px solid var(--border);

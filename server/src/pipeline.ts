@@ -4,6 +4,8 @@ import type {
   Connection,
   LlmMessage,
   Lorebook,
+  Persona,
+  PersonaGender,
   RemovedParticipant,
   Scenario,
 } from './types.js';
@@ -18,6 +20,7 @@ export interface ChatContext {
   removed: RemovedParticipant[];
   lorebooks: Lorebook[];
   scenario: Scenario | null;
+  persona: Persona | null;
 }
 
 export interface Reply {
@@ -25,34 +28,58 @@ export interface Reply {
   content: string;
 }
 
-function substitute(text: string, character: Character): string {
-  return text
-    .replace(/\{\{char\}\}/g, character.name)
-    .replace(/\{\{user\}\}/g, USER_NAME);
+/** The user's display name for the chat: their persona's name, falling back to "User". */
+export function userNameFor(persona: Persona | null): string {
+  return persona && persona.name.trim() ? persona.name.trim() : USER_NAME;
 }
 
-function characterBlock(character: Character): string {
+const GENDER_LABEL: Record<PersonaGender, string> = {
+  male: 'male',
+  female: 'female',
+  other: 'of another gender identity',
+};
+
+function personaBlock(persona: Persona): string {
+  const name = userNameFor(persona);
+  const lines: string[] = [`[The user: ${name}]`];
+  lines.push(`${name} is ${GENDER_LABEL[persona.gender] ?? 'of another gender identity'} and controls this side of the conversation.`);
+  if (persona.description.trim()) lines.push(`About ${name}: ${persona.description.trim()}`);
+  return lines.join('\n');
+}
+
+function substitute(text: string, character: Character, userName: string): string {
+  return text
+    .replace(/\{\{char\}\}/g, character.name)
+    .replace(/\{\{user\}\}/g, userName);
+}
+
+function characterBlock(character: Character, userName: string): string {
   const lines: string[] = [`[Character: ${character.name}]`];
-  if (character.description) lines.push(`Description: ${substitute(character.description, character)}`);
-  if (character.personality) lines.push(`Personality: ${substitute(character.personality, character)}`);
-  if (character.system_prompt) lines.push(`System: ${substitute(character.system_prompt, character)}`);
+  if (character.description) lines.push(`Description: ${substitute(character.description, character, userName)}`);
+  if (character.personality) lines.push(`Personality: ${substitute(character.personality, character, userName)}`);
+  if (character.system_prompt) lines.push(`System: ${substitute(character.system_prompt, character, userName)}`);
   if (character.post_history_instructions) {
-    lines.push(`Post-history instructions: ${substitute(character.post_history_instructions, character)}`);
+    lines.push(`Post-history instructions: ${substitute(character.post_history_instructions, character, userName)}`);
   }
-  if (character.mes_example) lines.push(`Example messages:\n${substitute(character.mes_example, character)}`);
+  if (character.mes_example) lines.push(`Example messages:\n${substitute(character.mes_example, character, userName)}`);
   return lines.join('\n');
 }
 
 export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMessage[] {
   const { chat, activeCharacters, removed, lorebooks, scenario } = ctx;
+  const userName = userNameFor(ctx.persona);
   const names = activeCharacters.map((c) => c.name);
 
   const systemParts: string[] = [];
   systemParts.push(
     `You are running a roleplay chat between multiple characters and the user. ` +
       `The active characters are: ${names.join(', ') || '(none yet)'}. ` +
-      `Active characters may each respond. Speak only as one of the active characters; never speak for ${USER_NAME}.`,
+      `Active characters may each respond. Speak only as one of the active characters; never speak for ${userName}.`,
   );
+  const personaName = userNameFor(ctx.persona);
+  if (ctx.persona && (ctx.persona.description.trim() || (personaName !== USER_NAME && personaName !== 'You'))) {
+    systemParts.push(personaBlock(ctx.persona));
+  }
   if (activeCharacters.length > 1) {
     systemParts.push(`When you reply, start with the speaking character's name followed by a colon, e.g. "${names[0]}: ...".`);
   }
@@ -65,7 +92,7 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMess
       `Mark emphasis with _underscores_, bold with **asterisks**, and bullet points as "* item" with one per line.`,
   );
   for (const character of activeCharacters) {
-    systemParts.push(`${characterBlock(character)}\n`);
+    systemParts.push(`${characterBlock(character, userName)}\n`);
   }
   if (removed.length > 0) {
     systemParts.push(
@@ -87,7 +114,7 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMess
 
   const roleplayText = chat.messages
     .map((m) => {
-      const name = m.speaker.characterId === null ? USER_NAME : m.speaker.name;
+      const name = m.speaker.characterId === null ? userName : m.speaker.name;
       return `${name}: ${m.content}`;
     })
     .join('\n');
@@ -103,7 +130,7 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMess
     const isUser = m.speaker.characterId === null;
     messages.push({
       role: isUser ? 'user' : 'assistant',
-      content: `${isUser ? USER_NAME : m.speaker.name}: ${m.content}`,
+      content: `${isUser ? userName : m.speaker.name}: ${m.content}`,
     });
   }
   return messages;

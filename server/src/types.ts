@@ -26,6 +26,15 @@ export interface Narrator extends Stamped {
   voiceSampleTranscript: string | null;
 }
 
+export type PersonaGender = 'male' | 'female' | 'other';
+
+export interface Persona extends Stamped {
+  name: string;
+  avatarPath: string | null;
+  description: string;
+  gender: PersonaGender;
+}
+
 /** Minimal shape both characters and narrators expose for TTS synthesis. */
 export interface VoiceSubject {
   id: string;
@@ -119,6 +128,7 @@ export interface Chat extends Stamped {
   lorebookIds: Id[];
   scenarioId: Id | null;
   narratorId: Id | null;
+  personaId: Id | null;
   messages: ChatMessage[];
   runtime: ChatRuntime;
 }

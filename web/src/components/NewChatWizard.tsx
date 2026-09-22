@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useApp } from '../store'
 
-const STEPS = ['Characters', 'Narrator (optional)', 'Lorebooks', 'Scenario']
+const STEPS = ['Characters', 'Persona', 'Narrator (optional)', 'Lorebooks', 'Scenario']
 
 export function NewChatWizard() {
-  const { characters: people, narrators, lorebooks, scenarios, closeOverlay, createChat, sending } = useApp()
+  const { characters: people, personas, narrators, lorebooks, scenarios, closeOverlay, createChat, sending } = useApp()
   const [step, setStep] = useState(0)
   const [participantIds, setParticipantIds] = useState<string[]>([])
+  const [personaId, setPersonaId] = useState<string | null>(null)
   const [narratorId, setNarratorId] = useState<string | null>(null)
   const [lorebookIds, setLorebookIds] = useState<string[]>([])
   const [scenarioId, setScenarioId] = useState<string | null>(null)
@@ -20,7 +21,7 @@ export function NewChatWizard() {
   const finish = async () => {
     setCreating(true)
     try {
-      await createChat({ title, participantIds, narratorId, lorebookIds, scenarioId })
+      await createChat({ title, participantIds, personaId, narratorId, lorebookIds, scenarioId })
     } finally {
       setCreating(false)
     }
@@ -67,6 +68,26 @@ export function NewChatWizard() {
 
         {step === 1 && (
           <div className="participant-pick">
+            {personas.map((persona) => (
+              <div
+                key={persona.id}
+                className={`pick-item${personaId === persona.id ? ' selected' : ''}`}
+                onClick={() => setPersonaId(persona.id)}
+              >
+                {persona.avatarPath ? <img src={persona.avatarPath} alt="" /> : <div className="avatar" />}
+                <span className="grow">{persona.name}</span>
+                {persona.description ? <span className="tag">{persona.gender}</span> : null}
+                {personaId === persona.id && <span className="tag">✓</span>}
+              </div>
+            ))}
+            {personas.length === 0 && (
+              <div className="hint">No personas yet — create one under the Personas menu.</div>
+            )}
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="participant-pick">
             {narrators.map((narrator) => (
               <div
                 key={narrator.id}
@@ -91,7 +112,7 @@ export function NewChatWizard() {
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="pick-list">
             {lorebooks.map((book) => (
               <div
@@ -108,7 +129,7 @@ export function NewChatWizard() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div>
             <label>
               Scenario (optional)
@@ -133,7 +154,7 @@ export function NewChatWizard() {
           Back
         </button>
         <div style={{ flex: 1 }} />
-        {step < 3 ? (
+        {step < 4 ? (
           <button className="primary" disabled={!canNext} onClick={() => setStep((s) => s + 1)}>
             Next
           </button>
