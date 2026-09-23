@@ -9,13 +9,14 @@ Multiple characters can be used in each chat, and characters can be added/remove
 ## Features
 
 - **Chats with characters** — add/remove characters mid-chat, per-chat runtime settings (temperature, top-p, max tokens, LLM/TTS connection, instant-reply mode).
+- **Personas** — you are a persona of your own (name, optional image/description, gender) injected into the LLM prompt so characters see who you are; default persona "You" is created automatically, each chat pins a persona at creation.
 - **SillyTavern compatibility** — import `.png` character cards (extracts character, and offers to import the embedded lorebook and scenario), export a card back out with its attached lorebook/scenario.
 - **Lorebooks** — SillyTavern-style keyword-scanning world knowledge, injected into the LLM prompt when relevant.
-- **Scenarios** — reusable opening scenes: system setup + first message + alternate greetings.
-- **Streaming replies** — the LLM reply streams in sentence-sized chunks; each sentence is sent to TTS and played back in order when ready, with a replay chip left under the message.
+- **Scenarios** — reusable opening scenes: system setup + first message + alternate greetings; chats can also carry an ad-hoc scenario written in the new-chat wizard (scenario text required, opening message optional).
+- **Streaming replies** — the LLM reply streams in sentence-sized chunks; each sentence is sent to TTS and played back in order when ready, with replay chips left under the message. When a multi-character reply hands over mid-stream (`Amy: ...`), the reply splits into separate per-speaker bubbles with their own avatars and audio.
 - **Speech vs narration** — dialogue (in double quotes) is spoken by the speaking character's voice, narration by the chat's narrator voice. Paragraph breaks between narration and speech are enforced server-side even when the model ignores the formatting contract, and the live bubble shows the transition as the reply streams.
 - **Narrators** — narrators are their own entity type (managed in the dedicated Narrators editor, separate from characters). Each chat picks one via `narratorId`, and narration is voiced by it (falling back to the character's voice when none is set).
-- **Speech input** — record and transcribe via STT into the input box.
+- **Speech input** — record and transcribe via STT into the input box (push-to-talk hotkey, default Ctrl+M, configurable in Configuration).
 - **Voice cloning** — TTS can clone a character's or narrator's uploaded voice sample; clones are cached per connection.
 
 ## Architecture
@@ -24,7 +25,7 @@ Multiple characters can be used in each chat, and characters can be added/remove
 server/     Express + TypeScript (ESM). API, JSON-file store, provider adapters, LLM pipeline.
 web/        React + Vite + TypeScript (SPA). Three-column chat UI, config/import editors.
 config.json Connections + default LLM/STT/TTS. Auto-created on first run.
-data/       characters/, narrators/, lorebooks/, scenarios/, chats/, media/, voices.json. Auto-created.
+data/       characters/, narrators/, personas/, lorebooks/, scenarios/, chats/, media/, voices.json. Auto-created.
 ```
 
 The server serves the built web app (`web/dist`) plus uploaded media under `/media/*`. It uses Express 5 with a history fallback for the SPA (non-`/api` GETs).
@@ -61,7 +62,7 @@ Notes:
 
 ## Data storage
 
-- All entities are written as JSON: `data/characters/<id>.json`, `data/narrators/<id>.json`, `data/lorebooks/<id>.json`, `data/scenarios/<id>.json`, `data/chats/<id>.json`. Avatars and voice samples live next to their entity (`data/<entity>/<id>/avatar.png`, `voice-sample.wav`); the legacy per-entity `character.json` layout is tolerated and migrated on load.
+- All entities are written as JSON: `data/characters/<id>.json`, `data/narrators/<id>.json`, `data/personas/<id>.json`, `data/lorebooks/<id>.json`, `data/scenarios/<id>.json`, `data/chats/<id>.json`. Avatars and voice samples live next to their entity (`data/<entity>/<id>/avatar.png`, `voice-sample.wav`); the legacy per-entity `character.json` layout is tolerated and migrated on load.
 - TTS output and user images go to `data/media/`.
 - Generated `voices.json` caches cloned voice IDs.
 - Everything uses file-level normalization on load, so stored files from older versions are upgraded smoothly (new fields get defaults).
@@ -77,7 +78,7 @@ Paths are overridable for testing or packaging:
 
 ## API overview
 
-- `CRUD` — `/api/connections`, `/api/characters`, `/api/narrators`, `/api/lorebooks`, `/api/scenarios`, `/api/chats`
+- `CRUD` — `/api/connections`, `/api/characters`, `/api/narrators`, `/api/personas`, `/api/lorebooks`, `/api/scenarios`, `/api/chats`
 - `POST /api/connections/:id/test` — verify + fetch models/voices
 - `POST /api/connections/defaults` — set default LLM/STT/TTS
 - `POST /api/characters/import`, `GET /api/characters/:id/export` — SillyTavern cards
