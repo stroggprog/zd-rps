@@ -115,7 +115,7 @@ export function RightColumn() {
             />
           </label>
           <label>
-            Max tokens
+            Max tokens (returned)
             <input
               type="number"
               min={1}
