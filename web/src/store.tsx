@@ -75,6 +75,8 @@ const Ctx = createContext<AppState | null>(null)
 
 const AUDIO_KEY = 'zd-audio-enabled'
 
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+
 let playChain: Promise<void> = Promise.resolve()
 
 /** Plays an audio URL in strict sequence after any previously queued clip. */
@@ -214,9 +216,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await refreshAll()
       setOverlay('none')
       await selectChat(created.id)
+      const openingAudioPending =
+        created.messages.length > 0 && created.messages[0].content !== '' && created.messages[0].audio.length === 0
+      if (openingAudioPending) {
+        const doAutoPlay = audioEnabled
+        const seen = new Set<string>()
+        void (async () => {
+          let stableCount = 0
+          let lastCount = 0
+          for (let i = 0; i < 60; i++) {
+            await sleep(1000)
+            try {
+              const detail = await api.chats.get(created.id)
+              setChat((prev) => {
+                if (!prev || prev.chat.id !== created.id) return prev
+                // The user may have started the conversation meanwhile — don't clobber.
+                const prevLen = prev.chat.messages.length
+                if (prevLen !== detail.chat.messages.length) return prev
+                return detail
+              })
+              const opening = detail.chat.messages[0]
+              const count = opening?.audio.length ?? 0
+              if (doAutoPlay && opening) {
+                for (const clip of opening.audio) {
+                  if (!seen.has(clip.id) && clip.path) {
+                    seen.add(clip.id)
+                    enqueueAudio(clip.path)
+                  }
+                }
+              }
+              // Keep polling while clips are still arriving, stop shortly after silence.
+              if (count > 0 && count === lastCount) {
+                stableCount += 1
+              } else {
+                stableCount = 0
+              }
+              lastCount = count
+              if (count > 0 && stableCount >= 3) break
+            } catch {
+              break
+            }
+          }
+        })()
+      }
       return created
     },
-    [refreshAll, selectChat],
+    [refreshAll, selectChat, audioEnabled],
   )
 
   const deleteChat = useCallback(

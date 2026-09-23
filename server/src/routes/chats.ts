@@ -190,6 +190,68 @@ export function chatsRouter(ctx: AppContext): Router {
           ttsConnectionId: null,
         },
       });
+
+      // Treat the seeded opening message like a streamed LLM reply: split it
+      // into sentences, attribute speech vs narration (QuotationTracker), and
+      // synthesize with the speaking character's voice / the narrator's voice.
+      // Runs in the background so the chat displays immediately.
+      if (messages.length > 0) {
+        let openingTtsConn: Connection | null = null;
+        try {
+          openingTtsConn = resolveKindConnection('tts', chat.runtime.ttsConnectionId);
+        } catch {
+          openingTtsConn = null;
+        }
+        if (openingTtsConn) {
+          const seed = messages[0];
+          const ttsConnForOpening = openingTtsConn;
+          void (async () => {
+            try {
+              const narratorChar = narratorId ? ctx.store.narrators.get(narratorId) ?? null : null;
+              const parts: { text: string; isSpeech: boolean }[] = [];
+              const quotation = new QuotationTracker();
+              const splitter = new SentenceStream({
+                activeNames: participantIds
+                  .map((pid) => ctx.store.characters.get(pid)?.name)
+                  .filter((n): n is string => Boolean(n)),
+                onSentence: (sentence) => {
+                  const s = sentence.trim();
+                  if (s) parts.push({ text: s, isSpeech: quotation.isSpeech(s) });
+                },
+              });
+              splitter.push(seed.content);
+              splitter.finish();
+
+              const clips: MessageAudio[] = [];
+              for (let i = 0; i < parts.length; i += 1) {
+                const part = parts[i];
+                if (!/[\p{L}\p{N}]/u.test(part.text)) continue;
+                const voiceChar = part.isSpeech ? firstChar : narratorChar ?? firstChar;
+                if (!voiceChar) continue;
+                if (!(voiceChar.voiceSamplePath || ttsConnForOpening.modelOrVoice)) continue;
+                try {
+                  const audio = await synthesizeCharacterSpeech(ttsConnForOpening, voiceChar, part.text, ctx.voiceCache);
+                  await ensureDir(DIR.audio);
+                  const filename = `${seed.id}-${i}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
+                  await fs.writeFile(path.join(DIR.audio, filename), audio);
+                  clips.push({ id: `${seed.id}-${i}`, text: part.text, path: `/media/audio/${filename}`, ts: now() });
+                  // Publish each clip immediately so clients pick them up one by one.
+                  const current = chats.getOrThrow(chat.id);
+                  const updatedMessages = current.messages.map((m) =>
+                    m.id === seed.id ? { ...m, audio: [...clips] } : m,
+                  );
+                  chats.update(chat.id, { messages: updatedMessages });
+                } catch (err) {
+                  console.warn('[opening-tts]', (err as Error).message);
+                }
+              }
+            } catch (err) {
+              console.warn('[opening-tts] background task failed:', (err as Error).message);
+            }
+          })().catch((err) => console.error('[opening-tts] unhandled:', (err as Error).message));
+        }
+      }
+
       res.status(201).json(chat);
     }),
   );
