@@ -53,12 +53,19 @@ export function NewChatWizard() {
         <button onClick={closeOverlay}>✕ Close</button>
       </div>
       <div className="overlay-body">
-        <div className="wizard-steps">
+        <div className="wizard-steps" style={{ alignItems: 'center' }}>
+          <button disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+            ← Back
+          </button>
+          <button className="primary" disabled={!canNext || step >= STEPS.length - 1} onClick={() => setStep((s) => s + 1)}>
+            Next →
+          </button>
           {STEPS.map((label, i) => (
             <span key={label} className={`wizard-step${i === step ? ' active' : ''}`}>
               {i + 1}. {label}
             </span>
           ))}
+          <div style={{ flex: 1 }} />
         </div>
 
         {step === 0 && (
@@ -144,9 +151,11 @@ export function NewChatWizard() {
         )}
 
         {step === 4 && (
-          <div>
-            <label>
-              Scenario (optional)
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 640 }}>
+            <div className="field">
+              <label style={{ marginBottom: 0 }}>
+                Scenario (optional)
+              </label>
               <select
                 value={scenarioId ?? ''}
                 onChange={(e) => {
@@ -161,9 +170,9 @@ export function NewChatWizard() {
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
             {!scenarioId && (
-              <div style={{ marginTop: 12 }}>
+              <div>
                 <div className="row" style={{ marginBottom: 6 }}>
                   <button
                     className={adhoc ? 'toggle on' : 'toggle'}
@@ -173,51 +182,49 @@ export function NewChatWizard() {
                   </button>
                 </div>
                 {adhoc && (
-                  <div>
-                    <label>
-                      Scenario text
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div className="field">
+                      <label style={{ marginBottom: 0 }}>
+                        Scenario text
+                      </label>
                       <textarea
                         rows={4}
                         value={adhocScenario}
                         placeholder="Scene setup the LLM should know about…"
                         onChange={(e) => setAdhocScenario(e.target.value)}
                       />
-                    </label>
-                    <label>
-                      Opening message (optional)
+                    </div>
+                    <div className="field">
+                      <label style={{ marginBottom: 0 }}>
+                        Opening message (optional)
+                      </label>
                       <textarea
                         rows={3}
                         value={adhocOpening}
                         placeholder="First message in the chat, spoken by the first participant"
                         onChange={(e) => setAdhocOpening(e.target.value)}
                       />
-                    </label>
+                    </div>
                   </div>
                 )}
               </div>
             )}
-            <label>
-              Chat title (optional)
+            <div className="field">
+              <label style={{ marginBottom: 0 }}>
+                Chat title (optional)
+              </label>
               <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Leave empty to auto-name" />
-            </label>
+            </div>
           </div>
         )}
       </div>
-      <div className="overlay-foot" style={{ borderTop: '1px solid var(--border)', borderBottom: 'none' }}>
-        <button disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
-          Back
-        </button>
-        <div style={{ flex: 1 }} />
-        {step < 4 ? (
-          <button className="primary" disabled={!canNext} onClick={() => setStep((s) => s + 1)}>
-            Next
-          </button>
-        ) : (
+      {step === STEPS.length - 1 && (
+        <div className="overlay-foot" style={{ justifyContent: 'flex-end', borderBottom: 'none' }}>
           <button className="primary" disabled={creating || sending} onClick={() => void finish()}>
             {creating ? 'Creating…' : 'Create chat'}
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
