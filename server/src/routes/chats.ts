@@ -307,7 +307,11 @@ export function chatsRouter(ctx: AppContext): Router {
 
       for (const add of body.add ?? []) {
         const character = ctx.store.characters.get(add);
-        if (character && !participantIds.includes(add)) participantIds.push(add);
+        if (character && !participantIds.includes(add)) {
+          participantIds.push(add);
+          // Returning a previously removed participant clears their tombstone.
+          removed = removed.filter((r) => r.characterId !== add);
+        }
       }
 
       const removeSet = new Set(body.remove ?? []);
@@ -475,7 +479,8 @@ export function chatsRouter(ctx: AppContext): Router {
         // Multi-character replies: "Name: " prefixes mid-reply hand the reply
         // over to another participant. Strip the prefix from what gets spoken;
         // the block's speaker snapshot carries the attribution instead.
-        const pm = /^([A-Za-z0-9 _.'-]{1,60}):\s*/.exec(trimmed);
+        // Stray emphasis markers ("***") may be glued before the label.
+        const pm = /^\*{0,3}\s*([A-Za-z0-9 _.'-]{1,60}):\s*/.exec(trimmed);
         if (pm) {
           const cand = pm[1].trim();
           const match = activeChars.find((c) => c.name.toLowerCase() === cand.toLowerCase());

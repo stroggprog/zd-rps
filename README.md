@@ -4,11 +4,11 @@ Single-user, localhost roleplay-chat app: a Node/Express middleware that wires L
 
 ## Concept
 
-Multiple characters can be used in each chat, and characters can be added/removed on the fly. Character descriptions and personality are separated from Scenario and Lorebooks, so when starting a chat you can select any characters, any lorebooks (multiple) and any scenario. New lorebooks and Scenarios can be created independantly ready for future use.
+Multiple characters can be used in each chat, and characters can be added/removed on the fly. Character descriptions and personality are separated from Scenario and Lorebooks, so when starting a chat you can select any characters, any lorebooks (multiple) and any scenario. New lorebooks and Scenarios can be created independantly ready for future use. Ad-hoc scenarios can be created on the fly.
 
 ## Features
 
-- **Chats with characters** — add/remove characters mid-chat, per-chat runtime settings (temperature, top-p, max tokens, LLM/TTS connection, instant-reply mode).
+- **Chats with characters** — add/remove characters mid-chat (removed ones get dimmed with a "removed" label and a ＋ button to bring them back), per-chat runtime settings (temperature, top-p, max tokens, LLM/TTS connection, instant-reply mode).
 - **Personas** — you are a persona of your own (name, optional image/description, gender) injected into the LLM prompt so characters see who you are; default persona "You" is created automatically, each chat pins a persona at creation.
 - **SillyTavern compatibility** — import `.png` character cards (extracts character, and offers to import the embedded lorebook and scenario), export a card back out with its attached lorebook/scenario.
 - **Lorebooks** — SillyTavern-style keyword-scanning world knowledge, injected into the LLM prompt when relevant.

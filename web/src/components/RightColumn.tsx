@@ -222,6 +222,14 @@ export function RightColumn() {
             {r.avatarPath ? <img src={r.avatarPath} alt="" /> : <div className="avatar" />}
             <span className="grow">{r.name}</span>
             <span className="tag">removed</span>
+            <button
+              className="icon"
+              title="Return to chat"
+              disabled={busy}
+              onClick={() => void addParticipants([r.characterId])}
+            >
+              ＋
+            </button>
           </div>
         ))}
         <button onClick={() => setShowPicker((s) => !s)}>＋ Add character</button>
