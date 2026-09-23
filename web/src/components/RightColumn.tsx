@@ -34,7 +34,7 @@ export function RightColumn() {
   const { chat, characters, connections, narrators, addParticipants, removeParticipant, setNarrator, patchRuntime, busy, openOverlay } = useApp()
   const [showPicker, setShowPicker] = useState(false)
   const [showNarratorPicker, setShowNarratorPicker] = useState(false)
-  const [open, setOpen] = useState({ runtime: true, scenario: false, lorebooks: false })
+  const [open, setOpen] = useState({ runtime: false, scenario: false, lorebooks: false })
   const toggle = (key: keyof typeof open) => setOpen((s) => ({ ...s, [key]: !s[key] }))
 
   if (!chat) {
