@@ -19,6 +19,7 @@ function sanitize(input: unknown, existing?: Connection): Connection | null {
   if (kind === 'llm' && !['openai-compatible', 'ollama'].includes(provider)) return null;
   if (kind === 'stt' && !['openai-whisper', 'whispercpp'].includes(provider)) return null;
   if (kind === 'tts' && !['elevenlabs', 'cartesia', 'omnivoice', 'dots'].includes(provider)) return null;
+  const rawContext = Number(input.contextTokens);
   return {
     id: existing?.id ?? uuid(),
     name: asString(input.name, existing?.name ?? 'Unnamed connection'),
@@ -30,6 +31,8 @@ function sanitize(input: unknown, existing?: Connection): Connection | null {
     providerOptions: isObject(input.providerOptions)
       ? input.providerOptions
       : (existing?.providerOptions ?? {}),
+    contextTokens:
+      Number.isFinite(rawContext) && rawContext > 0 ? Math.floor(rawContext) : (existing?.contextTokens ?? null),
   };
 }
 

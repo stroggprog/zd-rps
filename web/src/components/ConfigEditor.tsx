@@ -37,6 +37,7 @@ function emptyConnection(): Connection {
     apiKey: '',
     modelOrVoice: '',
     providerOptions: {},
+    contextTokens: null,
   }
 }
 
@@ -63,7 +64,7 @@ export function ConfigEditor() {
   }
 
   const beginEdit = (conn: Connection) => {
-    setDraft({ ...conn, providerOptions: { ...conn.providerOptions } })
+    setDraft({ ...conn, providerOptions: { ...conn.providerOptions }, contextTokens: conn.contextTokens ?? null })
     setTest(null)
   }
 
@@ -283,6 +284,24 @@ export function ConfigEditor() {
                 <span className="hint">This provider exposes no model/voice list.</span>
               )}
             </div>
+
+            {draft.kind === 'llm' && (
+              <div className="field">
+                <label>Context window (tokens)</label>
+                <input
+                  inputMode="numeric"
+                  value={draft.contextTokens ?? ''}
+                  onChange={(e) => {
+                    const v = Number(e.target.value.replace(/[^0-9]/g, ''))
+                    setDraft({ ...draft, contextTokens: e.target.value === '' ? null : Math.max(0, Math.floor(v)) })
+                  }}
+                  placeholder="Leave empty for no trimming"
+                />
+                <span className="hint">
+                  When set, older transcript messages are dropped to fit this budget (e.g. 32768, 131072, 262144).
+                </span>
+              </div>
+            )}
 
             {optionDefs.map((opt) => (
               <div key={opt.key} className={`field${optionDefs.length % 2 === 1 ? ' full' : ''}`}>

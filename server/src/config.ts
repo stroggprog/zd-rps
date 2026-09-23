@@ -18,6 +18,7 @@ export function getConfig(): AppConfig {
 
 function sanitizeConnection(raw: unknown): AppConfig['connections'][number] | null {
   if (!isObject(raw)) return null;
+  const contextTokens = Number(raw.contextTokens);
   return {
     id: asString(raw.id),
     name: asString(raw.name),
@@ -27,6 +28,8 @@ function sanitizeConnection(raw: unknown): AppConfig['connections'][number] | nu
     apiKey: asString(raw.apiKey),
     modelOrVoice: asString(raw.modelOrVoice),
     providerOptions: isObject(raw.providerOptions) ? raw.providerOptions : {},
+    // Optional per-connection context window (tokens) for history trimming.
+    contextTokens: Number.isFinite(contextTokens) && contextTokens > 0 ? Math.floor(contextTokens) : null,
   };
 }
 

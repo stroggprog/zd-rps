@@ -13,6 +13,7 @@ Multiple characters can be used in each chat, and characters can be added/remove
 - **SillyTavern compatibility** — import `.png` character cards (extracts character, and offers to import the embedded lorebook and scenario), export a card back out with its attached lorebook/scenario.
 - **Lorebooks** — SillyTavern-style keyword-scanning world knowledge, injected into the LLM prompt when relevant.
 - **Scenarios** — reusable opening scenes: system setup + first message + alternate greetings; chats can also carry an ad-hoc scenario written in the new-chat wizard (scenario text required, opening message optional).
+- **Context-window trimming** — LLM connections get an optional context-window budget (tokens) in Configuration; when the transcript outgrows it, the oldest history is dropped to fit (generation tokens reserved, a note added to the prompt) instead of erroring out.
 - **Streaming replies** — the LLM reply streams in sentence-sized chunks; each sentence is sent to TTS and played back in order when ready, with replay chips left under the message. When a multi-character reply hands over mid-stream (`Amy: ...`), the reply splits into separate per-speaker bubbles with their own avatars and audio.
 - **Speech vs narration** — dialogue (in double quotes) is spoken by the speaking character's voice, narration by the chat's narrator voice. Paragraph breaks between narration and speech are enforced server-side even when the model ignores the formatting contract, and the live bubble shows the transition as the reply streams.
 - **Narrators** — narrators are their own entity type (managed in the dedicated Narrators editor, separate from characters). Each chat picks one via `narratorId`, and narration is voiced by it (falling back to the character's voice when none is set).
@@ -58,6 +59,7 @@ Connections live in `config.json` and are edited from the web UI. Each connectio
 Notes:
 
 - `openai-compatible` appends `/v1` automatically; model list comes from `/v1/models`.
+- LLM connections can optionally limit the context window (**Context window (tokens)**); with it set, older chat history is trimmed to `contextTokens − maxTokens` estimated tokens. Leave empty to send full history every turn.
 - `ollama` uses `/api/tags` for models and supports `think: false` (the chat's **Instant replies (no thinking)** toggle) so reasoning models reply without spending their generation budget on a CoT block.
 - Voice cloning uses the character's uploaded voice sample; connections without cloning support pass it as reference audio.
 

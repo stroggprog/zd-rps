@@ -126,6 +126,12 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMess
 
   const messages: LlmMessage[] = [system];
   const tail = historyTail > 0 ? chat.messages.slice(-historyTail) : chat.messages;
+  if (historyTail > 0 && historyTail < chat.messages.length) {
+    system.content +=
+      `\n\nNote: the transcript has been trimmed to fit the context window; ` +
+      `the earliest exchanges (about ${chat.messages.length - historyTail} messages) are omitted. ` +
+      `You may still reference them generically, but rely on what you can see.`;
+  }
   for (const m of tail) {
     const isUser = m.speaker.characterId === null;
     messages.push({
@@ -134,6 +140,30 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMess
     });
   }
   return messages;
+}
+
+/** Conservative token estimate; ~3.2 chars per token keeps numeric headroom. */
+export function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 3.2);
+}
+
+/**
+ * How many trailing history messages fit the context window:
+ * budget = contextTokens - generation budget, walking history backwards,
+ * always keeping at least the last 2 messages.
+ */
+export function historyTailFor(chat: Chat, contextTokens: number, maxTokens: number): number {
+  const budget = contextTokens - maxTokens;
+  if (budget <= 0) return Math.min(2, chat.messages.length);
+  let used = 0;
+  let tail = 0;
+  for (let i = chat.messages.length - 1; i >= 0; i -= 1) {
+    const m = chat.messages[i];
+    used += estimateTokens(`${m.speaker.name}: ${m.content}`);
+    if (used > budget) break;
+    tail += 1;
+  }
+  return Math.min(Math.max(tail, 2), chat.messages.length);
 }
 
 const NAME_PREFIX = /^([A-Za-z0-9 _.'-]{1,60}):\s*(.+)$/s;

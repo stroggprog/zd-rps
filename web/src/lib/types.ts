@@ -147,6 +147,8 @@ export interface Connection {
   apiKey: string
   modelOrVoice: string
   providerOptions: Record<string, unknown>
+  /** Context window budget in tokens for LLM connections; history is trimmed to fit. */
+  contextTokens: number | null
 }
 
 export interface ProviderOptionDef {

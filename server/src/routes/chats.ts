@@ -15,7 +15,7 @@ import type {
 } from '../types.js';
 import { DIR } from '../paths.js';
 import { getConfig } from '../config.js';
-import { buildLlmMessages, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
+import { buildLlmMessages, historyTailFor, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
 import { chatPersona } from '../store.js';
 import { synthesizeCharacterSpeech, audioExt } from '../ttsService.js';
 import { SentenceStream } from '../streaming.js';
@@ -391,6 +391,11 @@ export function chatsRouter(ctx: AppContext): Router {
         .filter((b) => b !== undefined);
       const scenario = scenarioFor(ctx, chatWithUser);
 
+      // Optional per-connection context window: trim older history to fit.
+      const historyTail = llmConn.contextTokens
+        ? historyTailFor(chatWithUser, llmConn.contextTokens, chatWithUser.runtime.maxTokens)
+        : 0;
+
       const messages = buildLlmMessages(
         {
           chat: chatWithUser,
@@ -400,7 +405,7 @@ export function chatsRouter(ctx: AppContext): Router {
           scenario,
           persona: chatPersona(ctx.store, chatWithUser),
         },
-        0,
+        historyTail,
       );
 
       res.setHeader('Content-Type', 'text/event-stream');
