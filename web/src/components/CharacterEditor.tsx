@@ -258,7 +258,7 @@ export function CharacterEditor() {
                     <div className="field">
                       <label>Voice sample (WAV)</label>
                       {activeCharacter?.voiceSamplePath && (
-                        <audio src={activeCharacter.voiceSamplePath} controls style={{ width: '100%' }} />
+                        <audio src={`${activeCharacter.voiceSamplePath}?v=${activeCharacter.updated}`} controls style={{ width: '100%' }} />
                       )}
                       <div className="row">
                         <input ref={voiceInput} type="file" accept="audio/wav,.wav,audio/*" />

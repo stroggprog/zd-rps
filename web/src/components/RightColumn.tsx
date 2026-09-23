@@ -163,7 +163,7 @@ export function RightColumn() {
             ✕
           </button>
           {narrator.voiceSamplePath && (
-            <audio src={narrator.voiceSamplePath} controls style={{ width: 40, height: 28, marginLeft: 6 }} />
+            <audio src={`${narrator.voiceSamplePath}?v=${narrator.updated}`} controls style={{ width: 40, height: 28, marginLeft: 6 }} />
           )}
         </div>
       ) : (

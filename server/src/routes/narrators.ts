@@ -117,6 +117,7 @@ export function narratorsRouter(ctx: AppContext): Router {
       const file = (req.files as Express.Multer.File[] | undefined)?.[0] ?? (req.file as Express.Multer.File | undefined);
       if (!file) throw new ApiError('Expected a voice sample file field', 400);
       await writeFile(narrator.id, 'voice-sample.wav', file.buffer);
+      ctx.voiceCache.invalidate(narrator.id);
       const transcript = req.body && typeof req.body.transcript === 'string' ? req.body.transcript : '';
       res.json(
         narrators.update(narrator.id, {
@@ -132,6 +133,7 @@ export function narratorsRouter(ctx: AppContext): Router {
     asyncHandler(async (req, res) => {
       const narrator = narrators.getOrThrow(idParam(req));
       await fs.rm(path.join(DIR.narrators, narrator.id, 'voice-sample.wav'), { force: true });
+      ctx.voiceCache.invalidate(narrator.id);
       res.json(
         narrators.update(narrator.id, { voiceSamplePath: null, voiceSampleTranscript: null }),
       );

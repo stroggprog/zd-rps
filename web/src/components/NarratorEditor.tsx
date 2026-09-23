@@ -164,7 +164,7 @@ export function NarratorEditor() {
                 <div className="field full">
                   <label>Voice sample (WAV)</label>
                   {activeNarrator?.voiceSamplePath && (
-                    <audio src={activeNarrator.voiceSamplePath} controls style={{ width: '100%' }} />
+                    <audio src={`${activeNarrator.voiceSamplePath}?v=${activeNarrator.updated}`} controls style={{ width: '100%' }} />
                   )}
                   <div className="row">
                     <input ref={voiceInput} type="file" accept="audio/wav,.wav,audio/*" />

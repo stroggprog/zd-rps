@@ -11,6 +11,8 @@ interface VoiceCacheEntry {
 export interface VoiceCache {
   get(connId: string, charId: string): VoiceCacheEntry | undefined;
   set(connId: string, charId: string, entry: VoiceCacheEntry): void;
+  /** Drop all cached clones for a subject (e.g. after its voice sample changed). */
+  invalidate(charId: string): void;
   flush(): Promise<void>;
 }
 
@@ -48,6 +50,15 @@ export async function createVoiceCache(): Promise<VoiceCache> {
     set(connId, charId, entry) {
       map.set(`${connId}:${charId}`, entry);
       dirty = true;
+      void flush();
+    },
+    invalidate(charId) {
+      for (const key of [...map.keys()]) {
+        if (key.endsWith(`:${charId}`)) {
+          map.delete(key);
+          dirty = true;
+        }
+      }
       void flush();
     },
     flush,

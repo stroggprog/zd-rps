@@ -45,9 +45,17 @@ async function main() {
   app.use('/api/chats', chatsRouter(ctx));
   app.use('/api/audio', audioRouter(ctx));
 
-  app.use('/media/characters', express.static(DIR.characters));
-  app.use('/media/narrators', express.static(DIR.narrators));
-  app.use('/media/personas', express.static(DIR.personas));
+  const mediaNoCache = {
+    etag: true,
+    setHeaders: (res: express.Response) => {
+      // Avatars/voice samples are replaced in place at the same URL (editors,
+      // TTS reference playback) — force revalidation so updated files are used.
+      res.setHeader('Cache-Control', 'no-cache');
+    },
+  };
+  app.use('/media/characters', express.static(DIR.characters, mediaNoCache));
+  app.use('/media/narrators', express.static(DIR.narrators, mediaNoCache));
+  app.use('/media/personas', express.static(DIR.personas, mediaNoCache));
   app.use('/media/audio', express.static(DIR.audio));
   app.use('/media/images', express.static(DIR.images));
 
