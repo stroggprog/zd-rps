@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { api } from '../lib/api'
+import { comboFromEvent, getSttHotkey } from '../lib/hotkey'
 
 interface RecorderState {
   recording: boolean
@@ -73,11 +74,24 @@ export function BottomBar() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false)
+      if (e.key === 'Escape') {
+        setMenuOpen(false)
+        return
+      }
+      if (e.repeat) return
+      // Toggle push-to-talk with the configurable STT hotkey (default Ctrl+M).
+      if (e.ctrlKey || e.altKey || e.metaKey) {
+        const active = comboFromEvent(e)
+        if (active && active === getSttHotkey() && sttConfigured && !transcribing) {
+          e.preventDefault()
+          if (recorder.recording) void flushMic()
+          else void recorder.start().catch((err) => setError((err as Error).message))
+        }
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  })
 
   const startNewChat = () => {
     setMenuOpen(false)

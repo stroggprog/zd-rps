@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../store'
 import { api } from '../lib/api'
+import { comboFromEvent, getSttHotkey, setSttHotkey } from '../lib/hotkey'
 import type {
   Connection,
   ConnectionKind,
@@ -43,6 +44,7 @@ export function ConfigEditor() {
   const { providers, connections, closeOverlay, refreshAll, setError, defaults, setConnectionDefault } = useApp()
   const [draft, setDraft] = useState<Connection | null>(null)
   const [saving, setSaving] = useState(false)
+  const [sttHotkey, setSttHotkeyState] = useState<string>(() => getSttHotkey())
   const [test, setTest] = useState<TestResult | null>(null)
   const [testing, setTesting] = useState(false)
 
@@ -150,6 +152,36 @@ export function ConfigEditor() {
               </div>
             </div>
           ))}
+        </div>
+
+        <h3 style={{ marginTop: 28 }}>Hotkeys</h3>
+        <div className="field" style={{ maxWidth: 320 }}>
+          <label>Microphone / STT key</label>
+          <div className="row">
+            <input
+              className="grow"
+              readOnly
+              value={sttHotkey !== '__capturing__' ? sttHotkey : ''}
+              placeholder={sttHotkey === '__capturing__' ? 'Press key combination…' : sttHotkey}
+              onKeyDown={(e) => {
+                if (sttHotkey !== '__capturing__') return
+                e.preventDefault()
+                const combo = comboFromEvent(e)
+                if (combo) {
+                  setSttHotkey(combo)
+                  setSttHotkeyState(combo)
+                }
+              }}
+            />
+            <button
+              onClick={() => setSttHotkeyState(sttHotkey === '__capturing__' ? getSttHotkey() : '__capturing__')}
+            >
+              {sttHotkey === '__capturing__' ? 'Cancel' : 'Change'}
+            </button>
+          </div>
+          <span className="hint" style={{ padding: 0 }}>
+            Default: Ctrl+M. Toggle push-to-talk anywhere; press again to stop and transcribe.
+          </span>
         </div>
 
         <h3 style={{ marginTop: 28 }}>Connection editor</h3>
