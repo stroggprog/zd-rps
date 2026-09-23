@@ -153,6 +153,7 @@ export const api = {
       participantIds: string[]
       lorebookIds: string[]
       scenarioId: string | null
+      scenarioInline?: { name?: string; scenario: string; first_mes: string } | null
       narratorId?: string | null
       personaId?: string | null
     }) => http<Chat>('/api/chats', jsonInit('POST', payload)),

@@ -11,6 +11,9 @@ export function NewChatWizard() {
   const [narratorId, setNarratorId] = useState<string | null>(null)
   const [lorebookIds, setLorebookIds] = useState<string[]>([])
   const [scenarioId, setScenarioId] = useState<string | null>(null)
+  const [adhoc, setAdhoc] = useState(false)
+  const [adhocScenario, setAdhocScenario] = useState('')
+  const [adhocOpening, setAdhocOpening] = useState('')
   const [title, setTitle] = useState('')
   const [creating, setCreating] = useState(false)
 
@@ -21,7 +24,18 @@ export function NewChatWizard() {
   const finish = async () => {
     setCreating(true)
     try {
-      await createChat({ title, participantIds, personaId, narratorId, lorebookIds, scenarioId })
+      await createChat({
+        title,
+        participantIds,
+        personaId,
+        narratorId,
+        lorebookIds,
+        scenarioId,
+        scenarioInline:
+          adhoc && adhocScenario.trim()
+            ? { scenario: adhocScenario, first_mes: adhocOpening }
+            : null,
+      })
     } finally {
       setCreating(false)
     }
@@ -133,7 +147,13 @@ export function NewChatWizard() {
           <div>
             <label>
               Scenario (optional)
-              <select value={scenarioId ?? ''} onChange={(e) => setScenarioId(e.target.value || null)}>
+              <select
+                value={scenarioId ?? ''}
+                onChange={(e) => {
+                  setScenarioId(e.target.value || null)
+                  if (e.target.value) setAdhoc(false)
+                }}
+              >
                 <option value="">None</option>
                 {scenarios.map((scenario) => (
                   <option key={scenario.id} value={scenario.id}>
@@ -142,6 +162,40 @@ export function NewChatWizard() {
                 ))}
               </select>
             </label>
+            {!scenarioId && (
+              <div style={{ marginTop: 12 }}>
+                <div className="row" style={{ marginBottom: 6 }}>
+                  <button
+                    className={adhoc ? 'toggle on' : 'toggle'}
+                    onClick={() => setAdhoc(!adhoc)}
+                  >
+                    {adhoc ? '✓ Ad-hoc scenario' : '＋ Write an ad-hoc scenario'}
+                  </button>
+                </div>
+                {adhoc && (
+                  <div>
+                    <label>
+                      Scenario text
+                      <textarea
+                        rows={4}
+                        value={adhocScenario}
+                        placeholder="Scene setup the LLM should know about…"
+                        onChange={(e) => setAdhocScenario(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Opening message (optional)
+                      <textarea
+                        rows={3}
+                        value={adhocOpening}
+                        placeholder="First message in the chat, spoken by the first participant"
+                        onChange={(e) => setAdhocOpening(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
             <label>
               Chat title (optional)
               <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Leave empty to auto-name" />

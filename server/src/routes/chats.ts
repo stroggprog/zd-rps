@@ -10,11 +10,12 @@ import type {
   Id,
   MessageAudio,
   Narrator,
+  Scenario,
   SpeakerSnapshot,
 } from '../types.js';
 import { DIR } from '../paths.js';
 import { getConfig } from '../config.js';
-import { buildLlmMessages, streamLlm, USER_NAME } from '../pipeline.js';
+import { buildLlmMessages, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
 import { chatPersona } from '../store.js';
 import { synthesizeCharacterSpeech, audioExt } from '../ttsService.js';
 import { SentenceStream } from '../streaming.js';
@@ -33,8 +34,25 @@ function resolveKindConnection(kind: 'llm' | 'stt' | 'tts', runtimeValue: Id | n
   return conn;
 }
 
-function listSummary(ctx: AppContext, chat: Chat) {
-  return {
+/** The chat's scenario: library entity when referenced, otherwise its ad-hoc inline one. */
+function scenarioFor(ctx: AppContext, chat: Chat): Scenario | null {
+  if (chat.scenarioId) return ctx.store.scenarios.get(chat.scenarioId) ?? null;
+  if (chat.scenarioInline) {
+    return {
+      id: 'inline',
+      name: chat.scenarioInline.name || 'Ad-hoc scenario',
+      description: '',
+      scenario: chat.scenarioInline.scenario,
+      first_mes: chat.scenarioInline.first_mes,
+      alternate_greetings: [],
+      created: chat.created,
+      updated: chat.updated,
+    };
+  }
+  return null;
+}
+
+function listSummary(ctx: AppContext, chat: Chat) {  return {
     id: chat.id,
     title: chat.title,
     updated: chat.updated,
@@ -71,7 +89,7 @@ export function chatsRouter(ctx: AppContext): Router {
         lorebooks: chat.lorebookIds
           .map((bid) => ctx.store.lorebooks.get(bid))
           .filter((b) => b !== undefined),
-        scenario: chat.scenarioId ? ctx.store.scenarios.get(chat.scenarioId) ?? null : null,
+        scenario: scenarioFor(ctx, chat),
         narrator,
         persona: chatPersona(ctx.store, chat),
       });
@@ -86,6 +104,7 @@ export function chatsRouter(ctx: AppContext): Router {
         participantIds?: Id[];
         lorebookIds?: Id[];
         scenarioId?: Id | null;
+        scenarioInline?: { name?: string; scenario?: string; first_mes?: string } | null;
         narratorId?: Id | null;
         personaId?: Id | null;
       }>(req);
@@ -102,6 +121,49 @@ export function chatsRouter(ctx: AppContext): Router {
         body.personaId && ctx.store.personas.exists(body.personaId)
           ? ctx.store.personas.get(body.personaId) ?? null
           : personaList.find((p) => p.name === 'You') ?? personaList[0] ?? null;
+      const scenario = scenarioId ? ctx.store.scenarios.get(scenarioId) ?? null : null;
+      const firstChar = participantIds.length > 0 ? ctx.store.characters.get(participantIds[0]) ?? null : null;
+      const userName = persona?.name ?? USER_NAME;
+
+      // Ad-hoc scenario: only when no library scenario was chosen.
+      const inlineScenario = !scenario && body.scenarioInline && typeof body.scenarioInline.scenario === 'string' && body.scenarioInline.scenario.trim()
+        ? {
+            name: typeof body.scenarioInline.name === 'string' && body.scenarioInline.name.trim() ? body.scenarioInline.name.trim() : 'Ad-hoc scenario',
+            scenario: body.scenarioInline.scenario.trim(),
+            first_mes: typeof body.scenarioInline.first_mes === 'string' ? body.scenarioInline.first_mes : '',
+          }
+        : null;
+      const scenarioName = scenario?.name ?? inlineScenario?.name ?? 'Ad-hoc scenario';
+      const scenarioText = scenario?.scenario ?? inlineScenario?.scenario ?? '';
+      const scenarioOpening = scenario?.first_mes ?? inlineScenario?.first_mes ?? '';
+
+      // Seed the chat with the scenario's opening message, spoken by the first
+      // participant so it behaves like a normal LLM message (speaker, avatar).
+      const messages: ChatMessage[] = [];
+      if (scenarioOpening) {
+        const content = scenarioOpening
+          .replace(/\{\{char\}\}/g, firstChar?.name ?? 'Assistant')
+          .replace(/\{\{user\}\}/g, userNameFor(persona))
+          .trim();
+        if (content) {
+          messages.push({
+            id: uuid(),
+            role: 'assistant',
+            speaker: {
+              characterId: firstChar?.id ?? null,
+              name: firstChar?.name ?? 'Assistant',
+              avatarPath: firstChar?.avatarPath ?? null,
+              voiceSamplePath: null,
+            },
+            content,
+            audioPath: null,
+            audio: [],
+            images: [],
+            ts: now(),
+          });
+        }
+      }
+
       const chat = chats.create({
         title: asString(
           body.title,
@@ -114,9 +176,10 @@ export function chatsRouter(ctx: AppContext): Router {
         removedParticipants: [],
         lorebookIds,
         scenarioId,
+        scenarioInline: inlineScenario,
         narratorId,
         personaId: persona?.id ?? null,
-        messages: [],
+        messages: messages.length > 0 ? messages : [],
         runtime: {
           temperature: 0.8,
           topP: 0.95,
@@ -260,7 +323,7 @@ export function chatsRouter(ctx: AppContext): Router {
       const lorebooks = chatWithUser.lorebookIds
         .map((bid) => ctx.store.lorebooks.get(bid))
         .filter((b) => b !== undefined);
-      const scenario = chatWithUser.scenarioId ? ctx.store.scenarios.get(chatWithUser.scenarioId) ?? null : null;
+      const scenario = scenarioFor(ctx, chatWithUser);
 
       const messages = buildLlmMessages(
         {

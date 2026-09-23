@@ -121,12 +121,20 @@ export interface ChatRuntime {
   ttsConnectionId: Id | null;
 }
 
+/** Ad-hoc scenario attached directly to a chat instead of the shared library. */
+export interface InlineScenario {
+  name: string;
+  scenario: string;
+  first_mes: string;
+}
+
 export interface Chat extends Stamped {
   title: string;
   participantIds: Id[];
   removedParticipants: RemovedParticipant[];
   lorebookIds: Id[];
   scenarioId: Id | null;
+  scenarioInline: InlineScenario | null;
   narratorId: Id | null;
   personaId: Id | null;
   messages: ChatMessage[];

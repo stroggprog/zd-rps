@@ -57,6 +57,7 @@ export interface AppState {
     participantIds: string[]
     lorebookIds: string[]
     scenarioId: string | null
+    scenarioInline?: { name?: string; scenario: string; first_mes: string } | null
     narratorId?: string | null
     personaId?: string | null
   }) => Promise<Chat>
@@ -205,6 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       participantIds: string[]
       lorebookIds: string[]
       scenarioId: string | null
+      scenarioInline?: { name?: string; scenario: string; first_mes: string } | null
       narratorId?: string | null
       personaId?: string | null
     }) => {

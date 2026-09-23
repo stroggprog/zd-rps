@@ -35,6 +35,12 @@ export interface Persona extends Stamped {
   gender: PersonaGender
 }
 
+export interface InlineScenario {
+  name: string
+  scenario: string
+  first_mes: string
+}
+
 export interface LoreEntry {
   id: Id
   keys: string[]
@@ -119,6 +125,7 @@ export interface Chat extends Stamped {
   removedParticipants: RemovedParticipant[]
   lorebookIds: Id[]
   scenarioId: Id | null
+  scenarioInline: InlineScenario | null
   narratorId: Id | null
   personaId: Id | null
   messages: ChatMessage[]

@@ -18,6 +18,20 @@ const DEFAULT_RUNTIME = {
   ttsConnectionId: null,
 } satisfies Chat['runtime'];
 
+/** Accepts an inline ad-hoc scenario attached to a chat; tolerant of bad shapes. */
+function normalizeInlineScenario(chat: Chat): Chat['scenarioInline'] {
+  const raw = (chat as { scenarioInline?: unknown }).scenarioInline;
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as { name?: unknown; scenario?: unknown; first_mes?: unknown };
+  const scenario = typeof obj.scenario === 'string' ? obj.scenario : '';
+  if (!scenario.trim()) return null;
+  return {
+    name: typeof obj.name === 'string' && obj.name.trim() ? obj.name : 'Ad-hoc scenario',
+    scenario,
+    first_mes: typeof obj.first_mes === 'string' ? obj.first_mes : '',
+  };
+}
+
 export function normalizeChat(chat: Chat): Chat {
   return {
     ...chat,
@@ -26,6 +40,7 @@ export function normalizeChat(chat: Chat): Chat {
     removedParticipants: Array.isArray(chat.removedParticipants) ? chat.removedParticipants : [],
     lorebookIds: Array.isArray(chat.lorebookIds) ? chat.lorebookIds : [],
     scenarioId: typeof chat.scenarioId === 'string' ? chat.scenarioId : null,
+    scenarioInline: normalizeInlineScenario(chat),
     narratorId: typeof chat.narratorId === 'string' ? chat.narratorId : null,
     personaId: typeof (chat as { personaId?: unknown }).personaId === 'string' ? (chat as { personaId: Id | null }).personaId : null,
     messages: Array.isArray(chat.messages)
