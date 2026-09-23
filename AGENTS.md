@@ -2,6 +2,7 @@
 
 ## Working rules
 - Keep responses concise unless the user asks otherwise.
+- Always keep `AGENTS.md` and `README.md` up to date as the app evolves; update, then commit+push right after a feature lands.
 - In planning mode: ask clarifying questions; never assume design, tech stack, or features.
 - The user runs `npm run dev` themselves. Do not start/stop their dev server; use separate ports + temp data for smoke tests (below).
 - Do not modify `data/` or `config.json` during testing — they are the user's live state.
