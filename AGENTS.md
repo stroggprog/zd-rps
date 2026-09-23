@@ -45,6 +45,6 @@
 - Browser autoplay of streamed audio requires a prior user gesture (sending a message or creating a chat counts).
 - RightColumn's "Instant replies (no thinking)" maps to `runtime.disableThinking`.
 - STT hotkey: configurable (default Ctrl+M), stored in localStorage key `zd-hotkey-stt`; capture editor lives in the Configuration overlay (`web/src/lib/hotkey.ts`). It toggles push-to-talk like the 🎙 button.
-- Chats in the left panel have a hover-reveal ✕ delete button; personnel avatars clicked in chat open enlarged in the left-column image viewer (bottom of the column).
+- Chats in the left panel have a hover-reveal ✕ delete button; the hamburger menu also has Start New Chat / Close Current Chat (deselect; chat persists in the list) / Delete Current Chat. Personnel avatars clicked in chat open enlarged in the left-column image viewer (bottom of the column).
 - The new-chat wizard is 5 steps (Characters → Persona → Narrator (optional) → Lorebooks → Scenario) with fixed top-left Back/Next; the scenario step supports writing an ad-hoc inline scenario.
 - TopBar "Print" opens the `'print'` overlay (`web/src/components/PrintChat.tsx`): searchable chat list → new window with a static print-styled HTML transcript (HTML-escaped, `window.print()` on load). It bypasses the SPA and needs pop-up permission.

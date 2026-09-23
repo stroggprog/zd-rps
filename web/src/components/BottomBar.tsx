@@ -41,7 +41,7 @@ function useRecorder() {
 }
 
 export function BottomBar() {
-  const { selectedChatId, connections, sending, sendMessage, openOverlay, deleteChat, setError } = useApp()
+  const { selectedChatId, connections, sending, sendMessage, openOverlay, deleteChat, selectChat, setError } = useApp()
   const [menuOpen, setMenuOpen] = useState(false)
   const [text, setText] = useState('')
   const [transcribing, setTranscribing] = useState(false)
@@ -98,6 +98,11 @@ export function BottomBar() {
     openOverlay('new-chat')
   }
 
+  const closeCurrent = () => {
+    setMenuOpen(false)
+    void selectChat(null)
+  }
+
   const deleteCurrent = async () => {
     setMenuOpen(false)
     if (!selectedChatId) return
@@ -110,6 +115,9 @@ export function BottomBar() {
       {menuOpen && (
         <div className="menu-pop">
           <button onClick={startNewChat}>Start New Chat</button>
+          <button onClick={closeCurrent} disabled={!selectedChatId}>
+            Close Current Chat
+          </button>
           <button onClick={deleteCurrent} disabled={!selectedChatId} className="danger">
             Delete Current Chat
           </button>
