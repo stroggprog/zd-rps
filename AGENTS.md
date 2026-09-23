@@ -46,3 +46,4 @@
 - STT hotkey: configurable (default Ctrl+M), stored in localStorage key `zd-hotkey-stt`; capture editor lives in the Configuration overlay (`web/src/lib/hotkey.ts`). It toggles push-to-talk like the 🎙 button.
 - Chats in the left panel have a hover-reveal ✕ delete button; personnel avatars clicked in chat open enlarged in the left-column image viewer (bottom of the column).
 - The new-chat wizard is 5 steps (Characters → Persona → Narrator (optional) → Lorebooks → Scenario) with fixed top-left Back/Next; the scenario step supports writing an ad-hoc inline scenario.
+- TopBar "Print" opens the `'print'` overlay (`web/src/components/PrintChat.tsx`): searchable chat list → new window with a static print-styled HTML transcript (HTML-escaped, `window.print()` on load). It bypasses the SPA and needs pop-up permission.

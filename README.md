@@ -18,6 +18,7 @@ Multiple characters can be used in each chat, and characters can be added/remove
 - **Narrators** — narrators are their own entity type (managed in the dedicated Narrators editor, separate from characters). Each chat picks one via `narratorId`, and narration is voiced by it (falling back to the character's voice when none is set).
 - **Speech input** — record and transcribe via STT into the input box (push-to-talk hotkey, default Ctrl+M, configurable in Configuration).
 - **Voice cloning** — TTS can clone a character's or narrator's uploaded voice sample; clones are cached per connection.
+- **Print/PDF** — a Print button lists chats (searchable); picking one opens a printable transcript window (title, metadata, speaker-name paragraphs) with the browser's print dialog for saving as PDF.
 
 ## Architecture
 
