@@ -28,7 +28,8 @@ function chatToHtml(title: string, detail: Awaited<ReturnType<typeof api.chats.g
   if (persona) meta.push(`Persona: ${escapeHtml(persona.name)}`)
   if (narrator) meta.push(`Narrator: ${escapeHtml(narrator.name)}`)
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
-    body { font-family: Georgia, serif; color: #111; margin: 32px auto; max-width: 760px; line-height: 1.5; }
+    html { background: #fff; }
+    body { font-family: Georgia, serif; background: #fff; color: #111; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 32px auto; max-width: 760px; line-height: 1.5; }
     h1 { font-size: 22px; margin: 0 0 4px; }
     .meta { color: #555; font-size: 13px; margin-bottom: 24px; }
     .msg { margin: 0 0 20px; break-inside: avoid; }
