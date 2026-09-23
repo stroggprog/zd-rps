@@ -15,7 +15,7 @@ import type {
   Scenario,
 } from './lib/types'
 
-export type Overlay = 'none' | 'config' | 'characters' | 'narrators' | 'personas' | 'lorebooks' | 'scenarios' | 'new-chat'
+export type Overlay = 'none' | 'config' | 'characters' | 'narrators' | 'personas' | 'lorebooks' | 'scenarios' | 'new-chat' | 'print'
 
 export interface ConnectionDefaults {
   defaultLlm: string | null
