@@ -77,18 +77,24 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
   const names = activeCharacters.map((c) => c.name);
 
   const systemParts: string[] = [];
-  systemParts.push(
-    `You are running a roleplay chat between multiple characters and the user. ` +
-      `The active characters are: ${names.join(', ') || '(none yet)'}. ` +
-      `Active characters may each respond. Speak only as one of the active characters; never speak for ${userName}.`,
-  );
   const target = options.replyAs ?? null;
   if (target) {
+    // Sequential-turns mode: this call owns exactly one character. The framing
+    // must leave no room for the model to script the whole ensemble (it will
+    // otherwise, happily, write everyone's lines).
     systemParts.push(
-      `IMPORTANT: write this reply ONLY as ${target.name} — you are ${target.name}. ` +
-        `Start your turn speaking publicly directly (speech in double quotes) and continue with narration ` +
-        `in the same paragraphs. Do not impersonate any other character and never speak for ${userName}; ` +
-        `each other active character is prompted separately for their own turn. Do not add any name label.`,
+      `Roleplay turn. You are ${target.name}'s agent: the ONLY character you may write for is ${target.name}. ` +
+        `Other participants exist in the transcript (their turns were written by separate agents before you), ` +
+        `but they receive their own prompts — never write their speech, narration, or dialogue. ` +
+        `Never speak for ${userName} either. ` +
+        `Your turn: ${target.name}'s speech in double quotes first, then ${target.name}'s narration; ` +
+        `do not add any name label. If you cannot add anything meaningful as ${target.name}, reply with a single short paragraph (still only ${target.name}).`,
+    );
+  } else {
+    systemParts.push(
+      `You are running a roleplay chat between multiple characters and the user. ` +
+        `The active characters are: ${names.join(', ') || '(none yet)'}. ` +
+        `Active characters may each respond. Speak only as one of the active characters; never speak for ${userName}.`,
     );
   }
   const personaName = userNameFor(ctx.persona);
