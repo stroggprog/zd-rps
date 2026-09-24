@@ -491,13 +491,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const updated = await api.chats.rebuildMessageAudio(selectedChatId, messageId)
         setChat((prev) => (prev && prev.chat.id === updated.id ? { ...prev, chat: updated } : prev))
+        if (audioEnabled) {
+          // Play the fresh clips in order through the shared sequential queue.
+          for (const clip of updated.messages.find((m) => m.id === messageId)?.audio ?? []) {
+            if (clip.path) enqueueAudio(clip.path)
+          }
+        }
       } catch (e) {
         setError((e as Error).message)
       } finally {
         setBusy(false)
       }
     },
-    [selectedChatId],
+    [selectedChatId, audioEnabled],
   )
 
   const setConnectionDefault = useCallback(
