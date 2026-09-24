@@ -598,7 +598,7 @@ export function chatsRouter(ctx: AppContext): Router {
         if (pm) {
           const cand = pm[2].trim();
           const match = activeChars.find((c) => c.name.toLowerCase() === cand.toLowerCase());
-          if (match && (!blockSpeaker || blockSpeaker.name !== match.name)) {
+          if (match && !roundsMode && (!blockSpeaker || blockSpeaker.name !== match.name)) {
             // Anything before the label belongs to the previous speaker's block.
             const prefix = pm[1].trim();
             if (prefix) {
@@ -709,6 +709,12 @@ export function chatsRouter(ctx: AppContext): Router {
 
       const streamErrorBox: { err: Error | null } = { err: null };
       const streamError = (): Error | null => streamErrorBox.err;
+
+      // Disabled handover detection while sequential rounds are running: each
+      // participant answers at most once, so mid-reply speaker switching is
+      // not attempted and every participant gets exactly one call.
+      let roundsMode = false;
+
       const contextTail = llmConn.contextTokens
         ? historyTailFor(chatWithUser, llmConn.contextTokens, chatWithUser.runtime.maxTokens)
         : 0;
@@ -724,7 +730,7 @@ export function chatsRouter(ctx: AppContext): Router {
           const lm = /^(?:\*{0,3}\s*)?["'\u201C]?\s*([A-Za-z0-9 _.'-]{1,60})'s\s/.exec(p);
           if (lm) {
             const match = activeChars.find((c) => c.name.toLowerCase() === lm[1].trim().toLowerCase());
-            if (match && (!blockSpeaker || blockSpeaker.name !== match.name)) {
+            if (match && !roundsMode && (!blockSpeaker || blockSpeaker.name !== match.name)) {
               beginBlock({
                 characterId: match.id,
                 name: match.name,
@@ -781,6 +787,7 @@ export function chatsRouter(ctx: AppContext): Router {
 
         for (const target of activeChars) {
           if (ctrl.aborted) break;
+          roundsMode = true;
           beginBlock({
             characterId: target.id,
             name: target.name,
@@ -788,6 +795,7 @@ export function chatsRouter(ctx: AppContext): Router {
             voiceSamplePath: target.voiceSamplePath,
           });
           await runReplyPipeline(targetMessages(target));
+          roundsMode = false;
           if (emitted === 0 && !streamError) {
             continue; // this participant stayed silent; keep going
           }
