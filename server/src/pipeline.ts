@@ -131,8 +131,13 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
         `for characters beyond the one named.`,
     );
   }
-  for (const character of activeCharacters) {
+  for (const character of target ? [target] : activeCharacters) {
     systemParts.push(`${characterBlock(character, userName)}\n`);
+  }
+  if (target) {
+    systemParts.push(
+      `Reminder: there are no other characters to write for. Produce ${target.name}'s turn only.`,
+    );
   }
   if (removed.length > 0) {
     systemParts.push(
