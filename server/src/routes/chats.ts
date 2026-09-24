@@ -601,14 +601,42 @@ export function chatsRouter(ctx: AppContext): Router {
         let trimmed = sentence.trim();
         if (!trimmed) return;
         // Multi-character replies: "Name: " prefixes mid-reply hand the reply
-        // over to another participant. Strip the prefix from what gets spoken;
-        // the block's speaker snapshot carries the attribution instead.
-        // Stray emphasis markers ("***") may be glued before the label.
-        const pm = /^\*{0,3}\s*([A-Za-z0-9 _.'-]{1,60}):\s*/.exec(trimmed);
+        // over to another participant. The label may be glued after closing
+        // quotes/asterisk runs or short junk like `[emoji]"` of the previous
+        // speaker's line; anything before the label stays with the previous
+        // speaker. Requires the label's name to match an active character and
+        // its prefix junk to hold no sentence-ending punctuation.
+        const pm = /^([^\n.!?\u2026]{0,40}?)([A-Za-z0-9 _.'-]{1,60}):\s*/.exec(trimmed);
         if (pm) {
-          const cand = pm[1].trim();
+          const cand = pm[2].trim();
           const match = activeChars.find((c) => c.name.toLowerCase() === cand.toLowerCase());
           if (match && (!blockSpeaker || blockSpeaker.name !== match.name)) {
+            // Anything before the label belongs to the previous speaker's block.
+            const prefix = pm[1].trim();
+            if (prefix) {
+              const isSpeechPrefix = quotation.isSpeech(prefix);
+              const idx = audioQueue.submit();
+              sentenceOwner.set(idx, blockId);
+              emitted += 1;
+              const sepVoice = blockSpeaker
+                ? activeChars.find((c) => c.id === blockSpeaker!.characterId) ?? speakerChar
+                : speakerChar;
+              const voiceChar = isSpeechPrefix ? sepVoice : narratorChar ?? sepVoice;
+              void (async () => {
+                try {
+                  const audio = await synthesizeCharacterSpeech(ttsConn!, voiceChar!, prefix, ctx.voiceCache);
+                  await ensureDir(DIR.audio);
+                  const filename = `${assistantId}-${idx}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
+                  await fs.writeFile(path.join(DIR.audio, filename), audio);
+                  audioQueue.finish(idx, { text: prefix, path: `/media/audio/${filename}` }, emitAudio);
+                } catch (err) {
+                  console.warn('[sentence-tts]', (err as Error).message);
+                  audioQueue.finish(idx, { text: prefix, path: '' }, emitAudio);
+                }
+              })();
+              const specBefore = blockSpecs.get(blockId);
+              if (specBefore) specBefore.content = specBefore.content ? `${specBefore.content} ${prefix}` : prefix;
+            }
             beginBlock({
               characterId: match.id,
               name: match.name,
