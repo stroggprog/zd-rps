@@ -115,6 +115,7 @@ export interface ChatRuntime {
   maxTokens: number
   autoTts: boolean
   disableThinking: boolean
+  sequentialTurns: boolean
   llmConnectionId: Id | null
   ttsConnectionId: Id | null
 }

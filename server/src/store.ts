@@ -14,6 +14,7 @@ const DEFAULT_RUNTIME = {
   maxTokens: 4096,
   autoTts: false,
   disableThinking: true,
+  sequentialTurns: false,
   llmConnectionId: null,
   ttsConnectionId: null,
 } satisfies Chat['runtime'];

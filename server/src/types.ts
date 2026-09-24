@@ -117,6 +117,8 @@ export interface ChatRuntime {
   maxTokens: number;
   autoTts: boolean;
   disableThinking: boolean;
+  /** One LLM call per participant per turn, instead of relying on labeled handovers. */
+  sequentialTurns: boolean;
   llmConnectionId: Id | null;
   ttsConnectionId: Id | null;
 }

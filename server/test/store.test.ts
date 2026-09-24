@@ -45,6 +45,7 @@ describe('normalizeChat', () => {
           maxTokens: 2048,
           autoTts: true,
           disableThinking: false,
+          sequentialTurns: false,
           llmConnectionId: 'l1',
           ttsConnectionId: 't1',
         },
@@ -56,6 +57,7 @@ describe('normalizeChat', () => {
       maxTokens: 2048,
       autoTts: true,
       disableThinking: false,
+      sequentialTurns: false,
       llmConnectionId: 'l1',
       ttsConnectionId: 't1',
     });

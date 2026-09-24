@@ -66,7 +66,12 @@ function characterBlock(character: Character, userName: string): string {
   return lines.join('\n');
 }
 
-export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMessage[] {
+export interface BuildOptions {
+  /** When set, the call writes that character's turn ONLY (sequential-turns mode). */
+  replyAs?: Character;
+}
+
+export function buildLlmMessages(ctx: ChatContext, historyTail: number, options: BuildOptions = {}): LlmMessage[] {
   const { chat, activeCharacters, removed, lorebooks, scenario } = ctx;
   const userName = userNameFor(ctx.persona);
   const names = activeCharacters.map((c) => c.name);
@@ -77,6 +82,15 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMess
       `The active characters are: ${names.join(', ') || '(none yet)'}. ` +
       `Active characters may each respond. Speak only as one of the active characters; never speak for ${userName}.`,
   );
+  const target = options.replyAs ?? null;
+  if (target) {
+    systemParts.push(
+      `IMPORTANT: write this reply ONLY as ${target.name} — you are ${target.name}. ` +
+        `Start your turn speaking publicly directly (speech in double quotes) and continue with narration ` +
+        `in the same paragraphs. Do not impersonate any other character and never speak for ${userName}; ` +
+        `each other active character is prompted separately for their own turn. Do not add any name label.`,
+    );
+  }
   const personaName = userNameFor(ctx.persona);
   if (ctx.persona && (ctx.persona.description.trim() || (personaName !== USER_NAME && personaName !== 'You'))) {
     systemParts.push(personaBlock(ctx.persona));

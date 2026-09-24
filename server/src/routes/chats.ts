@@ -10,6 +10,7 @@ import type {
   Id,
   MessageAudio,
   Narrator,
+  LlmMessage,
   Scenario,
   SpeakerSnapshot,
   VoiceSubject,
@@ -187,6 +188,7 @@ export function chatsRouter(ctx: AppContext): Router {
           maxTokens: 4096,
           autoTts: false,
           disableThinking: true,
+          sequentialTurns: false,
           llmConnectionId: null,
           ttsConnectionId: null,
         },
@@ -510,22 +512,8 @@ export function chatsRouter(ctx: AppContext): Router {
         .filter((b) => b !== undefined);
       const scenario = scenarioFor(ctx, chatWithUser);
 
-      // Optional per-connection context window: trim older history to fit.
-      const historyTail = llmConn.contextTokens
-        ? historyTailFor(chatWithUser, llmConn.contextTokens, chatWithUser.runtime.maxTokens)
-        : 0;
-
-      const messages = buildLlmMessages(
-        {
-          chat: chatWithUser,
-          activeCharacters: activeChars,
-          removed: chatWithUser.removedParticipants,
-          lorebooks,
-          scenario,
-          persona: chatPersona(ctx.store, chatWithUser),
-        },
-        historyTail,
-      );
+      // Optional per-connection context window; the history tail is computed
+      // where the messages are built.
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -719,34 +707,143 @@ export function chatsRouter(ctx: AppContext): Router {
         activeStream.finish();
       });
 
-      let streamError: Error | null = null;
-      try {
-        await streamLlm(
-          llmConn,
-          messages,
-          {
-            temperature: chatWithUser.runtime.temperature,
-            topP: chatWithUser.runtime.topP,
-            maxTokens: chatWithUser.runtime.maxTokens,
-            disableThinking: chatWithUser.runtime.disableThinking,
-          },
-          { onDelta: (delta) => paragraphs.push(formatter.push(delta)), ctrl },
-        );
-      } catch (err) {
-        streamError = err as Error;
+      const streamErrorBox: { err: Error | null } = { err: null };
+      const streamError = (): Error | null => streamErrorBox.err;
+      const contextTail = llmConn.contextTokens
+        ? historyTailFor(chatWithUser, llmConn.contextTokens, chatWithUser.runtime.maxTokens)
+        : 0;
+      const historyTail = contextTail;
+      const runReplyPipeline = async (roundMessages: LlmMessage[]): Promise<void> => {
+        let paraSpeech = false;
+        const roundFormatter = new SpeechFormatter();
+        let activeStream: SentenceStream | null = null;
+        const paragraphs = new ParagraphStream((p) => {
+          // The model often hands over by starting a narration paragraph with
+          // "<Name>'s ..." (e.g. `Rusty's screen displays...`) without a label.
+          // When that name is a different active participant, start their block.
+          const lm = /^(?:\*{0,3}\s*)?["'\u201C]?\s*([A-Za-z0-9 _.'-]{1,60})'s\s/.exec(p);
+          if (lm) {
+            const match = activeChars.find((c) => c.name.toLowerCase() === lm[1].trim().toLowerCase());
+            if (match && (!blockSpeaker || blockSpeaker.name !== match.name)) {
+              beginBlock({
+                characterId: match.id,
+                name: match.name,
+                avatarPath: match.avatarPath,
+                voiceSamplePath: match.voiceSamplePath,
+              });
+            }
+          }
+          // Paragraph classification gate: each paragraph is attributed via
+          // QuotationTracker (a paragraph with an orphan closing quote — the
+          // model dropping its opening quote — counts as speech for the whole
+          // paragraph), then fed to the sentence stream with that attribution.
+          paraSpeech = quotation.isSpeech(p);
+          activeStream = new SentenceStream({ activeNames, onSentence: handleSentence });
+          activeStream.push(p);
+          activeStream.finish();
+        });
+        try {
+          await streamLlm(
+            llmConn,
+            roundMessages,
+            {
+              temperature: chatWithUser.runtime.temperature,
+              topP: chatWithUser.runtime.topP,
+              maxTokens: chatWithUser.runtime.maxTokens,
+              disableThinking: chatWithUser.runtime.disableThinking,
+            },
+            { onDelta: (delta) => paragraphs.push(roundFormatter.push(delta)), ctrl },
+          );
+        } catch (err) {
+          if (!streamErrorBox.err) streamErrorBox.err = err as Error;
+        }
+        paragraphs.finish();
+      };
+
+      if (chatWithUser.runtime.sequentialTurns && activeChars.length > 1) {
+        // One LLM call per participant; each round gets its own message block
+        // and the transcript is persisted between rounds so each next call
+        // can see what the previous participants said.
+        const seqCtxBase = {
+          chat: chats.getOrThrow(chatWithUser.id),
+          activeCharacters: activeChars,
+          removed: chatWithUser.removedParticipants,
+          lorebooks,
+          scenario,
+          persona: chatPersona(ctx.store, chatWithUser),
+        };
+        const targetMessages = (target: Character): LlmMessage[] =>
+          buildLlmMessages(
+            { ...seqCtxBase, chat: chats.getOrThrow(chatWithUser.id) },
+            historyTail,
+            { replyAs: target },
+          );
+
+        for (const target of activeChars) {
+          if (ctrl.aborted) break;
+          beginBlock({
+            characterId: target.id,
+            name: target.name,
+            avatarPath: target.avatarPath,
+            voiceSamplePath: target.voiceSamplePath,
+          });
+          await runReplyPipeline(targetMessages(target));
+          if (emitted === 0 && !streamError) {
+            continue; // this participant stayed silent; keep going
+          }
+          // Persist the transcript so later rounds see earlier replies.
+          const prior = chats.getOrThrow(chatWithUser.id).messages.filter(
+            (m) => !orderedBlocks.includes(m.id),
+          );
+          const saved = [...prior, ...orderedBlocks
+            .map((id) => blockSpecs.get(id)!)
+            .filter((spec) => spec.content.trim())
+            .map((spec) => ({
+              id: '',
+              role: 'assistant' as const,
+              speaker: spec.speaker,
+              content: spec.content.trim(),
+              audioPath: null as string | null,
+              audio: spec.clips,
+              images: [] as string[],
+              ts: now(),
+            }))];
+          chats.update(chatWithUser.id, { messages: saved });
+        }
+        await audioQueue.waitIdle();
+        if (emitted === 0) {
+          const message = streamErrorBox.err?.message ??
+            'The LLM returned no content. Try again or raise "Max tokens" in the chat settings.';
+          send('error', { message });
+          res.end();
+          return;
+        }
+        send('done', { chat: chats.getOrThrow(chatWithUser.id) });
+        res.end();
+        return;
       }
-      paragraphs.finish();
+
+      // Single LLM call for the whole reply (classic mode).
+      const messages = buildLlmMessages(
+        {
+          chat: chatWithUser,
+          activeCharacters: activeChars,
+          removed: chatWithUser.removedParticipants,
+          lorebooks,
+          scenario,
+          persona: chatPersona(ctx.store, chatWithUser),
+        },
+        historyTail,
+      );
+      await runReplyPipeline(messages);
       if (emitted === 0) {
-        const message = streamError
-          ? streamError.message
-          : 'The LLM returned no content. Try again or raise "Max tokens" in the chat settings.';
+        const message = streamErrorBox.err?.message ??
+          'The LLM returned no content. Try again or raise "Max tokens" in the chat settings.';
         send('error', { message });
         res.end();
         return;
       }
       await audioQueue.waitIdle();
-
-      formatter.finish();
       const finalBlocks: ChatMessage[] = orderedBlocks.map((id) => {
         const spec = blockSpecs.get(id)!;
         return {

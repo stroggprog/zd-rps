@@ -8,7 +8,7 @@ Multiple characters can be used in each chat, and characters can be added/remove
 
 ## Features
 
-- **Chats with characters** — add/remove characters mid-chat (removed ones get dimmed with a "removed" label and a ＋ button to bring them back), per-chat runtime settings (temperature, top-p, max tokens, LLM/TTS connection, instant-reply mode). Any message bubble can be edited or deleted (✎/🗑 under the bubble), which rewrites the LLM context so you can steer the conversation.
+- **Chats with characters** — add/remove characters mid-chat (removed ones get dimmed with a "removed" label and a ＋ button to bring them back), per-chat runtime settings (temperature, top-p, max tokens, LLM/TTS connection, instant-reply mode, plus an optional one-reply-per-participant sequential-turns mode that stops speaker leakage between bubbles). Any message bubble can be edited or deleted (✎/🗑 under the bubble), which rewrites the LLM context so you can steer the conversation.
 - **Personas** — you are a persona of your own (name, optional image/description, gender) injected into the LLM prompt so characters see who you are; default persona "You" is created automatically, each chat pins a persona at creation.
 - **Character tags** — tags on a character (comma-separated, also round-tripped with SillyTavern cards) filter the wizard's character list, show as chips in the character editor, and are injected into the LLM's character blocks as keywords.
 - **SillyTavern compatibility** — import `.png` character cards (extracts character, and offers to import the embedded lorebook and scenario), export a card back out with its attached lorebook/scenario.
