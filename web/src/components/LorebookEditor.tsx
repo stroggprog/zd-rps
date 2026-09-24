@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useApp } from '../store'
 import { api } from '../lib/api'
 import type { Lorebook, LoreEntry } from '../lib/types'
@@ -27,6 +27,7 @@ export function LorebookEditor() {
   const { lorebooks, closeOverlay, refreshAll, setError } = useApp()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [saving, setSaving] = useState(false)
+  const importInput = useRef<HTMLInputElement>(null)
 
   const setBook = (patch: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...patch } : d))
   const setEntry = (index: number, patch: Partial<LoreEntry>) =>
@@ -60,6 +61,17 @@ export function LorebookEditor() {
     await refreshAll()
   }
 
+  const importFile = async (file: File) => {
+    setError(null)
+    try {
+      const imported = await api.lorebooks.importFile(file)
+      setDraft(imported)
+      await refreshAll()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   return (
     <div className="overlay-wrap">
       <div className="overlay-head">
@@ -69,31 +81,53 @@ export function LorebookEditor() {
       <div className="overlay-body">
         <div className="list-grid">
           <div>
-            <button
-              className="primary"
-              style={{ marginBottom: 8 }}
-              onClick={() =>
-                setDraft({
-                  id: '',
-                  created: '',
-                  updated: '',
-                  name: '',
-                  description: '',
-                  scan_depth: 1000,
-                  token_budget: 500,
-                  recursive_scanning: false,
-                  extensions: {},
-                  entries: [],
-                })
-              }
-            >
-              ＋ New lorebook
-            </button>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button
+                className="primary"
+                onClick={() =>
+                  setDraft({
+                    id: '',
+                    created: '',
+                    updated: '',
+                    name: '',
+                    description: '',
+                    scan_depth: 1000,
+                    token_budget: 500,
+                    recursive_scanning: false,
+                    extensions: {},
+                    entries: [],
+                  })
+                }
+              >
+                ＋ New lorebook
+              </button>
+              <button onClick={() => importInput.current?.click()}>Import file (JSON)</button>
+              <input
+                ref={importInput}
+                type="file"
+                accept="application/json,.json"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void importFile(f)
+                  e.target.value = ''
+                }}
+              />
+            </div>
             <div className="pick-list">
               {lorebooks.map((book) => (
                 <div key={book.id} className={`pick-item${draft?.id === book.id ? ' selected' : ''}`} onClick={() => setDraft(book)}>
                   <span className="grow">{book.name}</span>
                   <span className="tag">{book.entries.length} entries</span>
+                  <a
+                    className="icon"
+                    href={`/api/lorebooks/${book.id}/export`}
+                    download={`${book.name.replace(/[^\w.-]+/g, '_')}.json`}
+                    title="Export as JSON"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    ⤓
+                  </a>
                 </div>
               ))}
               {lorebooks.length === 0 && <div className="hint">No lorebooks yet.</div>}

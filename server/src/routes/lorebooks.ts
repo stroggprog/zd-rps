@@ -101,5 +101,74 @@ export function lorebooksRouter(ctx: AppContext): Router {
     }),
   );
 
+  // Import a lorebook from an uploaded JSON file. Accepts our own export format
+  // and SillyTavern-style books (entries as a map or array).
+  router.post(
+    '/import',
+    asyncHandler(async (req, res) => {
+      const file = (req.files as Express.Multer.File[] | undefined)?.[0] ?? (req.file as Express.Multer.File | undefined);
+      if (!file) throw new ApiError('Expected a lorebook JSON file', 400);
+      let raw: unknown;
+      try {
+        raw = JSON.parse(file.buffer.toString('utf8'));
+      } catch {
+        throw new ApiError('The file is not valid JSON', 400);
+      }
+      if (!isObject(raw)) throw new ApiError('Unexpected lorebook file format', 400);
+      const obj = raw as Record<string, unknown>;
+
+      let rawEntries: unknown[] = [];
+      const stEntries = isObject(obj.entries)
+        ? Object.values(obj.entries)
+        : Array.isArray(obj.entries)
+          ? obj.entries
+          : null;
+      if (stEntries && stEntries.length > 0 && isObject(stEntries[0]) && (stEntries[0] as Record<string, unknown>).key !== undefined) {
+        // SillyTavern shape: key/keysecondary arrays, comment = entry name, etc.
+        rawEntries = stEntries.map((e) => {
+          const src = e as Record<string, unknown>;
+          return {
+            ...src,
+            name: asString(src.comment, asString(src.name, '')),
+            keys: Array.isArray(src.keys) ? src.keys : Array.isArray(src.key) ? src.key : [],
+            content: asString(src.content, ''),
+            enabled: src.enabled !== undefined ? src.enabled === true : src.disable === undefined ? true : src.disable !== true,
+            insertion_order: asNumber(src.insertion_order, asNumber(src.order, 0)),
+            case_sensitive: asBoolean(src.case_sensitive, src.caseSensitive === true),
+            secondary_keys: Array.isArray(src.secondary_keys)
+              ? src.secondary_keys
+              : Array.isArray(src.keysecondary)
+                ? src.keysecondary
+                : [],
+            constant: asBoolean(src.constant, false),
+            position: asString(src.position, 'before_char') === 'after_char' ? 'after_char' : 'before_char',
+          };
+        });
+      } else if (Array.isArray(obj.entries)) {
+        rawEntries = obj.entries;
+      }
+
+      const entries = rawEntries
+        .map(sanitizeEntry)
+        .filter((e): e is Lorebook['entries'][number] => e !== null);
+      const importedName = asString(obj.name, '') || asString(obj.bookName, '');
+      const name =
+        importedName ||
+        asString(file.originalname ?? '', '').replace(/\.json$/i, '') ||
+        'Imported lorebook';
+
+      const book = lorebooks.create({
+        name,
+        description: asString(obj.description, ''),
+        scan_depth: asNumber(obj.scan_depth ?? obj.scanDepth, 3),
+        token_budget: asNumber(obj.token_budget ?? obj.tokenBudget, 2048),
+        recursive_scanning: asBoolean(obj.recursive_scanning ?? obj.recursiveScanning, false),
+        extensions: {},
+        entries,
+      });
+      res.status(201).json(book);
+    }),
+  );
+
   return router;
 }

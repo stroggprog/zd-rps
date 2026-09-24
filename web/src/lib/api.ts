@@ -136,6 +136,11 @@ export const api = {
     update: (id: string, l: Partial<Lorebook>) =>
       http<Lorebook>(`/api/lorebooks/${id}`, jsonInit('PUT', l)),
     remove: (id: string) => http<void>(`/api/lorebooks/${id}`, { method: 'DELETE' }),
+    importFile: (file: File) => {
+      const form = new FormData()
+      form.append('file', file)
+      return http<Lorebook>('/api/lorebooks/import', { method: 'POST', body: form })
+    },
   },
 
   scenarios: {

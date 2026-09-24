@@ -224,7 +224,12 @@ export class JsonCollection<T extends Stamped> {
   update(id: Id, patch: Patch<T>): T | undefined {
     const current = this.items.get(id);
     if (!current) return undefined;
-    const updated = { ...current, ...patch, id, created: current.created, updated: now() } as T;
+    // Ignore undefined patch values so partial updates can't wipe fields.
+    const clean: Record<string, unknown> = { ...patch };
+    for (const key of Object.keys(clean)) {
+      if (clean[key] === undefined) delete clean[key];
+    }
+    const updated = { ...current, ...clean, id, created: current.created, updated: now() } as T;
     this.items.set(id, updated);
     void this.persist(updated);
     return updated;
