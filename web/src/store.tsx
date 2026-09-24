@@ -488,6 +488,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (messageId: string) => {
       if (!selectedChatId) return
       setBusy(true)
+      // Clear this bubble's chips immediately; fresh clips stream back over SSE.
+      setChat((prev) =>
+        prev
+          ? {
+              ...prev,
+              chat: {
+                ...prev.chat,
+                messages: prev.chat.messages.map((m) => (m.id === messageId ? { ...m, audio: [] } : m)),
+              },
+            }
+          : prev,
+      )
       try {
         await api.chats.rebuildMessageAudio(selectedChatId, messageId, {
           onAudio: (messageId, clip) => {
