@@ -489,14 +489,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!selectedChatId) return
       setBusy(true)
       try {
-        const updated = await api.chats.rebuildMessageAudio(selectedChatId, messageId)
-        setChat((prev) => (prev && prev.chat.id === updated.id ? { ...prev, chat: updated } : prev))
-        if (audioEnabled) {
-          // Play the fresh clips in order through the shared sequential queue.
-          for (const clip of updated.messages.find((m) => m.id === messageId)?.audio ?? []) {
-            if (clip.path) enqueueAudio(clip.path)
-          }
-        }
+        await api.chats.rebuildMessageAudio(selectedChatId, messageId, {
+          onAudio: (messageId, clip) => {
+            setChat((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    chat: {
+                      ...prev.chat,
+                      messages: prev.chat.messages.map((m) =>
+                        m.id === messageId ? { ...m, audio: [...m.audio, clip] } : m,
+                      ),
+                    },
+                  }
+                : prev,
+            )
+            if (audioEnabled && clip.path) enqueueAudio(clip.path)
+          },
+          onDone: (updated) => {
+            setChat((prev) => (prev && prev.chat.id === updated.id ? { ...prev, chat: updated } : prev))
+          },
+        })
       } catch (e) {
         setError((e as Error).message)
       } finally {

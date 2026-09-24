@@ -373,7 +373,8 @@ export function chatsRouter(ctx: AppContext): Router {
 
   // Rebuild a message's audio clips: drop the existing files and re-synthesize
   // each sentence with the current voice rules (speech = speaker, narration =
-  // narrator fallback). Explicit user action, ignores runtime.autoTts.
+  // narrator fallback). SSE: emits `audio` per finished clip, then `done` with
+  // the updated chat. Explicit user action, ignores runtime.autoTts.
   router.post(
     '/:id/messages/:mid/rebuild-audio',
     asyncHandler(async (req, res) => {
@@ -389,6 +390,18 @@ export function chatsRouter(ctx: AppContext): Router {
       } catch (err) {
         throw new ApiError((err as Error).message, 400);
       }
+
+      const send = (event: string, data: unknown) => {
+        if (res.writableEnded) return;
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      };
+
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
+      if (res.writableEnded) return;
 
       // Remove the old clip files.
       for (const clip of message.audio) {
@@ -431,15 +444,19 @@ export function chatsRouter(ctx: AppContext): Router {
           const filename = `${message.id}-${i}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
           await fs.writeFile(path.join(DIR.audio, filename), audio);
           clips.push({ id: `${message.id}-${i}`, text: part.text, path: `/media/audio/${filename}`, ts: now() });
+          // Publish each clip as it lands so clients enqueue/play immediately.
+          send('audio', { messageId: message.id, index: i, ...clips[clips.length - 1] });
+          const current = chats.getOrThrow(chat.id);
+          chats.update(chat.id, {
+            messages: current.messages.map((m) => (m.id === mid ? { ...m, audio: [...clips] } : m)),
+          });
         } catch (err) {
           console.warn('[rebuild-audio]', (err as Error).message);
         }
       }
 
-      const messages = [...chat.messages];
-      messages[idx] = { ...message, audio: clips };
-      const updated = chats.update(chat.id, { messages });
-      res.json(chats.get(updated!.id));
+      send('done', { chat: chats.getOrThrow(chat.id) });
+      res.end();
     }),
   );
 

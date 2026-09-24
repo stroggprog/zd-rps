@@ -13,6 +13,7 @@ import type {
   Scenario,
   TestResult,
 } from './types'
+import { rebuildMessageAudioSse } from './sseRebuild'
 
 async function http<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init)
@@ -166,8 +167,8 @@ export const api = {
       http<Chat>(`/api/chats/${id}/messages/${messageId}`, jsonInit('PATCH', { content })),
     removeMessage: (id: string, messageId: string) =>
       http<Chat>(`/api/chats/${id}/messages/${messageId}`, { method: 'DELETE' }),
-    rebuildMessageAudio: (id: string, messageId: string) =>
-      http<Chat>(`/api/chats/${id}/messages/${messageId}/rebuild-audio`, { method: 'POST' }),
+    rebuildMessageAudio: (id: string, messageId: string, handlers: { onAudio?: (messageId: string | null, clip: MessageAudio) => void; onDone?: (chat: Chat) => void }) =>
+      rebuildMessageAudioSse(id, messageId, handlers),
     messageStream: (id: string, content: string, audioEnabled: boolean, handlers: MessageStreamHandlers) =>
       sseMessage(id, content, audioEnabled, handlers),
   },
