@@ -54,7 +54,9 @@ export class SpeechFormatter {
         continue;
       }
       if (this.pendingNewlines > 0) {
-        this.result += '\n'.repeat(this.justClosed ? 2 : 1);
+        // A closed speech block always restores a blank line; otherwise emit
+        // the paragraph breaks the model wrote (capped at 2).
+        this.result += '\n'.repeat(this.justClosed ? Math.max(2, this.pendingNewlines) : Math.min(2, Math.max(1, this.pendingNewlines)));
         this.pendingNewlines = 0;
         this.justClosed = false;
       }
@@ -68,7 +70,7 @@ export class SpeechFormatter {
   /** Flush any trailing newlines and return the rest of the normalized text. */
   finish(): string {
     if (this.pendingNewlines > 0) {
-      this.result += '\n'.repeat(this.justClosed ? 2 : 1);
+      this.result += '\n'.repeat(this.justClosed ? Math.max(2, this.pendingNewlines) : Math.min(2, Math.max(1, this.pendingNewlines)));
       this.pendingNewlines = 0;
       this.justClosed = false;
     }
@@ -107,7 +109,8 @@ export class SpeechFormatter {
       this.result += ch;
       return;
     }
-    const lead = this.pendingNewlines > 0;
+    const lead =
+      this.pendingNewlines > 0 || this.result.length === 0 || this.result.endsWith('\n');
     if (lead) {
       this.result += '\n\n';
       this.pendingNewlines = 0;

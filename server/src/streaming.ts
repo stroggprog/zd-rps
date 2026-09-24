@@ -100,3 +100,32 @@ export class SentenceStream {
     }
   }
 }
+/**
+ * Splits normalized text into paragraphs at blank lines. Chats with speech
+ * attribution work per paragraph: dialog paragraphs must start with an opening
+ * double quote (formatting contract), narration paragraphs are separate. The
+ * stream feeds the SentenceStream after each paragraph is classified.
+ */
+export class ParagraphStream {
+  private buffer = '';
+
+  constructor(private readonly onParagraph: (text: string) => void) {}
+
+  push(delta: string): void {
+    this.buffer += delta;
+    for (;;) {
+      const m = /\n\s*\n/.exec(this.buffer);
+      if (!m) break;
+      const para = this.buffer.slice(0, m.index);
+      this.buffer = this.buffer.slice(m.index + m[0].length);
+      if (para.trim()) this.onParagraph(para);
+    }
+  }
+
+  /** Flush the trailing (final) paragraph. Safe to call once, at stream end. */
+  finish(): void {
+    const rest = this.buffer.trim();
+    this.buffer = '';
+    if (rest) this.onParagraph(rest);
+  }
+}

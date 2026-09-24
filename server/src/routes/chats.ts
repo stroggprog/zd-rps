@@ -19,7 +19,7 @@ import { getConfig } from '../config.js';
 import { buildLlmMessages, historyTailFor, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
 import { chatPersona } from '../store.js';
 import { synthesizeCharacterSpeech, audioExt } from '../ttsService.js';
-import { SentenceStream } from '../streaming.js';
+import { ParagraphStream, SentenceStream } from '../streaming.js';
 import { QuotationTracker } from '../speech.js';
 import { SpeechFormatter } from '../formatting.js';
 import { OrderedAudio, type AudioResult } from '../orderedAudio.js';
@@ -564,7 +564,7 @@ export function chatsRouter(ctx: AppContext): Router {
 
       const resolveSpeaker = () => {
         if (speaker) return;
-        const speakerName = stream.speaker;
+        const speakerName = activeStream?.speaker ?? null;
         speakerChar = speakerName
           ? activeChars.find((c) => c.name.toLowerCase() === speakerName.toLowerCase()) ?? null
           : activeChars.length === 1
@@ -614,7 +614,7 @@ export function chatsRouter(ctx: AppContext): Router {
             // Anything before the label belongs to the previous speaker's block.
             const prefix = pm[1].trim();
             if (prefix) {
-              const isSpeechPrefix = quotation.isSpeech(prefix);
+              const isSpeechPrefix = paraSpeech;
               const idx = audioQueue.submit();
               sentenceOwner.set(idx, blockId);
               emitted += 1;
@@ -656,7 +656,7 @@ export function chatsRouter(ctx: AppContext): Router {
           );
         }
         if (blockSpeaker) speakerChar = activeChars.find((c) => c.id === blockSpeaker!.characterId) ?? speakerChar;
-        const isSpeech = quotation.isSpeech(trimmed);
+        const isSpeech = paraSpeech;
         const voiceChar = isSpeech ? speakerChar : narratorChar ?? speakerChar;
         const idx = audioQueue.submit();
         sentenceOwner.set(idx, blockId);
@@ -691,9 +691,17 @@ export function chatsRouter(ctx: AppContext): Router {
         })();
       };
 
-      const stream = new SentenceStream({
-        activeNames,
-        onSentence: handleSentence,
+      // Paragraph classification gate: each paragraph is attributed via
+      // QuotationTracker (a paragraph with an orphan closing quote — the model
+      // dropping its opening quote — counts as speech for the whole
+      // paragraph), then fed to the sentence stream with that attribution.
+      let paraSpeech = false;
+      let activeStream: SentenceStream | null = null;
+      const paragraphs = new ParagraphStream((p) => {
+        paraSpeech = quotation.isSpeech(p);
+        activeStream = new SentenceStream({ activeNames, onSentence: handleSentence });
+        activeStream.push(p);
+        activeStream.finish();
       });
 
       let streamError: Error | null = null;
@@ -707,12 +715,12 @@ export function chatsRouter(ctx: AppContext): Router {
             maxTokens: chatWithUser.runtime.maxTokens,
             disableThinking: chatWithUser.runtime.disableThinking,
           },
-          { onDelta: (delta) => stream.push(formatter.push(delta)), ctrl },
+          { onDelta: (delta) => paragraphs.push(formatter.push(delta)), ctrl },
         );
       } catch (err) {
         streamError = err as Error;
       }
-      stream.finish();
+      paragraphs.finish();
       if (emitted === 0) {
         const message = streamError
           ? streamError.message
