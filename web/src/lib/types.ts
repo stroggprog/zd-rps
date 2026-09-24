@@ -17,6 +17,8 @@ export interface Character extends Stamped {
   avatarPath: string | null
   voiceSamplePath: string | null
   voiceSampleTranscript: string | null
+  /** Optional per-character LLM connection override (sequential turns). */
+  llmConnectionId: string | null
 }
 
 export interface Narrator extends Stamped {

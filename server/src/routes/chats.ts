@@ -719,7 +719,7 @@ export function chatsRouter(ctx: AppContext): Router {
         ? historyTailFor(chatWithUser, llmConn.contextTokens, chatWithUser.runtime.maxTokens)
         : 0;
       const historyTail = contextTail;
-      const runReplyPipeline = async (roundMessages: LlmMessage[]): Promise<void> => {
+      const runReplyPipeline = async (roundMessages: LlmMessage[], roundConn: Connection = llmConn): Promise<void> => {
         let paraSpeech = false;
         const roundFormatter = new SpeechFormatter();
         let activeStream: SentenceStream | null = null;
@@ -750,7 +750,7 @@ export function chatsRouter(ctx: AppContext): Router {
         });
         try {
           await streamLlm(
-            llmConn,
+            roundConn,
             roundMessages,
             {
               temperature: chatWithUser.runtime.temperature,
@@ -794,7 +794,10 @@ export function chatsRouter(ctx: AppContext): Router {
             avatarPath: target.avatarPath,
             voiceSamplePath: target.voiceSamplePath,
           });
-          await runReplyPipeline(targetMessages(target));
+          const roundConn = target.llmConnectionId
+            ? getConfig().connections.find((c) => c.id === target.llmConnectionId && c.kind === 'llm') ?? llmConn
+            : llmConn;
+          await runReplyPipeline(targetMessages(target), roundConn);
           roundsMode = false;
           if (emitted === 0 && !streamError) {
             continue; // this participant stayed silent; keep going

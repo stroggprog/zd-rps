@@ -12,6 +12,7 @@ interface Draft {
   post_history_instructions: string
   mes_example: string
   tags: string
+  llmConnectionId: string | null
 }
 
 function emptyDraft(): Draft {
@@ -24,15 +25,16 @@ function emptyDraft(): Draft {
     post_history_instructions: '',
     mes_example: '',
     tags: '',
+    llmConnectionId: null,
   }
 }
 
 function toDraft(c: Character): Draft {
-  return { ...c, id: c.id, tags: c.tags.join(', ') }
+  return { ...c, id: c.id, tags: c.tags.join(', '), llmConnectionId: c.llmConnectionId ?? null }
 }
 
 export function CharacterEditor() {
-  const { characters, closeOverlay, refreshAll, setError } = useApp()
+  const { characters, connections: allConnections, closeOverlay, refreshAll, setError } = useApp()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [imported, setImported] = useState<ImportDraft | null>(null)
   const [importName, setImportName] = useState('')
@@ -216,6 +218,23 @@ export function CharacterEditor() {
                   <div className="field">
                     <label>Tags (comma-separated)</label>
                     <input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} />
+                  </div>
+                  <div className="field">
+                    <label>Own LLM connection (sequential turns)</label>
+                    <select
+                      value={draft.llmConnectionId ?? ''}
+                      onChange={(e) => setDraft({ ...draft, llmConnectionId: e.target.value || null })}
+                    >
+                      <option value="">Chat default</option>
+                      {allConnections.filter((cn) => cn.kind === 'llm').map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="hint" style={{ padding: 0 }}>
+                      When Sequential turns is on, this character replies through their own connection.
+                    </span>
                   </div>
                   <div className="field full">
                     <label>Description</label>

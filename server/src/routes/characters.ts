@@ -104,6 +104,10 @@ export function charactersRouter(ctx: AppContext): Router {
         post_history_instructions: asString(body.post_history_instructions),
         mes_example: asString(body.mes_example),
         tags: Array.isArray(body.tags) ? body.tags.map((t) => asString(t)).filter(Boolean) : [],
+        llmConnectionId:
+          typeof body.llmConnectionId === 'string' && body.llmConnectionId
+            ? body.llmConnectionId
+            : null,
         avatarPath: null,
         voiceSamplePath: null,
         voiceSampleTranscript: null,
@@ -129,6 +133,11 @@ export function charactersRouter(ctx: AppContext): Router {
         mes_example: body.mes_example !== undefined ? asString(body.mes_example) : undefined,
         tags: body.tags !== undefined
           ? body.tags.map((t) => asString(t)).filter(Boolean)
+          : undefined,
+        llmConnectionId: body.llmConnectionId !== undefined
+          ? typeof body.llmConnectionId === 'string' && body.llmConnectionId
+            ? body.llmConnectionId
+            : null
           : undefined,
       });
       res.json(updated);
@@ -240,6 +249,7 @@ export function charactersRouter(ctx: AppContext): Router {
         avatarPath: null,
         voiceSamplePath: null,
         voiceSampleTranscript: null,
+        llmConnectionId: null,
       });
       if (payload.avatarBuffer) {
         await saveAvatar(character.id, payload.avatarBuffer, 'image/png');

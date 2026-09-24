@@ -73,6 +73,10 @@ export function normalizeCharacter(character: Character): Character {
     voiceSamplePath: typeof character.voiceSamplePath === 'string' ? character.voiceSamplePath : null,
     voiceSampleTranscript:
       typeof character.voiceSampleTranscript === 'string' ? character.voiceSampleTranscript : null,
+    llmConnectionId:
+      typeof (character as { llmConnectionId?: unknown }).llmConnectionId === 'string'
+        ? (character as { llmConnectionId: string | null }).llmConnectionId
+        : null,
   };
 }
 
