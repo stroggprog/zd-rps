@@ -59,6 +59,12 @@ export class SpeechFormatter {
         this.result += '\n'.repeat(this.justClosed ? Math.max(2, this.pendingNewlines) : Math.min(2, Math.max(1, this.pendingNewlines)));
         this.pendingNewlines = 0;
         this.justClosed = false;
+      } else if (this.justClosed) {
+        // Narration glued straight after a closing speech quote (no newline
+        // at all, e.g. `hull." Kiara's voice is steady...`): force the
+        // paragraph break the contract requires.
+        this.result += '\n\n';
+        this.justClosed = false;
       }
       this.result += ch;
     }
@@ -110,11 +116,13 @@ export class SpeechFormatter {
       return;
     }
     const lead =
-      this.pendingNewlines > 0 || (this.result.length > 0 && this.result.endsWith('\n'));
-    if (lead && this.pendingNewlines > 0) {
-      // The first paragraph must not gain leading newlines; wait for content.
-      this.result += '\n\n';
-      this.pendingNewlines = 0;
+      this.pendingNewlines > 0 || this.result.length === 0 || this.result.endsWith('\n');
+    if (lead) {
+      if (this.pendingNewlines > 0 || this.result.length > 0) {
+        // The first paragraph must not gain leading newlines; only later blocks.
+        this.result += '\n\n';
+        this.pendingNewlines = 0;
+      }
     }
     this.speechOpen = true;
     this.blockAtLineStart = lead;
