@@ -12,6 +12,7 @@ import type {
   Narrator,
   Scenario,
   SpeakerSnapshot,
+  VoiceSubject,
 } from '../types.js';
 import { DIR } from '../paths.js';
 import { getConfig } from '../config.js';
@@ -366,6 +367,78 @@ export function chatsRouter(ctx: AppContext): Router {
       const removed = chat.messages.filter((m) => m.id !== mid);
       if (removed.length === chat.messages.length) throw new ApiError('Message not found', 404);
       const updated = chats.update(chat.id, { messages: removed });
+      res.json(chats.get(updated!.id));
+    }),
+  );
+
+  // Rebuild a message's audio clips: drop the existing files and re-synthesize
+  // each sentence with the current voice rules (speech = speaker, narration =
+  // narrator fallback). Explicit user action, ignores runtime.autoTts.
+  router.post(
+    '/:id/messages/:mid/rebuild-audio',
+    asyncHandler(async (req, res) => {
+      const chat = chats.getOrThrow(idParam(req));
+      const mid = req.params.mid as Id;
+      const idx = chat.messages.findIndex((m) => m.id === mid);
+      if (idx < 0) throw new ApiError('Message not found', 404);
+      const message = chat.messages[idx];
+
+      let ttsConn: Connection;
+      try {
+        ttsConn = resolveKindConnection('tts', chat.runtime.ttsConnectionId);
+      } catch (err) {
+        throw new ApiError((err as Error).message, 400);
+      }
+
+      // Remove the old clip files.
+      for (const clip of message.audio) {
+        await fs.rm(path.join(DIR.audio, path.basename(clip.path)), { force: true });
+      }
+
+      const narratorChar = chat.narratorId ? ctx.store.narrators.get(chat.narratorId) ?? null : null;
+      const speakerChar = message.speaker.characterId
+        ? ctx.store.characters.get(message.speaker.characterId) ?? null
+        : null;
+      const parts: { text: string; isSpeech: boolean }[] = [];
+      const quotation = new QuotationTracker();
+      const splitter = new SentenceStream({
+        activeNames: chat.participantIds
+          .map((pid) => ctx.store.characters.get(pid)?.name)
+          .filter((n): n is string => Boolean(n)),
+        onSentence: (sentence) => {
+          const s = sentence.trim();
+          if (s) parts.push({ text: s, isSpeech: quotation.isSpeech(s) });
+        },
+      });
+      splitter.push(message.content);
+      splitter.finish();
+
+      const clips: MessageAudio[] = [];
+      for (let i = 0; i < parts.length; i += 1) {
+        const part = parts[i];
+        if (!/[\p{L}\p{N}]/u.test(part.text)) continue;
+        const voiceShare = part.isSpeech ? speakerChar : narratorChar ?? speakerChar;
+        const subject: VoiceSubject = voiceShare ?? {
+          id: `user-${message.speaker.name}`,
+          name: message.speaker.name,
+          voiceSamplePath: message.speaker.voiceSamplePath,
+          voiceSampleTranscript: null,
+        };
+        if (!(subject.voiceSamplePath || ttsConn.modelOrVoice)) continue;
+        try {
+          const audio = await synthesizeCharacterSpeech(ttsConn, subject, part.text, ctx.voiceCache);
+          await ensureDir(DIR.audio);
+          const filename = `${message.id}-${i}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
+          await fs.writeFile(path.join(DIR.audio, filename), audio);
+          clips.push({ id: `${message.id}-${i}`, text: part.text, path: `/media/audio/${filename}`, ts: now() });
+        } catch (err) {
+          console.warn('[rebuild-audio]', (err as Error).message);
+        }
+      }
+
+      const messages = [...chat.messages];
+      messages[idx] = { ...message, audio: clips };
+      const updated = chats.update(chat.id, { messages });
       res.json(chats.get(updated!.id));
     }),
   );

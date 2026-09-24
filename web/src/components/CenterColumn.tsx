@@ -12,7 +12,7 @@ async function speakViaApi(message: ChatMessage) {
 }
 
 export function CenterColumn() {
-  const { chat, sending, setViewer, updateMessage, removeMessage, refreshChat } = useApp()
+  const { chat, sending, setViewer, updateMessage, removeMessage, rebuildMessageAudio, refreshChat } = useApp()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
@@ -134,6 +134,9 @@ export function CenterColumn() {
                   </button>
                   <button className="icon" title="Delete message" onClick={() => void deleteMessage(message.id)}>
                     🗑
+                  </button>
+                  <button className="icon" title="Rebuild audio for this message" onClick={() => void rebuildMessageAudio(message.id)}>
+                    ♻
                   </button>
                   {!isUser && (
                     <button className="icon" title={message.audioPath ? 'Play audio' : 'Speak'} onClick={() => play(message)}>

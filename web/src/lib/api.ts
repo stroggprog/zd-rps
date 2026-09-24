@@ -166,6 +166,8 @@ export const api = {
       http<Chat>(`/api/chats/${id}/messages/${messageId}`, jsonInit('PATCH', { content })),
     removeMessage: (id: string, messageId: string) =>
       http<Chat>(`/api/chats/${id}/messages/${messageId}`, { method: 'DELETE' }),
+    rebuildMessageAudio: (id: string, messageId: string) =>
+      http<Chat>(`/api/chats/${id}/messages/${messageId}/rebuild-audio`, { method: 'POST' }),
     messageStream: (id: string, content: string, audioEnabled: boolean, handlers: MessageStreamHandlers) =>
       sseMessage(id, content, audioEnabled, handlers),
   },

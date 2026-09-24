@@ -71,6 +71,7 @@ export interface AppState {
   refreshChat: () => Promise<void>
   updateMessage: (messageId: string, content: string) => Promise<void>
   removeMessage: (messageId: string) => Promise<void>
+  rebuildMessageAudio: (messageId: string) => Promise<void>
 }
 
 const Ctx = createContext<AppState | null>(null)
@@ -483,6 +484,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [selectedChatId, refreshChat],
   )
 
+  const rebuildMessageAudio = useCallback(
+    async (messageId: string) => {
+      if (!selectedChatId) return
+      setBusy(true)
+      try {
+        const updated = await api.chats.rebuildMessageAudio(selectedChatId, messageId)
+        setChat((prev) => (prev && prev.chat.id === updated.id ? { ...prev, chat: updated } : prev))
+      } catch (e) {
+        setError((e as Error).message)
+      } finally {
+        setBusy(false)
+      }
+    },
+    [selectedChatId],
+  )
+
   const setConnectionDefault = useCallback(
     async (kind: 'llm' | 'stt' | 'tts', connectionId: string | null) => {
       await api.connections.setDefault(kind, connectionId)
@@ -530,6 +547,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refreshChat,
       updateMessage,
       removeMessage,
+      rebuildMessageAudio,
     }),
     [
       providers,
@@ -569,6 +587,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refreshChat,
       updateMessage,
       removeMessage,
+      rebuildMessageAudio,
     ],
   )
 
