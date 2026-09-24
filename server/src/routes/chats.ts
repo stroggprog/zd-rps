@@ -804,18 +804,20 @@ export function chatsRouter(ctx: AppContext): Router {
             (m) => !orderedBlocks.includes(m.id),
           );
           const saved = [...prior, ...orderedBlocks
-            .map((id) => blockSpecs.get(id)!)
-            .filter((spec) => spec.content.trim())
-            .map((spec) => ({
-              id: '',
-              role: 'assistant' as const,
-              speaker: spec.speaker,
-              content: spec.content.trim(),
-              audioPath: null as string | null,
-              audio: spec.clips,
-              images: [] as string[],
-              ts: now(),
-            }))];
+            .filter((id) => blockSpecs.get(id)?.content.trim())
+            .map((id) => {
+              const spec = blockSpecs.get(id)!;
+              return {
+                id,
+                role: 'assistant' as const,
+                speaker: spec.speaker,
+                content: spec.content.trim(),
+                audioPath: null as string | null,
+                audio: spec.clips,
+                images: [] as string[],
+                ts: now(),
+              };
+            })];
           chats.update(chatWithUser.id, { messages: saved });
         }
         await audioQueue.waitIdle();

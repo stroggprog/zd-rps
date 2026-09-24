@@ -47,6 +47,7 @@ export function normalizeChat(chat: Chat): Chat {
     messages: Array.isArray(chat.messages)
       ? chat.messages.map((m) => ({
           ...m,
+          id: m.id || `${uuid()}`,
           content: typeof m.content === 'string' ? m.content : '',
           audioPath: typeof m.audioPath === 'string' ? m.audioPath : null,
           audio: Array.isArray((m as { audio?: unknown }).audio) ? (m as { audio: MessageAudio[] }).audio : [],
