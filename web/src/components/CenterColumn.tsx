@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useApp, enqueueAudio } from '../store'
 import { api } from '../lib/api'
 import type { ChatMessage } from '../lib/types'
@@ -12,8 +12,10 @@ async function speakViaApi(message: ChatMessage) {
 }
 
 export function CenterColumn() {
-  const { chat, sending, setViewer } = useApp()
+  const { chat, sending, setViewer, updateMessage, removeMessage, refreshChat } = useApp()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState('')
 
   useEffect(() => {
     const el = scrollRef.current
@@ -42,6 +44,21 @@ export function CenterColumn() {
     }
   }
 
+  const deleteMessage = async (id: string) => {
+    if (!window.confirm('Delete this message? It will be removed from the LLM context as well.')) return
+    await removeMessage(id)
+  }
+
+  const saveEdit = async (id: string) => {
+    const content = editDraft.trim()
+    setEditingId(null)
+    if (content && content !== messages.find((m) => m.id === id)?.content) {
+      await updateMessage(id, content)
+    } else {
+      await refreshChat()
+    }
+  }
+
   return (
     <main className="column center">
       <div className="messages" ref={scrollRef}>
@@ -63,18 +80,38 @@ export function CenterColumn() {
               )}
               <div>
                 <div className="meta">{message.speaker.name}{isUser && ' · you'}</div>
-                <div className="bubble">
-                  {message.content}
-                  {message.images.map((src) => (
-                    <img
-                      key={src}
-                      className="msg-image"
-                      src={src}
-                      alt="Attachment"
-                      onClick={() => setViewer(message.images, message.images.indexOf(src))}
+                {editingId === message.id ? (
+                  <div className="bubble">
+                    <textarea
+                      rows={6}
+                      style={{ width: '100%', background: 'transparent', color: 'inherit', border: '1px solid var(--border)' }}
+                      value={editDraft}
+                      autoFocus
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void saveEdit(message.id)
+                        if (e.key === 'Escape') setEditingId(null)
+                      }}
                     />
-                  ))}
-                </div>
+                    <div className="row" style={{ marginTop: 6 }}>
+                      <button className="primary" onClick={() => void saveEdit(message.id)}>Save</button>
+                      <button onClick={() => setEditingId(null)}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bubble">
+                    {message.content}
+                    {message.images.map((src) => (
+                      <img
+                        key={src}
+                        className="msg-image"
+                        src={src}
+                        alt="Attachment"
+                        onClick={() => setViewer(message.images, message.images.indexOf(src))}
+                      />
+                    ))}
+                  </div>
+                )}
                 {!isUser && message.audio.length > 0 && (
                   <div className="chips">
                     {message.audio.map((clip, i) => (
@@ -91,13 +128,19 @@ export function CenterColumn() {
                     ))}
                   </div>
                 )}
-                {!isUser && (
-                  <div className="actions">
+                <div className="actions">
+                  <button className="icon" title="Edit message" onClick={() => { setEditingId(message.id); setEditDraft(message.content) }}>
+                    ✎
+                  </button>
+                  <button className="icon" title="Delete message" onClick={() => void deleteMessage(message.id)}>
+                    🗑
+                  </button>
+                  {!isUser && (
                     <button className="icon" title={message.audioPath ? 'Play audio' : 'Speak'} onClick={() => play(message)}>
                       {message.audioPath ? '▶' : '🔊'}
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           )

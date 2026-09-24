@@ -69,6 +69,8 @@ export interface AppState {
   patchRuntime: (patch: Partial<Chat['runtime']>) => Promise<void>
   setConnectionDefault: (kind: 'llm' | 'stt' | 'tts', connectionId: string | null) => Promise<void>
   refreshChat: () => Promise<void>
+  updateMessage: (messageId: string, content: string) => Promise<void>
+  removeMessage: (messageId: string) => Promise<void>
 }
 
 const Ctx = createContext<AppState | null>(null)
@@ -449,6 +451,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [selectedChatId, chat],
   )
 
+  const updateMessage = useCallback(
+    async (messageId: string, content: string) => {
+      if (!selectedChatId) return
+      setBusy(true)
+      try {
+        await api.chats.updateMessage(selectedChatId, messageId, content)
+        await refreshChat()
+      } catch (e) {
+        setError((e as Error).message)
+      } finally {
+        setBusy(false)
+      }
+    },
+    [selectedChatId, refreshChat],
+  )
+
+  const removeMessage = useCallback(
+    async (messageId: string) => {
+      if (!selectedChatId) return
+      setBusy(true)
+      try {
+        await api.chats.removeMessage(selectedChatId, messageId)
+        await refreshChat()
+      } catch (e) {
+        setError((e as Error).message)
+      } finally {
+        setBusy(false)
+      }
+    },
+    [selectedChatId, refreshChat],
+  )
+
   const setConnectionDefault = useCallback(
     async (kind: 'llm' | 'stt' | 'tts', connectionId: string | null) => {
       await api.connections.setDefault(kind, connectionId)
@@ -494,6 +528,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       patchRuntime,
       setConnectionDefault,
       refreshChat,
+      updateMessage,
+      removeMessage,
     }),
     [
       providers,
@@ -531,6 +567,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       patchRuntime,
       setConnectionDefault,
       refreshChat,
+      updateMessage,
+      removeMessage,
     ],
   )
 

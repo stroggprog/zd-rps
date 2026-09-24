@@ -162,6 +162,10 @@ export const api = {
       http<Chat>(`/api/chats/${id}`, jsonInit('PATCH', payload)),
     participants: (id: string, payload: { add?: string[]; remove?: string[] }) =>
       http<Chat>(`/api/chats/${id}/participants`, jsonInit('POST', payload)),
+    updateMessage: (id: string, messageId: string, content: string) =>
+      http<Chat>(`/api/chats/${id}/messages/${messageId}`, jsonInit('PATCH', { content })),
+    removeMessage: (id: string, messageId: string) =>
+      http<Chat>(`/api/chats/${id}/messages/${messageId}`, { method: 'DELETE' }),
     messageStream: (id: string, content: string, audioEnabled: boolean, handlers: MessageStreamHandlers) =>
       sseMessage(id, content, audioEnabled, handlers),
   },

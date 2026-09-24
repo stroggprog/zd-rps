@@ -341,6 +341,35 @@ export function chatsRouter(ctx: AppContext): Router {
     }),
   );
 
+  router.patch(
+    '/:id/messages/:mid',
+    asyncHandler(async (req, res) => {
+      const chat = chats.getOrThrow(idParam(req));
+      const body = readJsonBody<{ content?: string }>(req);
+      const content = asString(body.content).trim();
+      if (!content) throw new ApiError('Message content is empty', 400);
+      const mid = idParam(req);
+      const idx = chat.messages.findIndex((m) => m.id === mid);
+      if (idx < 0) throw new ApiError('Message not found', 404);
+      const messages = [...chat.messages];
+      messages[idx] = { ...messages[idx], content };
+      const updated = chats.update(chat.id, { messages });
+      res.json(chats.get(updated!.id));
+    }),
+  );
+
+  router.delete(
+    '/:id/messages/:mid',
+    asyncHandler(async (req, res) => {
+      const chat = chats.getOrThrow(idParam(req));
+      const mid = idParam(req);
+      const removed = chat.messages.filter((m) => m.id !== mid);
+      if (removed.length === chat.messages.length) throw new ApiError('Message not found', 404);
+      const updated = chats.update(chat.id, { messages: removed });
+      res.json(chats.get(updated!.id));
+    }),
+  );
+
   router.post(
     '/:id/messages',
     asyncHandler(async (req, res) => {
