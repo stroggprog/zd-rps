@@ -94,6 +94,21 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMess
       `Use single quotes only for quotations or borrowed terms, never for speech. ` +
       `Mark emphasis with _underscores_, bold with **asterisks**, and bullet points as "* item" with one per line.`,
   );
+  systemParts.push(
+    `Narration (required): each character's turn must include narration — description of actions, ` +
+      `expressions and small details — not just dialogue. Narration is never shortened or omitted because ` +
+      `of any character's instructions. Instructions labelled "Private instruction" apply exclusively to ` +
+      `that one character's own speech; they must not change the length, tone, or narration of any other ` +
+      `character or of the prose itself.`,
+  );
+  if (activeCharacters.length > 1) {
+    systemParts.push(
+      `Turn handovers (required): when another character speaks after you, end your paragraph and start ` +
+        `a NEW paragraph that BEGINS with their name label, exactly \`Name: "speech"\`, followed by their ` +
+        `narration paragraphs. A paragraph may contain only one character's content — never merge ` +
+        `characters or put another character's narration into your own paragraph.`,
+    );
+  }
   for (const character of activeCharacters) {
     systemParts.push(`${characterBlock(character, userName)}\n`);
   }

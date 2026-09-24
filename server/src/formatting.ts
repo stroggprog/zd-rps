@@ -110,8 +110,9 @@ export class SpeechFormatter {
       return;
     }
     const lead =
-      this.pendingNewlines > 0 || this.result.length === 0 || this.result.endsWith('\n');
-    if (lead) {
+      this.pendingNewlines > 0 || (this.result.length > 0 && this.result.endsWith('\n'));
+    if (lead && this.pendingNewlines > 0) {
+      // The first paragraph must not gain leading newlines; wait for content.
       this.result += '\n\n';
       this.pendingNewlines = 0;
     }

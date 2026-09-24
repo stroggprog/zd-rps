@@ -698,6 +698,21 @@ export function chatsRouter(ctx: AppContext): Router {
       let paraSpeech = false;
       let activeStream: SentenceStream | null = null;
       const paragraphs = new ParagraphStream((p) => {
+        // The model often hands over by starting a narration paragraph with
+        // "<Name>'s ..." (e.g. `Rusty's screen displays...`) without a label.
+        // When that name is a different active participant, start their block.
+        const pm2 = /^(?:\*{0,3}\s*)?["'\u201C]?\s*([A-Za-z0-9 _.'-]{1,60})'s\s/.exec(p);
+        if (pm2) {
+          const match = activeChars.find((c) => c.name.toLowerCase() === pm2[1].trim().toLowerCase());
+          if (match && (!blockSpeaker || blockSpeaker.name !== match.name)) {
+            beginBlock({
+              characterId: match.id,
+              name: match.name,
+              avatarPath: match.avatarPath,
+              voiceSamplePath: match.voiceSamplePath,
+            });
+          }
+        }
         paraSpeech = quotation.isSpeech(p);
         activeStream = new SentenceStream({ activeNames, onSentence: handleSentence });
         activeStream.push(p);
