@@ -101,7 +101,7 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
   if (ctx.persona && (ctx.persona.description.trim() || (personaName !== USER_NAME && personaName !== 'You'))) {
     systemParts.push(personaBlock(ctx.persona));
   }
-  if (activeCharacters.length > 1) {
+  if (!target && activeCharacters.length > 1) {
     systemParts.push(`When you reply, start with the speaking character's name followed by a colon, e.g. "${names[0]}: ...".`);
   }
   systemParts.push(
