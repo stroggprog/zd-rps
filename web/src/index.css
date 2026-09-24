@@ -59,6 +59,19 @@ button.icon {
   background: transparent;
   border-color: transparent;
 }
+a.pick-export {
+  flex: none;
+  padding: 4px 6px;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  line-height: 1;
+}
+a.pick-export:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 
 input,
 select,

@@ -120,7 +120,7 @@ export function LorebookEditor() {
                   <span className="grow">{book.name}</span>
                   <span className="tag">{book.entries.length} entries</span>
                   <a
-                    className="icon"
+                    className="pick-export"
                     href={`/api/lorebooks/${book.id}/export`}
                     download={`${book.name.replace(/[^\w.-]+/g, '_')}.json`}
                     title="Export as JSON"
