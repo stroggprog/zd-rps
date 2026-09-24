@@ -55,6 +55,7 @@ function substitute(text: string, character: Character, userName: string): strin
 
 function characterBlock(character: Character, userName: string): string {
   const lines: string[] = [`[Character: ${character.name}]`];
+  if (character.tags.length > 0) lines.push(`Tags: ${character.tags.join(', ')}`);
   if (character.description) lines.push(`Description: ${substitute(character.description, character, userName)}`);
   if (character.personality) lines.push(`Personality: ${substitute(character.personality, character, userName)}`);
   if (character.system_prompt) lines.push(`System: ${substitute(character.system_prompt, character, userName)}`);

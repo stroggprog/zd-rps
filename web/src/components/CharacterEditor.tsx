@@ -196,6 +196,9 @@ export function CharacterEditor() {
                 >
                   {c.avatarPath ? <img src={c.avatarPath} alt="" /> : <div className="avatar" />}
                   <span className="grow">{c.name}</span>
+                  {c.tags.slice(0, 3).map((t) => (
+                    <span key={t} className="tag">{t}</span>
+                  ))}
                   {c.voiceSamplePath && <span className="tag">🎤</span>}
                 </div>
               ))}
