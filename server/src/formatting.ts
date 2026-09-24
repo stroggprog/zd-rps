@@ -16,7 +16,7 @@ const SPEECH_QUOTES = new Set(['"', '\u201C', '\u201D']);
 /** Word characters survive sentence boundaries; a quote after one must be a close. */
 const WORD = /[\p{L}\p{N}]/u;
 /** Punctuation that may directly precede a closing or stray dialogue quote. */
-const SPEECH_END = new Set(['.', '!', '?', '\u2026', ',', ';', ':']);
+const SPEECH_END = new Set(['.', '!', '?', '\u2026', ',', ';', ':', ']', ')']);
 
 export class SpeechFormatter {
   private result = '';
