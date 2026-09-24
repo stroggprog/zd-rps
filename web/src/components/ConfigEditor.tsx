@@ -71,14 +71,15 @@ export function ConfigEditor() {
   const providerInfo = draft ? providers.find((p) => p.id === draft.provider) : undefined
   const optionDefs = providerInfo?.capabilities.options ?? []
 
-  const save = async () => {
+  const save = async (): Promise<Connection | null> => {
     if (!draft || !draft.name.trim()) {
       setError('Connection name is required')
-      return
+      return null
     }
     setSaving(true)
+    let saved: Connection
     try {
-      const saved =
+      saved =
         draft.id
           ? await api.connections.update(draft.id, draft)
           : await api.connections.create(draft)
@@ -86,9 +87,11 @@ export function ConfigEditor() {
       await refreshAll()
     } catch (e) {
       setError((e as Error).message)
+      return null
     } finally {
       setSaving(false)
     }
+    return saved
   }
 
   const runTest = async () => {
@@ -96,7 +99,11 @@ export function ConfigEditor() {
     setTesting(true)
     setError(null)
     try {
-      setTest(await api.connections.test(draft.id))
+      // Save first so the test uses the values currently in the editor,
+      // not the previously stored configuration.
+      const saved = await save()
+      if (!saved) return
+      setTest(await api.connections.test(saved.id))
     } catch (e) {
       setError((e as Error).message)
     } finally {
