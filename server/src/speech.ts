@@ -22,8 +22,9 @@
  */
 
 const DOUBLE = new Set(['"', '\u201C', '\u201D']);
-/** Punctuation that may directly precede a closing dialogue quote. */
-const CLOSE_BEFORE = new Set([',', ';', ':', '.', '!', '?', '\u2026', '\u2014', '\u2013']);
+/** Punctuation that may directly precede a closing dialogue quote. Includes
+ *  `]`/`)` so model-emitted `[emoji]` line endings still count as speech close. */
+const CLOSE_BEFORE = new Set([',', ';', ':', '.', '!', '?', '\u2026', '\u2014', '\u2013', ']', ')']);
 const WORD = /[\p{L}\p{N}]/u;
 
 /** Classifies a double-quote char as open/close, or not a quote at all. */

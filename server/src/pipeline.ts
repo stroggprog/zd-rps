@@ -87,6 +87,8 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number): LlmMess
   systemParts.push(
     `Formatting (required): ` +
       `Write all speech in double quotes, e.g. "Spoken like a leader." ` +
+      `A speech paragraph must START with its double quote; a paragraph ending in a closing quote ` +
+      `without an opening one is an error. ` +
       `Separate speech from narration, and narration from speech, with a blank line (a paragraph break). ` +
       `Never put line breaks inside speech. ` +
       `Use single quotes only for quotations or borrowed terms, never for speech. ` +
