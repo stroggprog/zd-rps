@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useApp } from '../store'
 import { api } from '../lib/api'
 import type { Scenario } from '../lib/types'
@@ -66,6 +66,20 @@ export function ScenarioEditor() {
     await refreshAll()
   }
 
+  const importInput = useRef<HTMLInputElement>(null)
+
+  const importFile = async (file: File) => {
+    setError(null)
+    try {
+      const imported = await api.scenarios.importFile(file)
+      setDraft(imported)
+      setGreetings(imported.alternate_greetings.join('\n'))
+      await refreshAll()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   const copyGreeting = () => {
     if (draft?.first_mes) setGreetings((g) => (g ? `${g}\n${draft.first_mes}` : draft.first_mes))
   }
@@ -79,14 +93,37 @@ export function ScenarioEditor() {
       <div className="overlay-body">
         <div className="list-grid">
           <div>
-            <button className="primary" style={{ marginBottom: 8 }} onClick={beginCreate}>
-              ＋ New scenario
-            </button>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button className="primary" onClick={beginCreate}>
+                ＋ New scenario
+              </button>
+              <button onClick={() => importInput.current?.click()}>Import file (JSON)</button>
+              <input
+                ref={importInput}
+                type="file"
+                accept="application/json,.json"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void importFile(f)
+                  e.target.value = ''
+                }}
+              />
+            </div>
             <div className="pick-list">
               {scenarios.map((s) => (
                 <div key={s.id} className={`pick-item${draft?.id === s.id ? ' selected' : ''}`} onClick={() => beginEdit(s)}>
                   <span className="grow">{s.name}</span>
                   <span className="tag">{s.alternate_greetings.length} greetings</span>
+                  <a
+                    className="pick-export"
+                    href={`/api/scenarios/${s.id}/export`}
+                    download={`${s.name.replace(/[^\w.-]+/g, '_')}.json`}
+                    title="Export as JSON"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    ⤓
+                  </a>
                 </div>
               ))}
               {scenarios.length === 0 && <div className="hint">No scenarios yet.</div>}

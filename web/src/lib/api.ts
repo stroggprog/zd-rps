@@ -149,6 +149,11 @@ export const api = {
     update: (id: string, s: Partial<Scenario>) =>
       http<Scenario>(`/api/scenarios/${id}`, jsonInit('PUT', s)),
     remove: (id: string) => http<void>(`/api/scenarios/${id}`, { method: 'DELETE' }),
+    importFile: (file: File) => {
+      const form = new FormData()
+      form.append('file', file)
+      return http<Scenario>('/api/scenarios/import', { method: 'POST', body: form })
+    },
   },
 
   chats: {
