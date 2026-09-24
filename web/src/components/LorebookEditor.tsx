@@ -198,71 +198,93 @@ function sanitizeDraftEntries(entries: LoreEntry[]): LoreEntry[] {
 }
 
 function EntryForm({ entry, onChange, onRemove }: { entry: LoreEntry; onChange: (patch: Partial<LoreEntry>) => void; onRemove: () => void }) {
+  const [open, setOpen] = useState(false)
+  const keysLabel = entry.keys.length > 0 ? entry.keys.join(', ') : '(no keys)'
   return (
     <div className="entry-card">
-      <div className="row">
-        <span className="grow"><strong>{entry.name || '(unnamed entry)'}</strong></span>
-        <label className="row" style={{ gap: 4 }}>
-          <input type="checkbox" checked={entry.enabled} onChange={(e) => onChange({ enabled: e.target.checked })} />
-          enabled
-        </label>
-        <label className="row" style={{ gap: 4 }}>
-          <input type="checkbox" checked={entry.constant} onChange={(e) => onChange({ constant: e.target.checked })} />
-          constant
-        </label>
-        <button className="icon" title="Delete entry" onClick={onRemove}>✕</button>
+      <div
+        className="row"
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+        onClick={() => setOpen((o) => !o)}
+        title={open ? 'Roll entry up' : 'Open entry'}
+      >
+        <span style={{ width: 14 }} aria-hidden>{open ? '▾' : '▸'}</span>
+        <span className="grow">
+          <strong>{entry.name || '(unnamed entry)'}</strong>{' '}
+          <span className="hint" style={{ padding: 0 }}>{keysLabel}</span>
+        </span>
+        <button
+          className="icon"
+          title="Delete entry"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
+        >
+          ✕
+        </button>
       </div>
-      <div className="field">
-        <label>Name</label>
-        <input value={entry.name} onChange={(e) => onChange({ name: e.target.value })} />
-      </div>
-      <div className="form-grid">
-        <div className="field">
-          <label>Keys (comma-separated)</label>
-          <input value={entry.keys.join(', ')} onChange={(e) => onChange({ keys: e.target.value.split(',').map((k) => k.trim()) })} />
+      {open && (
+      <>
+        <div className="row" style={{ marginTop: 4 }}>
+          <label className="row" style={{ gap: 4 }}>
+            <input type="checkbox" checked={entry.enabled} onChange={(e) => onChange({ enabled: e.target.checked })} />
+            enabled
+          </label>
+          <label className="row" style={{ gap: 4 }}>
+            <input type="checkbox" checked={entry.constant} onChange={(e) => onChange({ constant: e.target.checked })} />
+            constant
+          </label>
         </div>
         <div className="field">
-          <label>Secondary keys</label>
-          <input value={entry.secondary_keys.join(', ')} onChange={(e) => onChange({ secondary_keys: e.target.value.split(',').map((k) => k.trim()) })} />
+          <label>Name</label>
+          <input value={entry.name} onChange={(e) => onChange({ name: e.target.value })} />
+        </div>
+        <div className="form-grid">
+          <div className="field">
+            <label>Keys (comma-separated)</label>
+            <input value={entry.keys.join(', ')} onChange={(e) => onChange({ keys: e.target.value.split(',').map((k) => k.trim()) })} />
+          </div>
+          <div className="field">
+            <label>Secondary keys</label>
+            <input value={entry.secondary_keys.join(', ')} onChange={(e) => onChange({ secondary_keys: e.target.value.split(',').map((k) => k.trim()) })} />
+          </div>
+          <div className="field">
+            <label>Insertion order</label>
+            <input type="number" value={entry.insertion_order} onChange={(e) => onChange({ insertion_order: Number(e.target.value) })} />
+          </div>
+          <div className="field">
+            <label>Priority</label>
+            <input type="number" value={entry.priority} onChange={(e) => onChange({ priority: Number(e.target.value) })} />
+          </div>
+          <div className="field">
+            <label>Position</label>
+            <select value={entry.position} onChange={(e) => onChange({ position: e.target.value as 'before_char' | 'after_char' })}>
+              <option value="before_char">Before character</option>
+              <option value="after_char">After character</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>Selective (needs secondary keys)</label>
+            <select value={entry.selective ? '1' : '0'} onChange={(e) => onChange({ selective: e.target.value === '1' })}>
+              <option value="0">Off</option>
+              <option value="1">On</option>
+            </select>
+          </div>
         </div>
         <div className="field">
-          <label>Insertion order</label>
-          <input type="number" value={entry.insertion_order} onChange={(e) => onChange({ insertion_order: Number(e.target.value) })} />
-        </div>
-        <div className="field">
-          <label>Priority</label>
-          <input type="number" value={entry.priority} onChange={(e) => onChange({ priority: Number(e.target.value) })} />
-        </div>
-        <div className="field">
-          <label>Position</label>
-          <select value={entry.position} onChange={(e) => onChange({ position: e.target.value as 'before_char' | 'after_char' })}>
-            <option value="before_char">Before character</option>
-            <option value="after_char">After character</option>
+          <label>Case sensitive</label>
+          <select value={entry.case_sensitive ? '1' : '0'} onChange={(e) => onChange({ case_sensitive: e.target.value === '1' })}>
+            <option value="0">No</option>
+            <option value="1">Yes</option>
           </select>
         </div>
         <div className="field">
-          <label>Selective (needs secondary keys)</label>
-          <select value={entry.selective ? '1' : '0'} onChange={(e) => onChange({ selective: e.target.value === '1' })}>
-            <option value="0">Off</option>
-            <option value="1">On</option>
-          </select>
+          <label>Content</label>
+          <textarea rows={4} value={entry.content} onChange={(e) => onChange({ content: e.target.value })} />
         </div>
-      </div>
-      <div className="field">
-        <label>Case sensitive</label>
-        <select value={entry.case_sensitive ? '1' : '0'} onChange={(e) => onChange({ case_sensitive: e.target.value === '1' })}>
-          <option value="0">No</option>
-          <option value="1">Yes</option>
-        </select>
-      </div>
-      <div className="field">
-        <label>Content</label>
-        <textarea rows={4} value={entry.content} onChange={(e) => onChange({ content: e.target.value })} />
-      </div>
-      <div className="field">
-        <label>Comment</label>
-        <input value={entry.comment} onChange={(e) => onChange({ comment: e.target.value })} />
-      </div>
+      </>
+      )}
     </div>
   )
 }
