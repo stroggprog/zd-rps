@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useApp } from '../store'
 
 export function LeftColumn() {
@@ -13,9 +14,22 @@ export function LeftColumn() {
   }
   const image = viewerIndex >= 0 ? viewerImages[viewerIndex] : null
 
+  const [chatsOpen, setChatsOpen] = useState(true)
+  // A chat starting/resuming collapses the list to free space.
+  useEffect(() => {
+    if (selectedChatId) setChatsOpen(false)
+  }, [selectedChatId])
+
   return (
     <aside className="column left">
-      <h3>Chats</h3>
+      <h3
+        style={{ cursor: 'pointer', display: 'flex', gap: 6, alignItems: 'center' }}
+        onClick={() => setChatsOpen((o) => !o)}
+        title={chatsOpen ? 'Roll chats up' : 'Show chats'}
+      >
+        {chatsOpen ? '▾' : '▸'} Chats
+      </h3>
+      {chatsOpen && (
       <div className="pick-list">
         {chats.map((c) => (
           <div
@@ -44,6 +58,7 @@ export function LeftColumn() {
         ))}
         {chats.length === 0 && <div className="hint">No chats yet. Use the ☰ menu to start one.</div>}
       </div>
+      )}
       <div className="images-block">
         <h3>Images</h3>
       {image && (
