@@ -88,7 +88,11 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
         `but they receive their own prompts — never write their speech, narration, or dialogue. ` +
         `Never speak for ${userName} either. ` +
         `Your turn: ${target.name}'s speech in double quotes first, then ${target.name}'s narration; ` +
-        `do not add any name label. If you cannot add anything meaningful as ${target.name}, reply with a single short paragraph (still only ${target.name}).`,
+        `do not add any name label. ` +
+        `Structure your turn as SEPARATE paragraphs: one paragraph of speech (in double quotes), ` +
+        `then a paragraph of narration about ${target.name}'s actions — never merge speech and narration ` +
+        `into one paragraph, and repeat that pattern if you speak more than once. ` +
+        `If you cannot add anything meaningful as ${target.name}, reply with a single short paragraph (still only ${target.name}).`,
     );
   } else {
     systemParts.push(

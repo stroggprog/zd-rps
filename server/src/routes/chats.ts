@@ -721,6 +721,9 @@ export function chatsRouter(ctx: AppContext): Router {
       const historyTail = contextTail;
       const runReplyPipeline = async (roundMessages: LlmMessage[], roundConn: Connection = llmConn): Promise<void> => {
         let paraSpeech = false;
+        // Fresh quotation state per pipeline run so one round's quote state
+        // can't poison the next round's speech/narration attribution.
+        const roundQuotation = new QuotationTracker();
         const roundFormatter = new SpeechFormatter();
         let activeStream: SentenceStream | null = null;
         const paragraphs = new ParagraphStream((p) => {
@@ -743,7 +746,7 @@ export function chatsRouter(ctx: AppContext): Router {
           // QuotationTracker (a paragraph with an orphan closing quote — the
           // model dropping its opening quote — counts as speech for the whole
           // paragraph), then fed to the sentence stream with that attribution.
-          paraSpeech = quotation.isSpeech(p);
+          paraSpeech = roundQuotation.isSpeech(p);
           activeStream = new SentenceStream({ activeNames, onSentence: handleSentence });
           activeStream.push(p);
           activeStream.finish();
