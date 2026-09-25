@@ -1,0 +1,3 @@
+Kiara: "Stop analyzing my breathing, Mei. I'm fine. Just... thinking. The transition was rougher than the telemetry suggests."
+
+Kiara's voice is low, the tinny distortion of the comms unit making her exhaustion sound heavy and metallic. She shifts slightly in her pilot's seat, the faint creak of her flight harness audible through the audio feed. Her eyes remain fixed on the blackness of space, searching for any ghost of the ruins that might still be lingering in the wake of their jump.

@@ -789,7 +789,10 @@ export function chatsRouter(ctx: AppContext): Router {
           );
 
         for (const target of activeChars) {
-          if (ctrl.aborted) break;
+          // Once the turn starts, finish every round even if the browser
+          // disconnected (the dev proxy/SSE can drop on long turns): the
+          // transcript still completes and the client's next refresh shows it.
+          void ctrl;
           roundsMode = true;
           beginBlock({
             characterId: target.id,
