@@ -25,6 +25,13 @@ const NO_PREFIX_CUTOFF = 200;
 export interface SentenceStreamOptions {
   /** Names of the active characters; a leading "Name: " prefix is stripped when it matches one of these. */
   activeNames: string[];
+  /**
+   * When false, leading speaker prefixes are left untouched (they are handled
+   * by the SSE layer's handover detection instead). Used for paragraphs after
+   * the reply's first, so mid-reply labels become new per-speaker blocks.
+   * Default: true.
+   */
+  stripLabels?: boolean;
   /** Called once per completed sentence (trimmed, prefix stripped). `isLast` is true only for the final flush. */
   onSentence: (sentence: string, isLast: boolean) => void;
 }
@@ -37,8 +44,11 @@ export class SentenceStream {
   private readonly names: string[];
   private readonly onSentence: (sentence: string, isLast: boolean) => void;
 
+  private readonly stripLabels: boolean;
+
   constructor(options: SentenceStreamOptions) {
     this.names = options.activeNames.map((n) => n.toLowerCase());
+    this.stripLabels = options.stripLabels ?? true;
     this.onSentence = options.onSentence;
   }
 
@@ -89,7 +99,7 @@ export class SentenceStream {
   }
 
   private tryStripPrefix(): void {
-    if (this.stripped) return;
+    if (this.stripped || !this.stripLabels) return;
     const m = PREFIX.exec(this.buffer);
     if (m && this.names.includes(m[1].trim().toLowerCase())) {
       this.detectedSpeaker = m[1].trim();

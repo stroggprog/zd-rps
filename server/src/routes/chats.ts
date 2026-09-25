@@ -726,6 +726,7 @@ export function chatsRouter(ctx: AppContext): Router {
         const roundQuotation = new QuotationTracker();
         const roundFormatter = new SpeechFormatter();
         let activeStream: SentenceStream | null = null;
+        let isFirstParagraph = true;
         const paragraphs = new ParagraphStream((p) => {
           // The model often hands over by starting a narration paragraph with
           // "<Name>'s ..." (e.g. `Rusty's screen displays...`) without a label.
@@ -746,8 +747,16 @@ export function chatsRouter(ctx: AppContext): Router {
           // QuotationTracker (a paragraph with an orphan closing quote — the
           // model dropping its opening quote — counts as speech for the whole
           // paragraph), then fed to the sentence stream with that attribution.
+          // Only the reply's FIRST paragraph may lose its leading speaker
+          // label: later paragraphs' labels must survive to the handover
+          // detector, or they'd be swallowed and no new block would start.
           paraSpeech = roundQuotation.isSpeech(p);
-          activeStream = new SentenceStream({ activeNames, onSentence: handleSentence });
+          activeStream = new SentenceStream({
+            activeNames,
+            stripLabels: isFirstParagraph,
+            onSentence: handleSentence,
+          });
+          isFirstParagraph = false;
           activeStream.push(p);
           activeStream.finish();
         });
