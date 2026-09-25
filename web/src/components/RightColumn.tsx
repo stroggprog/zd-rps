@@ -36,6 +36,7 @@ export function RightColumn() {
   const [showPicker, setShowPicker] = useState(false)
   const [showNarratorPicker, setShowNarratorPicker] = useState(false)
   const [showStorySave, setShowStorySave] = useState(false)
+  const [savingStory, setSavingStory] = useState(false)
   const [saveStoryTarget, setSaveStoryTarget] = useState('__new__')
   const [newStoryName, setNewStoryName] = useState('')
   const [open, setOpen] = useState({ runtime: false, scenario: false, lorebooks: false, story: false })
@@ -195,10 +196,11 @@ export function RightColumn() {
             <button
               className="primary"
               style={{ marginTop: 6 }}
-              disabled={busy}
+              disabled={busy || savingStory}
               onClick={() => {
                 const isExisting = saveStoryTarget !== '__new__'
                 void (async () => {
+                  setSavingStory(true)
                   try {
                     await api.chats.saveStory(chat.chat.id, {
                       storyId: isExisting ? saveStoryTarget : null,
@@ -210,12 +212,12 @@ export function RightColumn() {
                   } catch (err) {
                     setError((err as Error).message)
                   } finally {
-                    // busy is shared; no local setter needed
+                    setSavingStory(false)
                   }
                 })()
               }}
             >
-              Generate summary & save
+              {savingStory ? 'Saving…' : 'Generate summary & save'}
             </button>
           </div>
         )}
