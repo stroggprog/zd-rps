@@ -12,6 +12,7 @@ interface Draft {
   post_history_instructions: string
   mes_example: string
   tags: string
+  creator_notes: string
   llmConnectionId: string | null
 }
 
@@ -25,12 +26,19 @@ function emptyDraft(): Draft {
     post_history_instructions: '',
     mes_example: '',
     tags: '',
+    creator_notes: '',
     llmConnectionId: null,
   }
 }
 
 function toDraft(c: Character): Draft {
-  return { ...c, id: c.id, tags: c.tags.join(', '), llmConnectionId: c.llmConnectionId ?? null }
+  return {
+    ...c,
+    id: c.id,
+    tags: c.tags.join(', '),
+    creator_notes: c.creator_notes ?? '',
+    llmConnectionId: c.llmConnectionId ?? null,
+  }
 }
 
 export function CharacterEditor() {
@@ -270,6 +278,15 @@ export function CharacterEditor() {
                   <div className="field full">
                     <label>Description</label>
                     <textarea rows={3} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+                  </div>
+                  <div className="field full">
+                    <label>Creator notes (written to the exported card)</label>
+                    <textarea
+                      rows={3}
+                      value={draft.creator_notes}
+                      placeholder="Saved as-is; exported cards default to 'Exported from zd-rps' when left empty"
+                      onChange={(e) => setDraft({ ...draft, creator_notes: e.target.value })}
+                    />
                   </div>
                   <div className="field full">
                     <label>Personality</label>

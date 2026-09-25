@@ -14,6 +14,7 @@ export interface Character extends Stamped {
   post_history_instructions: string
   mes_example: string
   tags: string[]
+  creator_notes: string | null
   avatarPath: string | null
   voiceSamplePath: string | null
   voiceSampleTranscript: string | null
@@ -209,7 +210,7 @@ export interface ScenarioDraft {
 
 export interface ImportDraft {
   importId: Id
-  character: Pick<Character, 'name' | 'description' | 'personality' | 'system_prompt' | 'post_history_instructions' | 'mes_example' | 'tags'>
+  character: Pick<Character, 'name' | 'description' | 'personality' | 'system_prompt' | 'post_history_instructions' | 'mes_example' | 'tags' | 'creator_notes'>
   lorebook: Lorebook | null
   scenario: ScenarioDraft | null
   hasAvatar: boolean

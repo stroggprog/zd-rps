@@ -14,6 +14,7 @@ export interface Character extends Stamped {
   post_history_instructions: string;
   mes_example: string;
   tags: string[];
+  creator_notes: string | null;
   avatarPath: string | null;
   voiceSamplePath: string | null;
   voiceSampleTranscript: string | null;

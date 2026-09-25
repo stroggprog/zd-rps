@@ -20,6 +20,7 @@ export interface ImportResult {
     post_history_instructions: string;
     mes_example: string;
     tags: string[];
+    creator_notes: string | null;
   };
   avatarBuffer: Buffer | null;
   lorebook: Lorebook | null;
@@ -198,6 +199,7 @@ export function buildImportResult(parsed: ParsedCard): ImportResult {
       post_history_instructions: asString(card.post_history_instructions),
       mes_example: asString(card.mes_example),
       tags: Array.isArray(card.tags) ? card.tags.map((t) => asString(t)).filter(Boolean) : [],
+      creator_notes: typeof card.creator_notes === 'string' ? card.creator_notes : null,
     },
     avatarBuffer,
     lorebook,
@@ -302,6 +304,7 @@ export function buildCardObject(args: {
   scenario?: string;
   alternate_greetings?: string[];
   avatarDataUrl?: string;
+  creator_notes?: string | null;
   character_book?: Record<string, unknown> | null;
 }): Record<string, unknown> {
   // Spec v2 shape: fixed fields at the top level, everything else under
@@ -323,7 +326,10 @@ export function buildCardObject(args: {
       alternate_greetings: args.alternate_greetings ?? [],
       avatar: args.avatarDataUrl ?? '',
       character_book: args.character_book ?? undefined,
-      creator_notes: 'Exported from zd-rps',
+      creator_notes:
+        args.creator_notes && args.creator_notes.trim() !== ''
+          ? args.creator_notes
+          : 'Exported from zd-rps',
       extensions: {},
     },
   };

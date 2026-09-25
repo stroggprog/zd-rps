@@ -69,6 +69,10 @@ export function normalizeCharacter(character: Character): Character {
       typeof character.post_history_instructions === 'string' ? character.post_history_instructions : '',
     mes_example: typeof character.mes_example === 'string' ? character.mes_example : '',
     tags: Array.isArray(character.tags) ? character.tags : [],
+    creator_notes:
+      typeof (character as { creator_notes?: unknown }).creator_notes === 'string'
+        ? (character as { creator_notes: string | null }).creator_notes
+        : null,
     avatarPath: typeof character.avatarPath === 'string' ? character.avatarPath : null,
     voiceSamplePath: typeof character.voiceSamplePath === 'string' ? character.voiceSamplePath : null,
     voiceSampleTranscript:

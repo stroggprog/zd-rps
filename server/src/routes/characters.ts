@@ -92,6 +92,10 @@ export function charactersRouter(ctx: AppContext): Router {
         post_history_instructions: asString(body.post_history_instructions),
         mes_example: asString(body.mes_example),
         tags: Array.isArray(body.tags) ? body.tags.map((t) => asString(t)).filter(Boolean) : [],
+        creator_notes:
+          typeof body.creator_notes === 'string' && body.creator_notes.trim() !== ''
+            ? body.creator_notes
+            : null,
         llmConnectionId:
           typeof body.llmConnectionId === 'string' && body.llmConnectionId
             ? body.llmConnectionId
@@ -121,6 +125,11 @@ export function charactersRouter(ctx: AppContext): Router {
         mes_example: body.mes_example !== undefined ? asString(body.mes_example) : undefined,
         tags: body.tags !== undefined
           ? body.tags.map((t) => asString(t)).filter(Boolean)
+          : undefined,
+        creator_notes: body.creator_notes !== undefined
+          ? typeof body.creator_notes === 'string' && body.creator_notes.trim() !== ''
+            ? body.creator_notes
+            : null
           : undefined,
         llmConnectionId: body.llmConnectionId !== undefined
           ? typeof body.llmConnectionId === 'string' && body.llmConnectionId
@@ -288,6 +297,9 @@ export function charactersRouter(ctx: AppContext): Router {
           post_history_instructions: character.post_history_instructions,
           mes_example: character.mes_example,
           tags: character.tags,
+          creator_notes: character.creator_notes && character.creator_notes.trim() !== ''
+            ? character.creator_notes
+            : undefined,
           first_mes: scenario?.first_mes ?? '',
           scenario: scenario?.scenario ?? '',
           alternate_greetings: scenario?.alternate_greetings ?? [],
