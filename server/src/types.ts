@@ -184,6 +184,8 @@ export interface AppConfig {
   defaultLlm: Id | null;
   defaultStt: Id | null;
   defaultTts: Id | null;
+  /** Write per-reply debug dumps into debug-rounds/ when true (default). */
+  debug: boolean;
   /** Optional replacement for the framing portion of the LLM system prompt. */
   systemPromptOverride: string | null;
 }

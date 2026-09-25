@@ -863,10 +863,12 @@ export function chatsRouter(ctx: AppContext): Router {
           if (!streamErrorBox.err) streamErrorBox.err = err as Error;
         }
         paragraphs.finish();
-        mkdirSync(path.join(ROOT, 'debug-rounds'), { recursive: true });
-        writeFileSync(path.join(ROOT, 'debug-rounds', 'response.txt'), rawText.trim());
-        writeFileSync(path.join(ROOT, 'debug-rounds', 'paragraphs.txt'), paraDebug);
-        writeFileSync(path.join(ROOT, 'debug-rounds', 'sep.txt'), sepDebug);
+        if (getConfig().debug !== false) {
+          mkdirSync(path.join(ROOT, 'debug-rounds'), { recursive: true });
+          writeFileSync(path.join(ROOT, 'debug-rounds', 'response.txt'), rawText.trim());
+          writeFileSync(path.join(ROOT, 'debug-rounds', 'paragraphs.txt'), paraDebug);
+          writeFileSync(path.join(ROOT, 'debug-rounds', 'sep.txt'), sepDebug);
+        }
 
       };
 
