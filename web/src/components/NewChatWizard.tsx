@@ -71,8 +71,8 @@ export function NewChatWizard() {
         </div>
 
         {step === 0 && (
-          <div className="participant-pick">
-            <div className="row" style={{ marginBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '0 0 140px' }}>
               <button
                 className={charTab === 'characters' ? 'toggle on' : 'toggle'}
                 onClick={() => setCharTab('characters')}
@@ -86,71 +86,80 @@ export function NewChatWizard() {
                 Groups
               </button>
             </div>
-            {charTab === 'characters' && (<div>
 
-            {(() => {
-              const allTags = [...new Set(people.flatMap((p) => p.tags))].sort((a, b) => a.localeCompare(b))
-              if (allTags.length === 0) return null
-              return (
-                <div className="row" style={{ flexWrap: 'wrap', marginBottom: 8 }}>
-                  {allTags.map((tag) => (
-                    <button
-                      key={tag}
-                      className={tagFilter === tag ? 'toggle on' : 'toggle'}
-                      onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '0 0 170px' }}>
+              {charTab === 'characters' &&
+                (() => {
+                  const allTags = [...new Set(people.flatMap((p) => p.tags))].sort((a, b) => a.localeCompare(b))
+                  if (allTags.length === 0) return <div className="hint">No tags yet.</div>
+                  return (
+                    <>
+                      {allTags.map((tag) => (
+                        <button
+                          key={tag}
+                          className={tagFilter === tag ? 'toggle on' : 'toggle'}
+                          style={{ alignSelf: 'stretch', width: '100%' }}
+                          onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                      {tagFilter && <button className="icon" onClick={() => setTagFilter(null)}>✕ clear</button>}
+                    </>
+                  )
+                })()}
+            </div>
+
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {charTab === 'characters' && (
+                <>
+                  {people
+                    .filter((p) => !tagFilter || p.tags.includes(tagFilter))
+                    .map((person) => (
+                    <div
+                      key={person.id}
+                      className={`pick-item${participantIds.includes(person.id) ? ' selected' : ''}`}
+                      onClick={() => toggle(participantIds, setParticipantIds, person.id)}
                     >
-                      {tag}
-                    </button>
-                  ))}
-                  {tagFilter && <button className="icon" onClick={() => setTagFilter(null)}>✕ clear</button>}
-                </div>
-              )
-            })()}
-            {people
-              .filter((p) => !tagFilter || p.tags.includes(tagFilter))
-              .map((person) => (
-              <div
-                key={person.id}
-                className={`pick-item${participantIds.includes(person.id) ? ' selected' : ''}`}
-                onClick={() => toggle(participantIds, setParticipantIds, person.id)}
-              >
-                {person.avatarPath ? <img src={person.avatarPath} alt="" /> : <div className="avatar" />}
-                <span className="grow">{person.name}</span>
-                {participantIds.includes(person.id) && <span className="tag">✓</span>}
-              </div>
-            ))}
-            {people.length === 0 && (
-              <div className="hint">No characters yet — create them under the Characters menu, or import a SillyTavern card there.</div>
-            )}
-            </div>)}
-
-            {charTab === 'groups' && (
-              <div>
-                {groups.map((g) => (
-                  <div
-                    key={g.id}
-                    className="pick-item"
-                    onClick={() => {
-                      const merged = new Set(participantIds)
-                      for (const m of g.memberIds) merged.add(m)
-                      setParticipantIds([...merged])
-                    }}
-                  >
-                    {g.avatarPath ? <img src={g.avatarPath} alt="" /> : <div className="avatar" />}
-                    <div className="grow">
-                      <div>{g.name}</div>
-                      <div className="hint" style={{ padding: 0 }}>
-                        {g.memberIds.length} member{g.memberIds.length === 1 ? '' : 's'}{g.description ? ` · ${g.description}` : ''}
-                      </div>
+                      {person.avatarPath ? <img src={person.avatarPath} alt="" /> : <div className="avatar" />}
+                      <span className="grow">{person.name}</span>
+                      {participantIds.includes(person.id) && <span className="tag">✓</span>}
                     </div>
-                    <span className="tag">＋ add {g.memberIds.length}</span>
-                  </div>
-                ))}
-                {groups.length === 0 && (
-                  <div className="hint">No groups yet — create them under the Groups menu (Characters → Groups).</div>
-                )}
-              </div>
-            )}
+                  ))}
+                  {people.length === 0 && (
+                    <div className="hint">No characters yet — create them under the Characters menu, or import a SillyTavern card there.</div>
+                  )}
+                </>
+              )}
+
+              {charTab === 'groups' && (
+                <>
+                  {groups.map((g) => (
+                    <div
+                      key={g.id}
+                      className="pick-item"
+                      onClick={() => {
+                        const merged = new Set(participantIds)
+                        for (const m of g.memberIds) merged.add(m)
+                        setParticipantIds([...merged])
+                      }}
+                    >
+                      {g.avatarPath ? <img src={g.avatarPath} alt="" /> : <div className="avatar" />}
+                      <div className="grow">
+                        <div>{g.name}</div>
+                        <div className="hint" style={{ padding: 0 }}>
+                          {g.memberIds.length} member{g.memberIds.length === 1 ? '' : 's'}{g.description ? ` · ${g.description}` : ''}
+                        </div>
+                      </div>
+                      <span className="tag">＋ add {g.memberIds.length}</span>
+                    </div>
+                  ))}
+                  {groups.length === 0 && (
+                    <div className="hint">No groups yet — create them under the Groups menu (Characters → Groups).</div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
 
