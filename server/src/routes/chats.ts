@@ -17,7 +17,7 @@ import type {
 } from '../types.js';
 import { DIR } from '../paths.js';
 import { getConfig } from '../config.js';
-import { buildLlmMessages, historyTailFor, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
+import { buildLlmMessages, callLlm, historyTailFor, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
 import { chatPersona } from '../store.js';
 import { synthesizeCharacterSpeech, audioExt } from '../ttsService.js';
 import { ParagraphStream, SentenceStream } from '../streaming.js';
@@ -872,6 +872,46 @@ export function chatsRouter(ctx: AppContext): Router {
         return;
       }
       await audioQueue.waitIdle();
+
+      // If the model opened with no `Name:` label, the first block falls back
+      // to "Assistant". Ask the LLM itself (tiny, num_predict=budget-free)
+      // which active character owns that first block and re-attribute it.
+      if (orderedBlocks.length > 0 && blockSpecs.get(orderedBlocks[0])!.speaker.characterId === null && activeChars.length > 0) {
+        const firstSpec = blockSpecs.get(orderedBlocks[0])!;
+        try {
+          const namesList = activeChars.map((c) => c.name);
+          const attribution = await callLlm(
+            llmConn,
+            [
+              {
+                role: 'system',
+                content: `You resolve speaker attribution from roleplay text. Answer with EXACTLY one name from the list and nothing else: ${namesList.join(', ')}.`,
+              },
+              {
+                role: 'user',
+                content: `Reply text:\n"""\n${firstSpec.content.slice(0, 1500)}\n"""\nWhich of these characters is speaking here? ${namesList.join(', ')}`,
+              },
+            ],
+            { temperature: 0, topP: 1, maxTokens: 16, disableThinking: true },
+          );
+          const guessed = attribution.trim().split('\n')[0].trim();
+          const match = activeChars.find((c) => c.name.toLowerCase() === guessed.toLowerCase());
+          if (match) {
+            blockSpecs.get(orderedBlocks[0])!.speaker = {
+              characterId: match.id,
+              name: match.name,
+              avatarPath: match.avatarPath,
+              voiceSamplePath: match.voiceSamplePath,
+            };
+            console.log(`[sp-attribution] unlabeled opener attributed to ${match.name}`);
+          } else {
+            console.log('[sp-attribution] model did not return a matching name:', guessed);
+          }
+        } catch (err) {
+          console.warn('[sp-attribution] attribution call failed:', (err as Error).message);
+        }
+      }
+
       const finalBlocks: ChatMessage[] = orderedBlocks.map((id) => {
         const spec = blockSpecs.get(id)!;
         return {

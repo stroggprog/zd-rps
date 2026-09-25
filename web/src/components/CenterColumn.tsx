@@ -63,7 +63,7 @@ export function CenterColumn() {
     <main className="column center">
       <div className="messages" ref={scrollRef}>
         {messages.map((message) => {
-          const isUser = message.speaker.characterId === null
+          const isUser = message.role === 'user'
           return (
             <div key={message.id} className={`message${isUser ? ' user' : ''}`}>
               {message.speaker.avatarPath ? (
