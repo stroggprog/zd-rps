@@ -31,8 +31,14 @@ function sanitize(input: unknown, existing?: Connection): Connection | null {
     providerOptions: isObject(input.providerOptions)
       ? input.providerOptions
       : (existing?.providerOptions ?? {}),
+    // Only values that were actually posted update the field: undefined keeps
+    // the stored one, and null/'' (or a non-positive number) clears it.
     contextTokens:
-      Number.isFinite(rawContext) && rawContext > 0 ? Math.floor(rawContext) : (existing?.contextTokens ?? null),
+      input.contextTokens === undefined
+        ? (existing?.contextTokens ?? null)
+        : Number.isFinite(rawContext) && rawContext > 0
+          ? Math.floor(rawContext)
+          : null,
   };
 }
 
