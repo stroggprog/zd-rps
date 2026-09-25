@@ -864,6 +864,7 @@ export function chatsRouter(ctx: AppContext): Router {
         // (all / selected / LLM decides) overrides the full roster.
         let replyTargets = [...activeChars];
         const mode = body.replyMode ?? 'all';
+        console.log(`[reply-mode] mode=${mode} ids=${JSON.stringify(body.replyIds ?? null)} narrow=${(body.replyMode ?? 'all') !== 'all'}`);
         if (mode === 'selected' && Array.isArray(body.replyIds)) {
           const picks = new Set(body.replyIds);
           const subset = activeChars.filter((c) => picks.has(c.id));
