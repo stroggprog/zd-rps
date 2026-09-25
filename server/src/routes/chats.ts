@@ -880,7 +880,24 @@ export function chatsRouter(ctx: AppContext): Router {
       }
       await audioQueue.waitIdle();
 
-      // If the model opened with no `Name:` label, the first block falls back
+      const finalBlocks: ChatMessage[] = orderedBlocks.map((id) => {
+        const spec = blockSpecs.get(id)!;
+        return {
+          id,
+          role: 'assistant',
+          speaker: spec.speaker,
+          content: spec.content.trim(),
+          audioPath: null,
+          audio: spec.clips,
+          images: [],
+          ts: now(),
+        };
+      });
+      const updated = chats.update(chatWithUser.id, {
+        messages: [...chatWithUser.messages, ...finalBlocks],
+      });
+      void (async () => {
+// If the model opened with no `Name:` label, the first block falls back
       // to "Assistant". Ask the LLM itself (tiny, num_predict=budget-free)
       // which active character owns that first block and re-attribute it.
       if (orderedBlocks.length > 0 && blockSpecs.get(orderedBlocks[0])!.speaker.characterId === null && activeChars.length > 0) {
@@ -918,23 +935,7 @@ export function chatsRouter(ctx: AppContext): Router {
           console.warn('[sp-attribution] attribution call failed:', (err as Error).message);
         }
       }
-
-      const finalBlocks: ChatMessage[] = orderedBlocks.map((id) => {
-        const spec = blockSpecs.get(id)!;
-        return {
-          id,
-          role: 'assistant',
-          speaker: spec.speaker,
-          content: spec.content.trim(),
-          audioPath: null,
-          audio: spec.clips,
-          images: [],
-          ts: now(),
-        };
-      });
-      const updated = chats.update(chatWithUser.id, {
-        messages: [...chatWithUser.messages, ...finalBlocks],
-      });
+      })().catch((err) => console.error('[sp-attribution] failed:', (err as Error).message));
       send('done', { chat: updated ?? chats.getOrThrow(chatWithUser.id) });
       res.end();
     }),
