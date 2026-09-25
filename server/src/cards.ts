@@ -167,14 +167,19 @@ export function dataUrlBuffer(dataUrl: string): { buffer: Buffer; mime: string }
 }
 
 export function buildImportResult(parsed: ParsedCard): ImportResult {
-  const card = parsed.card;
+  // Spec v2 cards nest the fields under `data`; flat exports (SillyTavern v1
+  // style or our own older exports) keep them at the top level.
+  const card = isObject(parsed.card.data)
+    ? (parsed.card.data as Record<string, unknown>)
+    : parsed.card;
+  const root = parsed.card;
   const name = asString(card.name, 'Unnamed');
 
   const avatarBuffer =
     parsed.imageBuffer ??
     (typeof card.avatar === 'string' ? dataUrlBuffer(card.avatar)?.buffer ?? null : null);
 
-  const lorebook = normalizeLorebook(card.character_book, name);
+  const lorebook = normalizeLorebook(card.character_book ?? root.character_book, name);
   const scenario = normalizeScenario(
     {
       scenario: card.scenario,
@@ -299,22 +304,27 @@ export function buildCardObject(args: {
   avatarDataUrl?: string;
   character_book?: Record<string, unknown> | null;
 }): Record<string, unknown> {
+  // Spec v2 shape: fixed fields at the top level, everything else under
+  // `data` (this is what SillyTavern reads; flat v1-style exports are
+  // rejected or warned about).
   return {
     spec: 'chara_card_v2',
     spec_version: '2.0',
-    name: args.name,
-    description: args.description,
-    personality: args.personality,
-    system_prompt: args.system_prompt,
-    post_history_instructions: args.post_history_instructions,
-    mes_example: args.mes_example,
-    tags: args.tags ?? [],
-    scenario: args.scenario ?? '',
-    first_mes: args.first_mes ?? '',
-    alternate_greetings: args.alternate_greetings ?? [],
-    avatar: args.avatarDataUrl ?? '',
-    creator_notes: 'Exported from zd-rps',
-    extensions: {},
-    character_book: args.character_book ?? undefined,
+    data: {
+      name: args.name,
+      description: args.description,
+      personality: args.personality,
+      system_prompt: args.system_prompt,
+      post_history_instructions: args.post_history_instructions,
+      mes_example: args.mes_example,
+      tags: args.tags ?? [],
+      scenario: args.scenario ?? '',
+      first_mes: args.first_mes ?? '',
+      alternate_greetings: args.alternate_greetings ?? [],
+      avatar: args.avatarDataUrl ?? '',
+      character_book: args.character_book ?? undefined,
+      creator_notes: 'Exported from zd-rps',
+      extensions: {},
+    },
   };
 }
