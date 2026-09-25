@@ -4,7 +4,7 @@ import { Router } from 'express';
 import type { AppContext } from '../context.js';
 import type { Character, ImportSuggestion } from '../types.js';
 import { DIR } from '../paths.js';
-import { buildCardObject, buildImportResult, parseCard, writePngText } from '../cards.js';
+import { bookToCharacterBook, buildCardObject, buildImportResult, parseCard, writePngText } from '../cards.js';
 import { ApiError, asBoolean, asString, ensureDir, uuid } from '../util.js';
 import { asyncHandler, idParam, readJsonBody } from './helpers.js';
 
@@ -60,18 +60,6 @@ async function saveAvatar(id: string, buffer: Buffer, mime: string): Promise<str
   }
   await writeCharacterFile(id, `avatar.${ext}`, buffer);
   return `/media/characters/${id}/avatar.${ext}`;
-}
-
-function buildCardPayload(character: Character): Record<string, unknown> {
-  return buildCardObject({
-    name: character.name,
-    description: character.description,
-    personality: character.personality,
-    system_prompt: character.system_prompt,
-    post_history_instructions: character.post_history_instructions,
-    mes_example: character.mes_example,
-    tags: character.tags,
-  });
 }
 
 export function charactersRouter(ctx: AppContext): Router {
@@ -286,7 +274,26 @@ export function charactersRouter(ctx: AppContext): Router {
       if (!avatar) {
         throw new ApiError('Cannot export: character has no PNG avatar. Upload a PNG avatar first.', 400);
       }
-      const charaJson = JSON.stringify(buildCardPayload(character));
+      // Optional embedded attachments for the round trip into SillyTavern.
+      const lorebookId = typeof req.query.lorebookId === 'string' ? req.query.lorebookId : '';
+      const scenarioId = typeof req.query.scenarioId === 'string' ? req.query.scenarioId : '';
+      const book = lorebookId ? ctx.store.lorebooks.get(lorebookId) ?? null : null;
+      const scenario = scenarioId ? ctx.store.scenarios.get(scenarioId) ?? null : null;
+      const charaJson = JSON.stringify(
+        buildCardObject({
+          name: character.name,
+          description: character.description,
+          personality: character.personality,
+          system_prompt: character.system_prompt,
+          post_history_instructions: character.post_history_instructions,
+          mes_example: character.mes_example,
+          tags: character.tags,
+          first_mes: scenario?.first_mes ?? '',
+          scenario: scenario?.scenario ?? '',
+          alternate_greetings: scenario?.alternate_greetings ?? [],
+          character_book: book ? bookToCharacterBook(book, character.name) : null,
+        }),
+      );
       const png = writePngText(avatar, 'chara', Buffer.from(charaJson, 'utf8').toString('base64'));
       const safeName = character.name.replace(/[^\w.-]+/g, '_') || 'character';
       res.setHeader('Content-Type', 'image/png');

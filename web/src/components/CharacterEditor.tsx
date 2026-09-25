@@ -34,10 +34,12 @@ function toDraft(c: Character): Draft {
 }
 
 export function CharacterEditor() {
-  const { characters, groups, connections: allConnections, closeOverlay, refreshAll, setError } = useApp()
+  const { characters, groups, connections: allConnections, lorebooks, scenarios, closeOverlay, refreshAll, setError } = useApp()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [imported, setImported] = useState<ImportDraft | null>(null)
   const [importName, setImportName] = useState('')
+  const [exportLorebookId, setExportLorebookId] = useState('')
+  const [exportScenarioId, setExportScenarioId] = useState('')
   const [acceptLorebook, setAcceptLorebook] = useState(true)
   const [acceptScenario, setAcceptScenario] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -338,9 +340,46 @@ export function CharacterEditor() {
                   </button>
                   {draft.id && (
                     <>
-                      <a className="button-link" href={api.characters.exportUrl(draft.id)} target="_blank" rel="noreferrer">
-                        Export card
-                      </a>
+                      <details style={{ display: 'inline-block' }}>
+                        <summary className="button-link" style={{ cursor: 'pointer' }}>
+                          Export card (options)
+                        </summary>
+                        <div className="field" style={{ marginTop: 6 }}>
+                          <label>Embed lorebook (optional)</label>
+                          <select
+                            value={exportLorebookId}
+                            onChange={(e) => setExportLorebookId(e.target.value)}
+                          >
+                            <option value="">None</option>
+                            {lorebooks.map((book) => (
+                              <option key={book.id} value={book.id}>
+                                {book.name} ({book.entries.length} entries)
+                              </option>
+                            ))}
+                          </select>
+                          <label style={{ marginTop: 6 }}>Embed scenario (optional)</label>
+                          <select
+                            value={exportScenarioId}
+                            onChange={(e) => setExportScenarioId(e.target.value)}
+                          >
+                            <option value="">None</option>
+                            {scenarios.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                          <a
+                            className="button-link"
+                            style={{ marginTop: 6, display: 'inline-block' }}
+                            href={`${api.characters.exportUrl(draft.id)}?lorebookId=${exportLorebookId}&scenarioId=${exportScenarioId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Download card
+                          </a>
+                        </div>
+                      </details>
                       <button className="danger" onClick={() => void remove(draft.id as string, draft.name)}>
                         Delete
                       </button>

@@ -257,6 +257,33 @@ export function normalizeLorebook(raw: unknown, charName: string): Lorebook | nu
   };
 }
 
+/** Encodes one of our lorebooks as a SillyTavern character_book for card export. */
+export function bookToCharacterBook(book: Lorebook, charName: string): Record<string, unknown> | null {
+  if (!book || book.entries.length === 0) return null;
+  return {
+    name: book.name || `${charName}'s lorebook`,
+    description: book.description,
+    scan_depth: book.scan_depth,
+    token_budget: book.token_budget,
+    recursive_scanning: book.recursive_scanning,
+    extensions: book.extensions ?? {},
+    entries: book.entries.map((e) => ({
+      keys: e.keys,
+      secondary_keys: e.secondary_keys,
+      content: e.content,
+      comment: e.name || '',
+      name: e.name || '',
+      enabled: e.enabled,
+      insertion_order: e.insertion_order,
+      case_sensitive: e.case_sensitive,
+      priority: e.priority,
+      selective: e.selective,
+      constant: e.constant,
+      position: e.position === 'after_char' ? 'after_char' : 'before_char',
+    })),
+  };
+}
+
 /** Rebuilds a spec v2 card object from character + scenario refs for export. */
 export function buildCardObject(args: {
   name: string;
@@ -270,6 +297,7 @@ export function buildCardObject(args: {
   scenario?: string;
   alternate_greetings?: string[];
   avatarDataUrl?: string;
+  character_book?: Record<string, unknown> | null;
 }): Record<string, unknown> {
   return {
     spec: 'chara_card_v2',
@@ -287,5 +315,6 @@ export function buildCardObject(args: {
     avatar: args.avatarDataUrl ?? '',
     creator_notes: 'Exported from zd-rps',
     extensions: {},
+    character_book: args.character_book ?? undefined,
   };
 }
