@@ -208,7 +208,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const openOverlay = useCallback((o: Overlay, payload?: unknown) => {
     setOverlayPayload(payload ?? null)
     setOverlay(o)
-  }, [])
+    // Pick up anything created elsewhere (e.g. a story saved from the right
+    // panel) so the lists inside overlays are never stale.
+    void refreshAll()
+  }, [refreshAll])
 
   const closeOverlay = useCallback(() => {
     setOverlay('none')
