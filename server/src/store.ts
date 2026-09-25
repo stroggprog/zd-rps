@@ -1,6 +1,6 @@
 import { readFile, readdir, rm, mkdir, copyFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Character, Chat, Lorebook, MessageAudio, Narrator, Persona, PersonaGender, Scenario, Stamped } from './types.js';
+import type { Character, CharacterGroup, Chat, Lorebook, MessageAudio, Narrator, Persona, PersonaGender, Scenario, Stamped } from './types.js';
 import type { Id } from './types.js';
 import { DIR } from './paths.js';
 import { atomicWrite, ensureDir, lookup, now, uuid } from './util.js';
@@ -88,6 +88,18 @@ export function normalizeNarrator(narrator: Narrator): Narrator {
     voiceSamplePath: typeof narrator.voiceSamplePath === 'string' ? narrator.voiceSamplePath : null,
     voiceSampleTranscript:
       typeof narrator.voiceSampleTranscript === 'string' ? narrator.voiceSampleTranscript : null,
+  };
+}
+
+export function normalizeGroup(group: CharacterGroup): CharacterGroup {
+  return {
+    ...group,
+    name: typeof group.name === 'string' ? group.name : '',
+    description: typeof group.description === 'string' ? group.description : '',
+    avatarPath: typeof group.avatarPath === 'string' ? group.avatarPath : null,
+    memberIds: Array.isArray(group.memberIds)
+      ? group.memberIds.filter((id) => typeof id === 'string' && id)
+      : [],
   };
 }
 
@@ -270,6 +282,7 @@ export interface DataStore {
   characters: JsonCollection<Character>;
   narrators: JsonCollection<Narrator>;
   personas: JsonCollection<Persona>;
+  groups: JsonCollection<CharacterGroup>;
   lorebooks: JsonCollection<Lorebook>;
   scenarios: JsonCollection<Scenario>;
   chats: JsonCollection<Chat>;
@@ -280,6 +293,7 @@ export function createStore(): DataStore {
     characters: new JsonCollection<Character>(DIR.characters, 'character', 'name' as keyof Character, normalizeCharacter),
     narrators: new JsonCollection<Narrator>(DIR.narrators, 'narrator', 'name' as keyof Narrator, normalizeNarrator),
     personas: new JsonCollection<Persona>(DIR.personas, 'persona', 'name' as keyof Persona, normalizePersona),
+    groups: new JsonCollection<CharacterGroup>(DIR.groups, 'group', 'name' as keyof CharacterGroup, normalizeGroup),
     lorebooks: new JsonCollection<Lorebook>(DIR.lorebooks, 'lorebook'),
     scenarios: new JsonCollection<Scenario>(DIR.scenarios, 'scenario'),
     chats: new JsonCollection<Chat>(DIR.chats, 'chat', 'title' as keyof Chat, normalizeChat),
@@ -292,6 +306,7 @@ export async function loadStore(store: DataStore): Promise<void> {
     store.characters.load(),
     store.narrators.load(),
     store.personas.load(),
+    store.groups.load(),
     store.lorebooks.load(),
     store.scenarios.load(),
     store.chats.load(),

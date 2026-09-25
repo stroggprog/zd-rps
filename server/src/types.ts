@@ -21,6 +21,13 @@ export interface Character extends Stamped {
   llmConnectionId: string | null;
 }
 
+export interface CharacterGroup extends Stamped {
+  name: string;
+  description: string;
+  avatarPath: string | null;
+  memberIds: Id[];
+}
+
 export interface Narrator extends Stamped {
   name: string;
   avatarPath: string | null;

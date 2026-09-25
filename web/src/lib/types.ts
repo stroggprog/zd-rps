@@ -28,6 +28,13 @@ export interface Narrator extends Stamped {
   voiceSampleTranscript: string | null
 }
 
+export interface CharacterGroup extends Stamped {
+  name: string
+  description: string
+  avatarPath: string | null
+  memberIds: Id[]
+}
+
 export type PersonaGender = 'male' | 'female' | 'other'
 
 export interface Persona extends Stamped {

@@ -8,6 +8,7 @@ import type {
   Lorebook,
   MessageAudio,
   Narrator,
+  CharacterGroup,
   Persona,
   ProviderInfo,
   Scenario,
@@ -135,6 +136,20 @@ export const api = {
       return http<Persona>(`/api/personas/${id}/avatar`, { method: 'POST', body: form })
     },
     removeAvatar: (id: string) => http<Persona>(`/api/personas/${id}/avatar`, { method: 'DELETE' }),
+  },
+
+  groups: {
+    list: () => http<CharacterGroup[]>('/api/groups'),
+    create: (g: Partial<CharacterGroup>) => http<CharacterGroup>('/api/groups', jsonInit('POST', g)),
+    update: (id: string, g: Partial<CharacterGroup>) =>
+      http<CharacterGroup>(`/api/groups/${id}`, jsonInit('PUT', g)),
+    remove: (id: string) => http<void>(`/api/groups/${id}`, { method: 'DELETE' }),
+    uploadAvatar: (id: string, file: File) => {
+      const form = new FormData()
+      form.append('avatar', file)
+      return http<CharacterGroup>(`/api/groups/${id}/avatar`, { method: 'POST', body: form })
+    },
+    removeAvatar: (id: string) => http<CharacterGroup>(`/api/groups/${id}/avatar`, { method: 'DELETE' }),
   },
 
   lorebooks: {

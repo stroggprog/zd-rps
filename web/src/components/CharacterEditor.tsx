@@ -34,7 +34,7 @@ function toDraft(c: Character): Draft {
 }
 
 export function CharacterEditor() {
-  const { characters, connections: allConnections, closeOverlay, refreshAll, setError } = useApp()
+  const { characters, groups, connections: allConnections, closeOverlay, refreshAll, setError } = useApp()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [imported, setImported] = useState<ImportDraft | null>(null)
   const [importName, setImportName] = useState('')
@@ -218,6 +218,35 @@ export function CharacterEditor() {
                   <div className="field">
                     <label>Tags (comma-separated)</label>
                     <input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} />
+                  </div>
+
+                  <div className="field">
+                    <label>Groups</label>
+                    <div className="row" style={{ flexWrap: 'wrap' }}>
+                      {groups.map((g) => {
+                        const selected = groups.filter((grp) => grp.memberIds.includes(draft.id as string)).some((grp) => grp.id === g.id)
+                        const toggle = async () => {
+                          if (!draft.id) return
+                          const nextMembers = selected
+                            ? g.memberIds.filter((m) => m !== draft.id)
+                            : [...g.memberIds, draft.id]
+                          await api.groups.update(g.id, { memberIds: nextMembers })
+                          await refreshAll()
+                        }
+                        return (
+                          <button
+                            key={g.id}
+                            className={selected ? 'toggle on' : 'toggle'}
+                            onClick={() => void toggle()}
+                          >
+                            {g.name}
+                          </button>
+                        )
+                      })}
+                      <span className="hint" style={{ padding: 0, width: '100%' }}>
+                        Click to add or remove this character from a group (changes saved immediately).
+                      </span>
+                    </div>
                   </div>
                   <div className="field">
                     <label>Own LLM connection (sequential turns)</label>

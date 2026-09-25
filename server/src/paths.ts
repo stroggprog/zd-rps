@@ -19,6 +19,7 @@ export const DIR = {
   characters: path.join(DATA_DIR, 'characters'),
   narrators: path.join(DATA_DIR, 'narrators'),
   personas: path.join(DATA_DIR, 'personas'),
+  groups: path.join(DATA_DIR, 'groups'),
   lorebooks: path.join(DATA_DIR, 'lorebooks'),
   scenarios: path.join(DATA_DIR, 'scenarios'),
   chats: path.join(DATA_DIR, 'chats'),

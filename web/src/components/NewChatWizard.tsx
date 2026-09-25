@@ -4,12 +4,13 @@ import { useApp } from '../store'
 const STEPS = ['Characters', 'Persona', 'Narrator (optional)', 'Lorebooks', 'Scenario']
 
 export function NewChatWizard() {
-  const { characters: people, personas, narrators, lorebooks, scenarios, closeOverlay, createChat, sending } = useApp()
+  const { characters: people, groups, narrators, personas, lorebooks, scenarios, closeOverlay, createChat, sending } = useApp()
   const [step, setStep] = useState(0)
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [personaId, setPersonaId] = useState<string | null>(null)
   const [narratorId, setNarratorId] = useState<string | null>(null)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const [charTab, setCharTab] = useState<'characters' | 'groups'>('characters')
   const [lorebookIds, setLorebookIds] = useState<string[]>([])
   const [scenarioId, setScenarioId] = useState<string | null>(null)
   const [adhoc, setAdhoc] = useState(false)
@@ -71,6 +72,22 @@ export function NewChatWizard() {
 
         {step === 0 && (
           <div className="participant-pick">
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button
+                className={charTab === 'characters' ? 'toggle on' : 'toggle'}
+                onClick={() => setCharTab('characters')}
+              >
+                Characters
+              </button>
+              <button
+                className={charTab === 'groups' ? 'toggle on' : 'toggle'}
+                onClick={() => setCharTab('groups')}
+              >
+                Groups
+              </button>
+            </div>
+            {charTab === 'characters' && (<div>
+
             {(() => {
               const allTags = [...new Set(people.flatMap((p) => p.tags))].sort((a, b) => a.localeCompare(b))
               if (allTags.length === 0) return null
@@ -104,6 +121,35 @@ export function NewChatWizard() {
             ))}
             {people.length === 0 && (
               <div className="hint">No characters yet — create them under the Characters menu, or import a SillyTavern card there.</div>
+            )}
+            </div>)}
+
+            {charTab === 'groups' && (
+              <div>
+                {groups.map((g) => (
+                  <div
+                    key={g.id}
+                    className="pick-item"
+                    onClick={() => {
+                      const merged = new Set(participantIds)
+                      for (const m of g.memberIds) merged.add(m)
+                      setParticipantIds([...merged])
+                    }}
+                  >
+                    {g.avatarPath ? <img src={g.avatarPath} alt="" /> : <div className="avatar" />}
+                    <div className="grow">
+                      <div>{g.name}</div>
+                      <div className="hint" style={{ padding: 0 }}>
+                        {g.memberIds.length} member{g.memberIds.length === 1 ? '' : 's'}{g.description ? ` · ${g.description}` : ''}
+                      </div>
+                    </div>
+                    <span className="tag">＋ add {g.memberIds.length}</span>
+                  </div>
+                ))}
+                {groups.length === 0 && (
+                  <div className="hint">No groups yet — create them under the Groups menu (Characters → Groups).</div>
+                )}
+              </div>
             )}
           </div>
         )}
