@@ -10,6 +10,7 @@ import { CharacterEditor } from './components/CharacterEditor'
 import { NarratorEditor } from './components/NarratorEditor'
 import { PersonaEditor } from './components/PersonaEditor'
 import { GroupEditor } from './components/GroupEditor'
+import { StoryEditor } from './components/StoryEditor'
 import { PrintChat } from './components/PrintChat'
 import { LorebookEditor } from './components/LorebookEditor'
 import { ScenarioEditor } from './components/ScenarioEditor'
@@ -36,6 +37,7 @@ function Shell() {
       {overlay === 'narrators' && <NarratorEditor />}
       {overlay === 'personas' && <PersonaEditor />}
       {overlay === 'groups' && <GroupEditor />}
+      {overlay === 'stories' && <StoryEditor />}
       {overlay === 'print' && <PrintChat />}
       {overlay === 'lorebooks' && <LorebookEditor />}
       {overlay === 'scenarios' && <ScenarioEditor />}

@@ -22,6 +22,11 @@ export interface Character extends Stamped {
   llmConnectionId: string | null
 }
 
+export interface Story extends Stamped {
+  name: string
+  summary: string
+}
+
 export interface Narrator extends Stamped {
   name: string
   avatarPath: string | null
@@ -137,6 +142,7 @@ export interface Chat extends Stamped {
   lorebookIds: Id[]
   scenarioId: Id | null
   scenarioInline: InlineScenario | null
+  storyId: Id | null
   narratorId: Id | null
   personaId: Id | null
   messages: ChatMessage[]

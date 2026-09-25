@@ -12,6 +12,7 @@ import type {
   Persona,
   ProviderInfo,
   Scenario,
+  Story,
   TestResult,
 } from './types'
 import { rebuildMessageAudioSse } from './sseRebuild'
@@ -138,6 +139,14 @@ export const api = {
     removeAvatar: (id: string) => http<Persona>(`/api/personas/${id}/avatar`, { method: 'DELETE' }),
   },
 
+  stories: {
+    list: () => http<Story[]>('/api/stories'),
+    create: (st: Partial<Story>) => http<Story>('/api/stories', jsonInit('POST', st)),
+    update: (id: string, st: Partial<Story>) =>
+      http<Story>(`/api/stories/${id}`, jsonInit('PUT', st)),
+    remove: (id: string) => http<void>(`/api/stories/${id}`, { method: 'DELETE' }),
+  },
+
   groups: {
     list: () => http<CharacterGroup[]>('/api/groups'),
     create: (g: Partial<CharacterGroup>) => http<CharacterGroup>('/api/groups', jsonInit('POST', g)),
@@ -189,6 +198,7 @@ export const api = {
       scenarioInline?: { name?: string; scenario: string; first_mes: string } | null
       narratorId?: string | null
       personaId?: string | null
+      storyId?: string | null
     }) => http<Chat>('/api/chats', jsonInit('POST', payload)),
     remove: (id: string) => http<void>(`/api/chats/${id}`, { method: 'DELETE' }),
     patch: (id: string, payload: Partial<Chat>) =>
@@ -199,6 +209,11 @@ export const api = {
       http<Chat>(`/api/chats/${id}/messages/${messageId}`, jsonInit('PATCH', { content })),
     removeMessage: (id: string, messageId: string) =>
       http<Chat>(`/api/chats/${id}/messages/${messageId}`, { method: 'DELETE' }),
+    saveStory: (id: string, payload: { name?: string; storyId?: string | null }) =>
+      http<{ story: Story }>(
+        `/api/chats/${id}/save-story`,
+        jsonInit('POST', payload),
+      ),
     rebuildMessageAudio: (id: string, messageId: string, handlers: { onAudio?: (messageId: string | null, clip: MessageAudio) => void; onDone?: (chat: Chat) => void }) =>
       rebuildMessageAudioSse(id, messageId, handlers),
     messageStream: (id: string, content: string, audioEnabled: boolean, handlers: MessageStreamHandlers) =>

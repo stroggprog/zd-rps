@@ -13,10 +13,11 @@ import type {
   Narrator,
   Persona,
   ProviderInfo,
+  Story,
   Scenario,
 } from './lib/types'
 
-export type Overlay = 'none' | 'config' | 'characters' | 'narrators' | 'personas' | 'groups' | 'lorebooks' | 'scenarios' | 'new-chat' | 'print'
+export type Overlay = 'none' | 'config' | 'characters' | 'narrators' | 'personas' | 'groups' | 'stories' | 'lorebooks' | 'scenarios' | 'new-chat' | 'print'
 
 export interface ConnectionDefaults {
   defaultLlm: string | null
@@ -31,6 +32,7 @@ export interface AppState {
   narrators: Narrator[]
   personas: Persona[]
   groups: CharacterGroup[]
+  stories: Story[]
   lorebooks: Lorebook[]
   scenarios: Scenario[]
   chats: ChatSummary[]
@@ -62,6 +64,7 @@ export interface AppState {
     scenarioInline?: { name?: string; scenario: string; first_mes: string } | null
     narratorId?: string | null
     personaId?: string | null
+    storyId?: string | null
   }) => Promise<Chat>
   deleteChat: (id: string) => Promise<void>
   sendMessage: (content: string, opts?: { audio?: boolean }) => Promise<void>
@@ -109,6 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [narrators, setNarrators] = useState<Narrator[]>([])
   const [personas, setPersonas] = useState<Persona[]>([])
   const [groups, setGroups] = useState<CharacterGroup[]>([])
+  const [stories, setStories] = useState<Story[]>([])
   const [lorebooks, setLorebooks] = useState<Lorebook[]>([])
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [chats, setChats] = useState<ChatSummary[]>([])
@@ -133,13 +137,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshAll = useCallback(async () => {
     try {
-      const [p, c, ch, n, ps, g, l, s, cs, d] = await Promise.all([
+      const [p, c, ch, n, ps, g, st_, l, s, cs, d] = await Promise.all([
         api.providers(),
         api.connections.list(),
         api.characters.list(),
         api.narrators.list(),
         api.personas.list(),
         api.groups.list(),
+        api.stories.list(),
         api.lorebooks.list(),
         api.scenarios.list(),
         api.chats.list(),
@@ -151,6 +156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setNarrators(n)
       setPersonas(ps)
       setGroups(g)
+      setStories(st_)
       setLorebooks(l)
       setScenarios(s)
       setChats(cs)
@@ -552,6 +558,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       narrators,
       personas,
       groups,
+      stories,
       lorebooks,
       scenarios,
       chats,
@@ -593,6 +600,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       narrators,
       personas,
       groups,
+      stories,
       lorebooks,
       scenarios,
       chats,

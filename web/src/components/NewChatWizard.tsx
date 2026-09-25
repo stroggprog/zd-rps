@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useApp } from '../store'
 
-const STEPS = ['Characters', 'Persona', 'Narrator (optional)', 'Lorebooks', 'Scenario']
+const STEPS = ['Characters', 'Story (optional)', 'Persona', 'Narrator (optional)', 'Lorebooks', 'Scenario']
 
 export function NewChatWizard() {
-  const { characters: people, groups, narrators, personas, lorebooks, scenarios, closeOverlay, createChat, sending } = useApp()
+  const { characters: people, groups, stories, narrators, personas, lorebooks, scenarios, closeOverlay, createChat, sending } = useApp()
   const [step, setStep] = useState(0)
   const [participantIds, setParticipantIds] = useState<string[]>([])
+  const [storyId, setStoryId] = useState<string | null>(null)
   const [personaId, setPersonaId] = useState<string | null>(null)
   const [narratorId, setNarratorId] = useState<string | null>(null)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
@@ -33,6 +34,7 @@ export function NewChatWizard() {
         narratorId,
         lorebookIds,
         scenarioId,
+        storyId,
         scenarioInline:
           adhoc && adhocScenario.trim()
             ? { scenario: adhocScenario, first_mes: adhocOpening }
@@ -164,6 +166,36 @@ export function NewChatWizard() {
         )}
 
         {step === 1 && (
+          <div className="participant-pick" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              className={`pick-item${storyId === null ? ' selected' : ''}`}
+              onClick={() => setStoryId(null)}
+            >
+              <span className="grow">No story — start from scratch</span>
+            </button>
+            {stories.map((st) => (
+              <button
+                key={st.id}
+                className={`pick-item${storyId === st.id ? ' selected' : ''}`}
+                onClick={() => setStoryId(st.id)}
+              >
+                <span className="grow">
+                  <div>{st.name}</div>
+                  <div className="hint" style={{ padding: 0 }}>
+                    {st.summary.slice(0, 90) || 'No summary yet.'}
+                  </div>
+                </span>
+                {storyId === st.id && <span className="tag">✓</span>}
+              </button>
+            ))}
+            <div className="hint">
+              The selected story's summary is injected at the start of the chat so you can continue a longer
+              story across separate chats.
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
           <div className="participant-pick">
             {personas.map((persona) => (
               <div
@@ -183,7 +215,7 @@ export function NewChatWizard() {
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="participant-pick">
             {narrators.map((narrator) => (
               <div
@@ -209,7 +241,7 @@ export function NewChatWizard() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="pick-list">
             {lorebooks.map((book) => (
               <div
@@ -226,7 +258,7 @@ export function NewChatWizard() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 640 }}>
             <div className="field">
               <label style={{ marginBottom: 0 }}>

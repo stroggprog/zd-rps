@@ -110,6 +110,7 @@ export function chatsRouter(ctx: AppContext): Router {
         scenarioInline?: { name?: string; scenario?: string; first_mes?: string } | null;
         narratorId?: Id | null;
         personaId?: Id | null;
+        storyId?: Id | null;
       }>(req);
       const participantIds = Array.isArray(body.participantIds)
         ? [...new Set(body.participantIds.filter((id) => ctx.store.characters.exists(id)))]
@@ -180,6 +181,7 @@ export function chatsRouter(ctx: AppContext): Router {
         lorebookIds,
         scenarioId,
         scenarioInline: inlineScenario,
+        storyId: body.storyId && ctx.store.stories.exists(body.storyId) ? body.storyId : null,
         narratorId,
         personaId: persona?.id ?? null,
         messages: messages.length > 0 ? messages : [],
@@ -265,6 +267,55 @@ export function chatsRouter(ctx: AppContext): Router {
     asyncHandler(async (req, res) => {
       if (!chats.delete(idParam(req))) throw new ApiError('Chat not found', 404);
       res.status(204).end();
+    }),
+  );
+
+  // Save the chat's transcript to a story: generate a summary with the LLM
+  // that folds in (and evolves) the story's existing summary when present.
+  router.post(
+    '/:id/save-story',
+    asyncHandler(async (req, res) => {
+      const chat = chats.getOrThrow(idParam(req));
+      const body = readJsonBody<{ name?: string; storyId?: Id | null }>(req);
+      const storyId = typeof body.storyId === 'string' && body.storyId ? body.storyId : null;
+      const story = storyId ? ctx.store.stories.get(storyId) ?? null : null;
+      const title = asString(body.name, chat.title || 'My story');
+
+      const llmConn = resolveKindConnection('llm', chat.runtime.llmConnectionId);
+      const persona = chatPersona(ctx.store, chat);
+      const userName = persona?.name ?? USER_NAME;
+
+      // Sources: prior story summary + recent transcript history.
+      const prior = story?.summary ?? '';
+      const transcript = chat.messages
+        .map((m) => `${m.speaker.characterId === null ? userName : m.speaker.name}: ${m.content}`)
+        .join('\n')
+        .slice(-24000);
+
+      const summary = await callLlm(
+        llmConn,
+        [
+          {
+            role: 'system',
+            content:
+              'You are a meticulous roleplay chronicler. Summarize the roleplay transcript into third-person prose: keep character relationships, ongoing plot threads, unresolved mysteries, promises, and the current location/time. Be concrete; do not invent events. 3 to 10 paragraphs max, no headings.',
+          },
+          {
+            role: 'user',
+            content:
+              (prior ? `Previous story summary (fold this in and evolve it):\n${prior}\n\n` : '') +
+              `New transcript to summarize:\n${transcript}\n\nWrite an updated story summary.`,
+          },
+        ],
+        { temperature: 0.3, topP: 1, maxTokens: 1200, disableThinking: true },
+      );
+
+      const updated =
+        story && storyId
+          ? ctx.store.stories.update(storyId, { summary: summary.trim() })!
+          : ctx.store.stories.create({ name: title, summary: summary.trim() });
+      chats.update(chat.id, { storyId: updated.id });
+      res.json({ story: updated });
     }),
   );
 
@@ -504,6 +555,10 @@ export function chatsRouter(ctx: AppContext): Router {
       chats.update(chat.id, { messages: [...chat.messages, userMsg] });
       const chatWithUser = chats.getOrThrow(chat.id);
 
+      const storyOf = () => {
+        const sid = chats.getOrThrow(chatWithUser.id).storyId;
+        return sid ? ctx.store.stories.get(sid) ?? null : null;
+      };
       const activeChars = chatWithUser.participantIds
         .map((pid) => ctx.store.characters.get(pid))
         .filter((c): c is Character => c !== undefined);
@@ -805,6 +860,7 @@ export function chatsRouter(ctx: AppContext): Router {
           lorebooks,
           scenario,
           persona: chatPersona(ctx.store, chatWithUser),
+          story: storyOf(),
         };
         const targetMessages = (target: Character): LlmMessage[] =>
           buildLlmMessages(
@@ -876,6 +932,7 @@ export function chatsRouter(ctx: AppContext): Router {
           lorebooks,
           scenario,
           persona: chatPersona(ctx.store, chatWithUser),
+          story: storyOf(),
         },
         historyTail,
       );

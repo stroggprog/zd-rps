@@ -21,6 +21,7 @@ export function TopBar() {
       <button onClick={() => openOverlay('narrators')}>Narrators</button>
       <button onClick={() => openOverlay('personas')}>Personas</button>
       <button onClick={() => openOverlay('groups')}>Groups</button>
+      <button onClick={() => openOverlay('stories')}>Stories</button>
       <button onClick={() => openOverlay('print')}>Print</button>
       <button onClick={() => openOverlay('lorebooks')}>Lorebooks</button>
       <button onClick={() => openOverlay('scenarios')}>Scenarios</button>

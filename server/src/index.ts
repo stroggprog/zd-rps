@@ -12,6 +12,7 @@ import { charactersRouter } from './routes/characters.js';
 import { narratorsRouter } from './routes/narrators.js';
 import { personasRouter } from './routes/personas.js';
 import { groupsRouter } from './routes/groups.js';
+import { storiesRouter } from './routes/stories.js';
 import { lorebooksRouter } from './routes/lorebooks.js';
 import { scenariosRouter } from './routes/scenarios.js';
 import { chatsRouter } from './routes/chats.js';
@@ -42,6 +43,7 @@ async function main() {
   app.use('/api/narrators', narratorsRouter(ctx));
   app.use('/api/personas', personasRouter(ctx));
   app.use('/api/groups', groupsRouter(ctx));
+  app.use('/api/stories', storiesRouter(ctx));
   app.use('/api/lorebooks', lorebooksRouter(ctx));
   app.use('/api/scenarios', scenariosRouter(ctx));
   app.use('/api/chats', chatsRouter(ctx));

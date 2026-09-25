@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useApp } from '../store'
+import { api } from '../lib/api'
 
 function Section({
   title,
@@ -31,10 +32,13 @@ function Section({
 }
 
 export function RightColumn() {
-  const { chat, characters, connections, narrators, addParticipants, removeParticipant, setNarrator, patchRuntime, busy, openOverlay } = useApp()
+  const { chat, characters, connections, narrators, stories, refreshChat, setError, addParticipants, removeParticipant, setNarrator, patchRuntime, busy, openOverlay } = useApp()
   const [showPicker, setShowPicker] = useState(false)
   const [showNarratorPicker, setShowNarratorPicker] = useState(false)
-  const [open, setOpen] = useState({ runtime: false, scenario: false, lorebooks: false })
+  const [showStorySave, setShowStorySave] = useState(false)
+  const [saveStoryTarget, setSaveStoryTarget] = useState('__new__')
+  const [newStoryName, setNewStoryName] = useState('')
+  const [open, setOpen] = useState({ runtime: false, scenario: false, lorebooks: false, story: false })
   const toggle = (key: keyof typeof open) => setOpen((s) => ({ ...s, [key]: !s[key] }))
 
   if (!chat) {
@@ -150,6 +154,70 @@ export function RightColumn() {
           </div>
         ) : (
           <div className="hint">No scenario attached.</div>
+        )}
+      </Section>
+
+      <Section title="Story" open={open.scenario === undefined ? false : open.story ?? false} onToggle={() => toggle('story')}>
+        {(() => {
+          const story = chat?.persona ?? null;
+          void story;
+          return null;
+        })()}
+        <div className="row">
+          <button className="primary" disabled={busy || !chat} onClick={() => setShowStorySave((v) => !v)}>
+            💾 Save story
+          </button>
+          {chat.chat.storyId && (
+            <span className="tag">
+              {stories.find((st) => st.id === chat.chat.storyId)?.name ?? 'Story saved'}
+            </span>
+          )}
+        </div>
+        {showStorySave && (
+          <div className="field">
+            <label>Save into</label>
+            <select value={saveStoryTarget} onChange={(e) => setSaveStoryTarget(e.target.value)}>
+              {stories.map((st) => (
+                <option key={st.id} value={st.id}>
+                  {st.name} (evolve)
+                </option>
+              ))}
+              <option value="__new__">New story…</option>
+            </select>
+            {saveStoryTarget === '__new__' && (
+              <input
+                style={{ marginTop: 6 }}
+                value={newStoryName}
+                placeholder={`Name (default: ${chat.chat.title})`}
+                onChange={(e) => setNewStoryName(e.target.value)}
+              />
+            )}
+            <button
+              className="primary"
+              style={{ marginTop: 6 }}
+              disabled={busy}
+              onClick={() => {
+                const isExisting = saveStoryTarget !== '__new__'
+                void (async () => {
+                  try {
+                    await api.chats.saveStory(chat.chat.id, {
+                      storyId: isExisting ? saveStoryTarget : null,
+                      name: isExisting ? undefined : newStoryName || undefined,
+                    })
+                    setShowStorySave(false)
+                    await refreshChat()
+                    setError(null)
+                  } catch (err) {
+                    setError((err as Error).message)
+                  } finally {
+                    // busy is shared; no local setter needed
+                  }
+                })()
+              }}
+            >
+              Generate summary & save
+            </button>
+          </div>
         )}
       </Section>
 

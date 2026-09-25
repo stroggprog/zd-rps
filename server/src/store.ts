@@ -1,6 +1,6 @@
 import { readFile, readdir, rm, mkdir, copyFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Character, CharacterGroup, Chat, Lorebook, MessageAudio, Narrator, Persona, PersonaGender, Scenario, Stamped } from './types.js';
+import type { Character, CharacterGroup, Chat, Lorebook, MessageAudio, Narrator, Persona, PersonaGender, Scenario, Stamped, Story } from './types.js';
 import type { Id } from './types.js';
 import { DIR } from './paths.js';
 import { atomicWrite, ensureDir, lookup, now, uuid } from './util.js';
@@ -42,6 +42,7 @@ export function normalizeChat(chat: Chat): Chat {
     lorebookIds: Array.isArray(chat.lorebookIds) ? chat.lorebookIds : [],
     scenarioId: typeof chat.scenarioId === 'string' ? chat.scenarioId : null,
     scenarioInline: normalizeInlineScenario(chat),
+    storyId: typeof (chat as { storyId?: unknown }).storyId === 'string' ? (chat as { storyId: Id | null }).storyId : null,
     narratorId: typeof chat.narratorId === 'string' ? chat.narratorId : null,
     personaId: typeof (chat as { personaId?: unknown }).personaId === 'string' ? (chat as { personaId: Id | null }).personaId : null,
     messages: Array.isArray(chat.messages)
@@ -92,6 +93,14 @@ export function normalizeNarrator(narrator: Narrator): Narrator {
     voiceSamplePath: typeof narrator.voiceSamplePath === 'string' ? narrator.voiceSamplePath : null,
     voiceSampleTranscript:
       typeof narrator.voiceSampleTranscript === 'string' ? narrator.voiceSampleTranscript : null,
+  };
+}
+
+export function normalizeStory(story: Story): Story {
+  return {
+    ...story,
+    name: typeof story.name === 'string' ? story.name : '',
+    summary: typeof story.summary === 'string' ? story.summary : '',
   };
 }
 
@@ -287,6 +296,7 @@ export interface DataStore {
   narrators: JsonCollection<Narrator>;
   personas: JsonCollection<Persona>;
   groups: JsonCollection<CharacterGroup>;
+  stories: JsonCollection<Story>;
   lorebooks: JsonCollection<Lorebook>;
   scenarios: JsonCollection<Scenario>;
   chats: JsonCollection<Chat>;
@@ -298,6 +308,7 @@ export function createStore(): DataStore {
     narrators: new JsonCollection<Narrator>(DIR.narrators, 'narrator', 'name' as keyof Narrator, normalizeNarrator),
     personas: new JsonCollection<Persona>(DIR.personas, 'persona', 'name' as keyof Persona, normalizePersona),
     groups: new JsonCollection<CharacterGroup>(DIR.groups, 'group', 'name' as keyof CharacterGroup, normalizeGroup),
+    stories: new JsonCollection<Story>(DIR.stories, 'story', 'name' as keyof Story, normalizeStory),
     lorebooks: new JsonCollection<Lorebook>(DIR.lorebooks, 'lorebook'),
     scenarios: new JsonCollection<Scenario>(DIR.scenarios, 'scenario'),
     chats: new JsonCollection<Chat>(DIR.chats, 'chat', 'title' as keyof Chat, normalizeChat),
@@ -311,6 +322,7 @@ export async function loadStore(store: DataStore): Promise<void> {
     store.narrators.load(),
     store.personas.load(),
     store.groups.load(),
+    store.stories.load(),
     store.lorebooks.load(),
     store.scenarios.load(),
     store.chats.load(),

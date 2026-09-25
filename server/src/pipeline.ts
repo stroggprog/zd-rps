@@ -22,6 +22,7 @@ export interface ChatContext {
   lorebooks: Lorebook[];
   scenario: Scenario | null;
   persona: Persona | null;
+  story: { name: string; summary: string } | null;
 }
 
 export interface Reply {
@@ -73,7 +74,7 @@ export interface BuildOptions {
 }
 
 export function buildLlmMessages(ctx: ChatContext, historyTail: number, options: BuildOptions = {}): LlmMessage[] {
-  const { chat, activeCharacters, removed, lorebooks, scenario } = ctx;
+  const { chat, activeCharacters, removed, lorebooks, scenario, story } = ctx;
   const userName = userNameFor(ctx.persona);
   const names = activeCharacters.map((c) => c.name);
 
@@ -111,6 +112,13 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
       `You are running a roleplay chat between multiple characters and the user. ` +
         `The active characters are: ${names.join(', ') || '(none yet)'}. ` +
         `Active characters may each respond. Speak only as one of the active characters; never speak for ${userName}.`,
+    );
+  }
+  if (story && story.summary.trim()) {
+    systemParts.push(
+      `Story so far (${story.name}):\n${story.summary}\n` +
+        `Continue the roleplay with this accumulated story context in mind; ` +
+        `it summarizes everything before the visible transcript.`,
     );
   }
   const personaName = userNameFor(ctx.persona);
