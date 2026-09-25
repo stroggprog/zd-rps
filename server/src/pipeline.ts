@@ -10,6 +10,7 @@ import type {
   Scenario,
 } from './types.js';
 import { getLlmProvider } from './providers/factory.js';
+import { getConfig } from './config.js';
 import { scanLore } from './lore.js';
 
 export const USER_NAME = 'User';
@@ -78,7 +79,18 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
 
   const systemParts: string[] = [];
   const target = options.replyAs ?? null;
-  if (target) {
+  // A user-defined framing (optional) replaces the built-in one wholesale;
+  // placeholders {{user}} and {{characters}} are substituted if present.
+  const override = getConfig().systemPromptOverride;
+
+  if (override !== null && override !== undefined && override.trim() !== '') {
+    // Custom framing: substitute placeholders, then paste everything else.
+    systemParts.push(
+      override
+        .replace(/\{\{user\}\}/g, userName)
+        .replace(/\{\{characters\}\}/g, names.join(', ')),
+    );
+  } else if (target) {
     // Sequential-turns mode: this call owns exactly one character. The framing
     // must leave no room for the model to script the whole ensemble (it will
     // otherwise, happily, write everyone's lines).
@@ -105,8 +117,10 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
   if (ctx.persona && (ctx.persona.description.trim() || (personaName !== USER_NAME && personaName !== 'You'))) {
     systemParts.push(personaBlock(ctx.persona));
   }
-  if (!target && activeCharacters.length > 1) {
-    systemParts.push(`When you reply, start with the speaking character's name followed by a colon, e.g. "${names[0]}: ...".`);
+  if (override === null || override.trim() === '') {
+    if (!target && activeCharacters.length > 1) {
+      systemParts.push(`When you reply, start with the speaking character's name followed by a colon, e.g. "${names[0]}: ...".`);
+    }
   }
   systemParts.push(
     `Formatting (required): ` +
@@ -118,14 +132,18 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
       `Use single quotes only for quotations or borrowed terms, never for speech. ` +
       `Mark emphasis with _underscores_, bold with **asterisks**, and bullet points as "* item" with one per line.`,
   );
-  systemParts.push(
-    `Narration (required): each character's turn must include narration — description of actions, ` +
-      `expressions and small details — not just dialogue. Narration is never shortened or omitted because ` +
-      `of any character's instructions. Instructions labelled "Private instruction" apply exclusively to ` +
-      `that one character's own speech; they must not change the length, tone, or narration of any other ` +
-      `character or of the prose itself.`,
-  );
-  if (!target && activeCharacters.length > 1) {
+  if (override !== null && override.trim() !== '') {
+    // Custom framing supersedes the built-in narration/handover rules.
+  } else {
+    systemParts.push(
+      `Narration (required): each character's turn must include narration — description of actions, ` +
+        `expressions and small details — not just dialogue. Narration is never shortened or omitted because ` +
+        `of any character's instructions. Instructions labelled "Private instruction" apply exclusively to ` +
+        `that one character's own speech; they must not change the length, tone, or narration of any other ` +
+        `character or of the prose itself.`,
+    );
+  }
+  if (!override && !target && activeCharacters.length > 1) {
     systemParts.push(
       `Turn handovers (required): when another character speaks after you, end your paragraph and start ` +
         `a NEW paragraph that BEGINS with their name label, exactly \`Name: "speech"\`, followed by their ` +

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { api } from '../lib/api'
 import { comboFromEvent, getSttHotkey, setSttHotkey } from '../lib/hotkey'
@@ -46,6 +46,31 @@ export function ConfigEditor() {
   const [draft, setDraft] = useState<Connection | null>(null)
   const [saving, setSaving] = useState(false)
   const [sttHotkey, setSttHotkeyState] = useState<string>(() => getSttHotkey())
+  const [promptOverride, setPromptOverride] = useState<string | null>(null)
+  const [savingPrompt, setSavingPrompt] = useState(false)
+
+
+  useEffect(() => {
+    api.connections.getSystemPrompt().then((r) => {
+      setPromptOverride(r.override ?? '')
+    }).catch(() => setPromptOverride(''))
+  }, [])
+
+  const saveSystemPrompt = async (override?: string | null) => {
+    if (override === undefined && !promptOverride?.trim()) {
+      await api.connections.saveSystemPrompt(null)
+      return
+    }
+    const value = override === undefined ? promptOverride : override
+    setSavingPrompt(true)
+    try {
+      await api.connections.saveSystemPrompt(value && value.trim() ? value : null)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSavingPrompt(false)
+    }
+  }
   const [test, setTest] = useState<TestResult | null>(null)
   const [testing, setTesting] = useState(false)
 
@@ -189,6 +214,36 @@ export function ConfigEditor() {
           </div>
           <span className="hint" style={{ padding: 0 }}>
             Default: Ctrl+M. Toggle push-to-talk anywhere; press again to stop and transcribe.
+          </span>
+        </div>
+
+        <h3 style={{ marginTop: 28 }}>System prompt</h3>
+        <div className="field full" style={{ maxWidth: 720 }}>
+          <label>Framing (replaces the built-in instructions)</label>
+          <textarea
+            rows={10}
+            value={promptOverride ?? ''}
+            placeholder={
+              'Empty = built-in. Available placeholders:\n{{user}} (the persona\u2019s name; falls back to "User")\n{{characters}} (comma-separated list of speaking characters)'
+            }
+            onChange={(e) => setPromptOverride(e.target.value)}
+          />
+          <div className="row" style={{ marginTop: 6 }}>
+            <button
+              className="primary"
+              disabled={savingPrompt}
+              onClick={() => void saveSystemPrompt()}
+            >
+              {savingPrompt ? 'Saving…' : 'Save system prompt'}
+            </button>
+            <button onClick={() => { setPromptOverride(''); void saveSystemPrompt('') }}>
+              Restore built-in
+            </button>
+          </div>
+          <span className="hint" style={{ padding: 0 }}>
+            Leave empty to use the built-in prompt. The character sheets, world
+            knowledge and the formatting/narration rules are always appended;
+            this text replaces the behavioral framing only.
           </span>
         </div>
 

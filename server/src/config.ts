@@ -8,6 +8,7 @@ const DEFAULTS: AppConfig = {
   defaultLlm: null,
   defaultStt: null,
   defaultTts: null,
+  systemPromptOverride: null,
 };
 
 let config: AppConfig = structuredClone(DEFAULTS);
@@ -48,6 +49,10 @@ export async function loadConfig(): Promise<void> {
       defaultLlm: asString(raw.defaultLlm, '') || null,
       defaultStt: asString(raw.defaultStt, '') || null,
       defaultTts: asString(raw.defaultTts, '') || null,
+      systemPromptOverride:
+        typeof raw.systemPromptOverride === 'string' && raw.systemPromptOverride.trim()
+          ? raw.systemPromptOverride
+          : null,
     };
   } catch {
     config = structuredClone(DEFAULTS);

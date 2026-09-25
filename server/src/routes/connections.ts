@@ -39,6 +39,22 @@ function sanitize(input: unknown, existing?: Connection): Connection | null {
 export function connectionsRouter(_ctx: AppContext): Router {
   const router = Router();
 
+  // View/edit the optional system-prompt framing override.
+  router.get('/config/system-prompt', asyncHandler(async (_req, res) => {
+    res.json({ override: getConfig().systemPromptOverride });
+  }));
+
+  router.put('/config/system-prompt', asyncHandler(async (req, res) => {
+    const body = readJsonBody<{ override?: string | null }>(req);
+    const override =
+      typeof body.override === 'string' && body.override.trim() !== ''
+        ? body.override.trim()
+        : null;
+    getConfig().systemPromptOverride = override;
+    await saveConfig();
+    res.json({ override });
+  }));
+
   router.get(
     '/providers',
     asyncHandler(async (_req, res) => {

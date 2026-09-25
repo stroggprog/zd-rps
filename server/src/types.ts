@@ -170,7 +170,26 @@ export interface AppConfig {
   defaultLlm: Id | null;
   defaultStt: Id | null;
   defaultTts: Id | null;
+  /** Optional replacement for the framing portion of the LLM system prompt. */
+  systemPromptOverride: string | null;
 }
+
+/** Non-dynamic core of the built-in framing instructions (the parts users may edit). */
+export const BUILTIN_FRAMING = {
+  classic:
+    `You are running a roleplay chat between multiple characters and the user. ` +
+    `The active characters are: {{characters}}. ` +
+    `Active characters may each respond. Speak only as one of the active characters; never speak for {{user}}.`,
+  formatting:
+    `Formatting (required): ` +
+    `Write all speech in double quotes, e.g. "Spoken like a leader." ` +
+    `A speech paragraph must START with its double quote; a paragraph ending in a closing quote ` +
+    `without an opening one is an error. ` +
+    `Separate speech from narration, and narration from speech, with a blank line (a paragraph break). ` +
+    `Never put line breaks inside speech. ` +
+    `Use single quotes only for quotations or borrowed terms, never for speech. ` +
+    `Mark emphasis with _underscores_, bold with **asterisks**, and bullet points as "* item" with one per line.`,
+};
 
 export interface LlmMessage {
   role: 'system' | 'user' | 'assistant';
