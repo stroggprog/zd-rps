@@ -121,7 +121,7 @@ export class SpeechFormatter {
       this.result.length === 0 ||
       this.result.endsWith('\n') ||
       // A label-prefixed open (`X: "speech"`) is paragraph-level speech too.
-      /[A-Za-z0-9 _.'-]{1,60}:\s{1,3}$/.test(trimmedResult) ||
+      /[A-Za-z0-9 _.'-]{1,60}:\s{0,3}$/.test(this.result) ||
       // The model's narration→dialogue handover: a quoted block opening
       // right after a sentence end inside a glued narration paragraph.
       /[.!?\u2026]$/.test(trimmedResult);
