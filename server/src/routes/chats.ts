@@ -854,7 +854,12 @@ export function chatsRouter(ctx: AppContext): Router {
 
       };
 
-      if (chatWithUser.runtime.sequentialTurns && activeChars.length > 1) {
+      // Sequential rounds also run when the user narrowed the roster for this
+      // message (reply controls make no sense in a single ensemble call).
+      const replyNarrowed =
+        (body.replyMode === 'selected' || body.replyMode === 'llm') &&
+        activeChars.length > 1;
+      if ((chatWithUser.runtime.sequentialTurns || replyNarrowed) && activeChars.length > 1) {
         // Which participants reply for this message: the send-time control
         // (all / selected / LLM decides) overrides the full roster.
         let replyTargets = [...activeChars];
