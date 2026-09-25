@@ -108,7 +108,8 @@ export class SpeechFormatter {
       this.result += ch;
       return;
     }
-    const prev = this.result[this.result.length - 1] ?? ' ';
+    const trimmedResult = this.result.trimEnd();
+    const prev = trimmedResult[trimmedResult.length - 1] ?? ' ';
     if (WORD.test(prev)) {
       // Stray/closing quote in prose (no matching open, e.g. a scare term);
       // keep it literally without opening a speech block.
@@ -120,16 +121,27 @@ export class SpeechFormatter {
       this.result.length === 0 ||
       this.result.endsWith('\n') ||
       // A label-prefixed open (`X: "speech"`) is paragraph-level speech too.
-      /[A-Za-z0-9 _.'-]{1,60}:\s{1,3}$/.test(this.result);
+      /[A-Za-z0-9 _.'-]{1,60}:\s{1,3}$/.test(trimmedResult) ||
+      // The model's narration→dialogue handover: a quoted block opening
+      // right after a sentence end inside a glued narration paragraph.
+      /[.!?\u2026]$/.test(trimmedResult);
+    let midParagraphHandover = false;
     if (lead) {
       if (this.pendingNewlines > 0) {
-        // The first paragraph must not gain leading newlines; only later blocks.
         this.result += '\n\n';
         this.pendingNewlines = 0;
+      } else {
+        // Glued narration→dialogue handover (e.g. `...disapproval. "Just try…`)
+        // gets its own paragraph. Inline markers (after a comma/word) stay.
+        if (this.result.length > 0 && !this.result.endsWith('\n') && /[.!?\u2026]$/.test(trimmedResult)) {
+          this.result += '\n\n';
+          midParagraphHandover = true;
+        }
       }
+      this.pendingNewlines = 0;
     }
     this.speechOpen = true;
-    this.blockAtLineStart = lead;
+    this.blockAtLineStart = lead || midParagraphHandover;
     this.result += ch;
   }
 }

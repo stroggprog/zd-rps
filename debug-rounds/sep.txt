@@ -1,44 +1,56 @@
-block=65c8b0f9 isSpeech=true blockState=true sep="" :: "With you!
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: With you!
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: With you!
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: To greet the guest!
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: To meet the man!
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: To meet the magnificent, mysterious, mig
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: [sparkle emoji]"
-block=65c8b0f9 isSpeech=false blockState=false sep="\n\n" :: Sam's voice reaches a new, unprecedented
-block=65c8b0f9 isSpeech=false blockState=false sep=" " :: You can hear the sound of her practicall
-block=65c8b0f9 isSpeech=true blockState=true sep="\n\n" :: "I'll be on my best, most professional, 
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I promise!
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I won't mention the 'uppity' thing!
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I won't mention the 'Panther Sweat'!
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I'll just be...
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I'll be...
-block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I'll be amazing!"
-block=b103c20f isSpeech=true blockState=true sep="" :: "Aww, Sam is going on a formal mission!
-block=b103c20f isSpeech=true blockState=true sep=" " :: Don't forget to bring back some juicy, j
-block=b103c20f isSpeech=true blockState=true sep=" " :: [wink emoji]"
-block=b103c20f isSpeech=true blockState=true sep=" " :: Yumiko's holographic form performs a pla
-block=b103c20f isSpeech=true blockState=true sep=" " :: She seems delighted by the prospect of S
-block=b103c20f isSpeech=true blockState=true sep=" " :: "I'll stay here and keep an eye on Rusty
-block=b103c20f isSpeech=true blockState=true sep=" " :: [giggle emoji]"
-block=93d725ad isSpeech=true blockState=true sep="" :: "Great.
-block=93d725ad isSpeech=true blockState=true sep=" " :: A welcoming committee.
-block=93d725ad isSpeech=true blockState=true sep=" " :: Because what this mission really needed 
-block=93d725ad isSpeech=true blockState=true sep=" " :: [eye roll emoji]"
-block=93d725ad isSpeech=true blockState=true sep=" " :: Rusty's screen displays a very unimpress
-block=93d725ad isSpeech=true blockState=true sep=" " :: He drifts toward a corner of the docking
-block=93d725ad isSpeech=true blockState=true sep=" " :: "If the Commander tries to give me a lec
-block=93d725ad isSpeech=true blockState=true sep=" " :: [smirk emoji]"
-block=065f0f9d isSpeech=true blockState=true sep="" :: "Understood.
-block=065f0f9d isSpeech=true blockState=true sep=" " :: I'll maintain the perimeter.
-block=065f0f9d isSpeech=true blockState=true sep=" " :: If the guest's shuttle has any issues wi
-block=065f0f9d isSpeech=true blockState=true sep=" " :: Good luck, Zen.
-block=065f0f9d isSpeech=true blockState=true sep=" " :: Try not to let the 'professionalism' ove
-block=065f0f9d isSpeech=false blockState=false sep="\n\n" :: Kiara's voice is dry, but there is a hin
-block=2895d092 isSpeech=true blockState=true sep="" :: "I have updated the arrival manifest to 
-block=2895d092 isSpeech=true blockState=true sep=" " :: I am also prepping the formal greeting p
-block=2895d092 isSpeech=true blockState=true sep=" " :: Zen, please ensure your uniform is withi
-block=2895d092 isSpeech=true blockState=true sep=" " :: We are representing the Europa, and Comm
-block=2895d092 isSpeech=true blockState=true sep=" " :: I will see you in the docking bay shortl
-block=2895d092 isSpeech=false blockState=false sep="\n\n" :: Li Mei's voice is the final, grounding n
-block=2895d092 isSpeech=false blockState=false sep=" " :: On your handheld, a countdown timer appe
+block=9837c94b isSpeech=true blockState=true sep="" :: "Smart?
+block=9837c94b isSpeech=true blockState=true sep=" " :: Smart?!
+block=9837c94b isSpeech=true blockState=true sep=" " :: I...
+block=9837c94b isSpeech=true blockState=true sep=" " :: I do?
+block=9837c94b isSpeech=true blockState=true sep=" " :: You think so, Zen?
+block=9837c94b isSpeech=true blockState=true sep=" " :: Truly?!"
+block=9837c94b isSpeech=false blockState=false sep="\n\n" :: Sam's voice hits a pitch so high it's al
+block=9837c94b isSpeech=false blockState=false sep=" " :: You can hear the frantic, rapid-fire shu
+block=9837c94b isSpeech=false blockState=false sep=" " :: Her hands are a blur of motion, smoothin
+block=9837c94b isSpeech=true blockState=true sep="\n\n" :: "I've made sure my hair is...
+block=9837c94b isSpeech=true blockState=true sep=" " :: is...
+block=9837c94b isSpeech=true blockState=true sep=" " :: perfectly placed!
+block=9837c94b isSpeech=true blockState=true sep=" " :: My insignia is aligned!
+block=9837c94b isSpeech=true blockState=true sep=" " :: My...
+block=9837c94b isSpeech=true blockState=true sep=" " :: my...
+block=9837c94b isSpeech=true blockState=true sep=" " :: my posture is professional!
+block=9837c94b isSpeech=true blockState=true sep=" " :: I'm not just smart, I'm...
+block=9837c94b isSpeech=true blockState=true sep=" " :: I'm...
+block=9837c94b isSpeech=true blockState=true sep=" " :: I'm ready!
+block=9837c94b isSpeech=true blockState=true sep=" " :: I'm ready for the Commander!
+block=9837c94b isSpeech=true blockState=true sep=" " :: I'm ready for the station!
+block=9837c94b isSpeech=true blockState=true sep=" " :: I'm ready for...
+block=9837c94b isSpeech=true blockState=true sep=" " :: for...
+block=9837c94b isSpeech=true blockState=true sep=" " :: everything!"
+block=9837c94b isSpeech=false blockState=false sep="\n\n" :: She lets out a long, shaky breath, tryin
+block=eab425a9 isSpeech=true blockState=true sep="" :: "Ooooh, look at her!
+block=eab425a9 isSpeech=true blockState=true sep=" " :: She's glowing!
+block=eab425a9 isSpeech=true blockState=true sep=" " :: She's practically a supernova of nervous
+block=eab425a9 isSpeech=true blockState=true sep=" " :: [giggle emoji]"
+block=eab425a9 isSpeech=true blockState=true sep=" " :: Yumiko's holographic form drifts alongsi
+block=eab425a9 isSpeech=true blockState=true sep=" " :: Her purple pigtails sway playfully.
+block=eab425a9 isSpeech=true blockState=true sep=" " :: "Don't worry, Sam!
+block=eab425a9 isSpeech=true blockState=true sep=" " :: You look absolutely, undeniably, incredi
+block=eab425a9 isSpeech=true blockState=true sep=" " :: important!
+block=eab425a9 isSpeech=true blockState=true sep=" " :: Just try not to trip over your own feet 
+block=eab425a9 isSpeech=true blockState=true sep=" " :: [wink emoji]"
+block=2675401f isSpeech=true blockState=true sep="" :: "If 'smart' is the new standard for 'loo
+block=2675401f isSpeech=true blockState=true sep=" " :: [eye roll emoji]"
+block=2675401f isSpeech=true blockState=true sep=" " :: Rusty's screen displays a very dry, unim
+block=2675401f isSpeech=true blockState=true sep=" " :: He floats a few inches off the floor, hi
+block=2675401f isSpeech=true blockState=true sep=" " :: "Just try to stand still, kid.
+block=2675401f isSpeech=true blockState=true sep=" " :: You're vibrating so much you're going to
+block=2675401f isSpeech=true blockState=true sep=" " :: [smirk emoji]"
+block=363900dc isSpeech=true blockState=true sep="" :: "Focus, Sam.
+block=363900dc isSpeech=true blockState=true sep=" " :: First impressions are tactical.
+block=363900dc isSpeech=true blockState=true sep=" " :: If you look like a mess, Vance will trea
+block=363900dc isSpeech=true blockState=true sep=" " :: Smooth, steady, and silent.
+block=363900dc isSpeech=true blockState=true sep=" " :: That is the goal."
+block=363900dc isSpeech=false blockState=false sep="\n\n" :: Kiara's voice is a cold splash of realit
+block=96b823bf isSpeech=true blockState=true sep="" :: "I have noted the observation, Zen.
+block=96b823bf isSpeech=true blockState=true sep=" " :: Sam's appearance is within acceptable pa
+block=96b823bf isSpeech=true blockState=true sep=" " :: I am currently monitoring the docking ba
+block=96b823bf isSpeech=true blockState=true sep=" " :: The Commander's shuttle has just cleared
+block=96b823bf isSpeech=true blockState=true sep=" " :: We have twelve minutes.
+block=96b823bf isSpeech=true blockState=true sep=" " :: Please, Sam, try to maintain your compos
+block=96b823bf isSpeech=false blockState=false sep="\n\n" :: Li Mei's voice is the steady, calm ancho
