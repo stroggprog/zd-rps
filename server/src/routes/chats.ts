@@ -655,6 +655,7 @@ export function chatsRouter(ctx: AppContext): Router {
       const handleSentence = (sentence: string, isLast: boolean) => {
         let trimmed = sentence.trim();
         if (!trimmed) return;
+        if (roundAborted) return;
         // Multi-character replies: "Name: " prefixes mid-reply hand the reply
         // over to another participant. The label may be glued after closing
         // quotes/asterisk runs or short junk like `[emoji]"` of the previous
@@ -665,6 +666,13 @@ export function chatsRouter(ctx: AppContext): Router {
         if (pm) {
           const cand = pm[2].trim();
           const match = activeChars.find((c) => c.name.toLowerCase() === cand.toLowerCase());
+          if (match && roundsMode && blockSpeaker && blockSpeaker.name !== match.name) {
+            // Sequential rounds: the model ignored the single-character framing
+            // and started writing another participant — cut the remainder of
+            // this round so the target's block stays theirs only.
+            roundAborted = true;
+            return;
+          }
           if (match && !roundsMode && (!blockSpeaker || blockSpeaker.name !== match.name)) {
             // Anything before the label belongs to the previous speaker's block.
             const prefix = pm[1].trim();
@@ -781,6 +789,7 @@ export function chatsRouter(ctx: AppContext): Router {
       // participant answers at most once, so mid-reply speaker switching is
       // not attempted and every participant gets exactly one call.
       let roundsMode = false;
+      let roundAborted = false;
 
       const contextTail = llmConn.contextTokens
         ? historyTailFor(chatWithUser, llmConn.contextTokens, chatWithUser.runtime.maxTokens)
@@ -804,7 +813,14 @@ export function chatsRouter(ctx: AppContext): Router {
           const lm = /^(?:\*{0,3}\s*)?["'\u201C]?\s*([A-Za-z0-9 _.'-]{1,60})'s\s/.exec(p);
           if (lm) {
             const match = activeChars.find((c) => c.name.toLowerCase() === lm[1].trim().toLowerCase());
-            if (match && !roundsMode && (!blockSpeaker || blockSpeaker.name !== match.name)) {
+            if (match && roundsMode && blockSpeaker && blockSpeaker.name !== match.name) {
+            // Sequential rounds: the model ignored the single-character framing
+            // and started writing another participant — cut the remainder of
+            // this round so the target's block stays theirs only.
+            roundAborted = true;
+            return;
+          }
+          if (match && !roundsMode && (!blockSpeaker || blockSpeaker.name !== match.name)) {
               beginBlock({
                 characterId: match.id,
                 name: match.name,
@@ -930,6 +946,7 @@ export function chatsRouter(ctx: AppContext): Router {
           );
 
         for (const target of replyTargets) {
+          roundAborted = false;
           console.log(`[reply-round] target=${target.name}`);
           // Once the turn starts, finish every round even if the browser
           // disconnected (the dev proxy/SSE can drop on long turns): the
