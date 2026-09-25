@@ -6,3 +6,4 @@ config.json
 .DS_Store
 to-do.txt
 *.kate-swp
+debug-rounds/

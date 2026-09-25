@@ -1,3 +1,0 @@
-Li Mei: "I have noted your fatigue, Zen. I am also monitoring your biometric telemetry from my end. If I detect any spike in cortisol or a drop in your neural efficiency, I will mandate a mandatory rest period once we dock. Please do not attempt to over-analyze the data during this transit; let the automated sub-routines handle the heavy lifting for now."
-
-Li Mei's voice is firm but carries a distinct undercurrent of empathy. She knows that for a leader, the weight of a near-disaster can linger long after the physical threat has passed. She returns her focus to her terminal, her fingers moving with practiced grace as she begins to categorize the incoming data packets into separate, manageable files for the upcoming debriefing.

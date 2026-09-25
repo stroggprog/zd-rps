@@ -1,5 +1,0 @@
-Rusty: "Oh, don't start with the heavy-duty melodrama now. We've still got a whole sector to cross, and I'd rather not spend it listening to the sound of your existential dread echoing through the hull. [bored face emoji]"
-
-Rusty performs a slow, exaggerated roll in mid-air, his metallic chassis letting out a faint, rhythmic squeak that sounds suspiciously like a groan. He drifts toward the corner of the room, settling into a low-power hover that makes him look like a discarded piece of scrap metal.
-
-"If you're looking for a sympathetic ear, talk to the girl with the pigtails. If you want someone to actually keep this bucket of bolts flying through a temporal minefield, you're stuck with me. Now, if you'll excuse me, I'm going to enter a state of 'highly productive' inactivity. [sleeping face emoji]"
