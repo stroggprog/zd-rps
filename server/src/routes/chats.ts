@@ -577,6 +577,7 @@ export function chatsRouter(ctx: AppContext): Router {
       };
 
       let blockSpeechState: boolean | null = null;
+      let paraSpeech = false;
       let sepDebug = '';
 
       const emitAudio = (index: number, result: AudioResult) => {
@@ -686,7 +687,6 @@ export function chatsRouter(ctx: AppContext): Router {
       // QuotationTracker (a paragraph with an orphan closing quote — the model
       // dropping its opening quote — counts as speech for the whole
       // paragraph), then fed to the sentence stream with that attribution.
-      let paraSpeech = false;
       let activeStream: SentenceStream | null = null;
       const paragraphs = new ParagraphStream((p) => {
         // The model often hands over by starting a narration paragraph with
@@ -723,7 +723,6 @@ export function chatsRouter(ctx: AppContext): Router {
         : 0;
       const historyTail = contextTail;
       const runReplyPipeline = async (roundMessages: LlmMessage[], roundConn: Connection = llmConn): Promise<void> => {
-        let paraSpeech = false;
         // Fresh quotation state per pipeline run so one round's quote state
         // can't poison the next round's speech/narration attribution.
         const roundQuotation = new QuotationTracker();
