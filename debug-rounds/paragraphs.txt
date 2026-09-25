@@ -1,0 +1,2 @@
+speech=true :: "On it! I'm already dancing through the data streams to see 
+speech=false :: Yumiko's expression shifts from playful to focused, though s

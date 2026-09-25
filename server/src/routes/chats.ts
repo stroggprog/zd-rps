@@ -577,6 +577,7 @@ export function chatsRouter(ctx: AppContext): Router {
       };
 
       let blockSpeechState: boolean | null = null;
+      let sepDebug = '';
 
       const emitAudio = (index: number, result: AudioResult) => {
         if (res.writableEnded || !result.path) return;
@@ -653,6 +654,7 @@ export function chatsRouter(ctx: AppContext): Router {
         const spec = blockSpecs.get(blockId);
         const sep = blockSpeechState === null ? '' : isSpeech === blockSpeechState ? ' ' : '\n\n';
         blockSpeechState = isSpeech;
+        sepDebug += `block=${blockId.slice(0, 8)} isSpeech=${isSpeech} blockState=${blockSpeechState} sep=${JSON.stringify(sep)} :: ${trimmed.slice(0, 40).replace(/\n/g, ' ')}\n`;
         if (spec) spec.content = spec.content ? `${spec.content}${sep}${trimmed}` : trimmed;
         send('sentence', { messageId: blockId, index: idx, text: trimmed, isLast, isSpeech });
         const canSpeak =
@@ -784,6 +786,7 @@ export function chatsRouter(ctx: AppContext): Router {
         mkdirSync(path.join(ROOT, 'debug-rounds'), { recursive: true });
         writeFileSync(path.join(ROOT, 'debug-rounds', 'response.txt'), rawText.trim());
         writeFileSync(path.join(ROOT, 'debug-rounds', 'paragraphs.txt'), paraDebug);
+        writeFileSync(path.join(ROOT, 'debug-rounds', 'sep.txt'), sepDebug);
 
       };
 
