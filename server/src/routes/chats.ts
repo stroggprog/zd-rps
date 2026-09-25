@@ -729,6 +729,7 @@ export function chatsRouter(ctx: AppContext): Router {
         let isFirstParagraph = true;
         // Debug dump: the RAW normalized text of every pipeline run, for inspection.
         let rawText = '';
+        let paraDebug = '';
         const paragraphs = new ParagraphStream((p) => {
           rawText += `${p}\n\n`;
 
@@ -754,6 +755,7 @@ export function chatsRouter(ctx: AppContext): Router {
           // label: later paragraphs' labels must survive to the handover
           // detector, or they'd be swallowed and no new block would start.
           paraSpeech = roundQuotation.isSpeech(p);
+          paraDebug += `speech=${paraSpeech} :: ${p.slice(0, 60).replace(/\n/g, ' ')}\n`;
           activeStream = new SentenceStream({
             activeNames,
             stripLabels: isFirstParagraph,
@@ -781,6 +783,7 @@ export function chatsRouter(ctx: AppContext): Router {
         paragraphs.finish();
         mkdirSync(path.join(ROOT, 'debug-rounds'), { recursive: true });
         writeFileSync(path.join(ROOT, 'debug-rounds', 'response.txt'), rawText.trim());
+        writeFileSync(path.join(ROOT, 'debug-rounds', 'paragraphs.txt'), paraDebug);
 
       };
 
