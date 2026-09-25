@@ -883,8 +883,11 @@ export function chatsRouter(ctx: AppContext): Router {
                 {
                   role: 'system',
                   content:
-                    `You decide which characters speak in a roleplay scene. Answer with ONLY a ` +
-                    `comma-separated subset of the names, no commentary:\n${roster}`,
+                    `You decide which characters speak in a roleplay scene. ` +
+                    `Reply with ONLY a comma-separated subset of the names, no commentary.\n${roster}\n` +
+                    `Guidance: pick the character the user addressed by name; otherwise the most relevant ` +
+                    `one. Use MULTIPLE names ONLY when the message clearly demands several speakers ` +
+                    `(a question posed to multiple characters, a ship-wide action).`,
                 },
                 {
                   role: 'user',
@@ -901,6 +904,7 @@ export function chatsRouter(ctx: AppContext): Router {
               guessed.some((g) => g.toLowerCase() === c.name.toLowerCase()),
             );
             if (subset.length > 0) replyTargets = subset;
+            console.log(`[reply-mode] llm picked: ${verdict.trim().slice(0, 120)} → speakers: ${replyTargets.map((c) => c.name).join(', ')}`);
           } catch (err) {
             console.warn('[reply-mode] LLM decision failed, replying as everyone:', (err as Error).message);
           }
@@ -926,6 +930,7 @@ export function chatsRouter(ctx: AppContext): Router {
           );
 
         for (const target of replyTargets) {
+          console.log(`[reply-round] target=${target.name}`);
           // Once the turn starts, finish every round even if the browser
           // disconnected (the dev proxy/SSE can drop on long turns): the
           // transcript still completes and the client's next refresh shows it.
