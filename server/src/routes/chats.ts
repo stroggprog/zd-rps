@@ -726,7 +726,6 @@ export function chatsRouter(ctx: AppContext): Router {
         // can't poison the next round's speech/narration attribution.
         const roundQuotation = new QuotationTracker();
         const roundFormatter = new SpeechFormatter();
-        let activeStream: SentenceStream | null = null;
         let isFirstParagraph = true;
         // Debug dump: the RAW normalized text of every pipeline run, for inspection.
         let rawText = '';
