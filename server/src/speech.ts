@@ -45,6 +45,12 @@ export class QuotationTracker {
   /** Speech opened by an inline mid-sentence quote that has not yet closed. */
   private inline = false;
 
+  /** Forget any open quote state (used when a speaker block hands over). */
+  reset(): void {
+    this.block = false;
+    this.inline = false;
+  }
+
   /**
    * Classifies a sentence as speech or narration and advances the internal
    * quote state. Call once per sentence, in stream order.

@@ -1,44 +1,44 @@
-block=9254ca51 isSpeech=true blockState=true sep="" :: "Jump completed.
-block=9254ca51 isSpeech=true blockState=true sep=" " :: Crew has reconvened on the bridge.
-block=9254ca51 isSpeech=true blockState=true sep=" " :: All personnel are present, and the initi
-block=9254ca51 isSpeech=false blockState=false sep="\n\n" :: Li Mei adjusts the grip on her handheld 
-block=9254ca51 isSpeech=false blockState=false sep=" " :: She remains seated in the quiet command 
-block=9254ca51 isSpeech=false blockState=false sep=" " :: Behind her transparent protective goggle
-block=9254ca51 isSpeech=false blockState=false sep=" " :: She keeps her posture straight within th
-block=2cf7d906 isSpeech=true blockState=true sep="" :: "Sure, Sam's summarizing the sudden, str
-block=2cf7d906 isSpeech=false blockState=false sep="\n\n" :: Sam turned toward the terminal, her fing
-block=2cf7d906 isSpeech=false blockState=false sep=" " :: She forced herself to focus on the data,
-block=2cf7d906 isSpeech=false blockState=false sep=" " :: Her eyes darted between the various crew
-block=fac6a77b isSpeech=true blockState=true sep="" :: "Scanning.
-block=fac6a77b isSpeech=true blockState=true sep=" " :: Discrepancy detected in local reality si
-block=fac6a77b isSpeech=true blockState=true sep=" " :: Crew status: functional."
-block=fac6a77b isSpeech=false blockState=false sep="\n\n" :: Kiara's voice cut through the comms with
-block=fac6a77b isSpeech=false blockState=false sep=" " :: She didn't look up from her console, her
-block=fac6a77b isSpeech=false blockState=false sep=" " :: Her fingers remained steady, tapping out
-block=fac6a77b isSpeech=false blockState=false sep=" " :: Every movement was calculated to minimiz
-block=1897df65 isSpeech=true blockState=true sep="" :: "Hm...
-block=1897df65 isSpeech=true blockState=true sep=" " :: everything feels a bit strange."
-block=1897df65 isSpeech=false blockState=false sep="\n\n" :: Frieren blinks slowly, her gaze drifting
-block=1897df65 isSpeech=false blockState=false sep=" " :: She doesn't seem to grasp the concept of
-block=1897df65 isSpeech=false blockState=false sep=" " :: To her, the rapid tapping of fingers and
-block=1897df65 isSpeech=false blockState=false sep=" " :: She reaches up to adjust one of her silv
-block=6a483c4b isSpeech=true blockState=true sep="" :: "Coming right up, sugar.
-block=6a483c4b isSpeech=true blockState=true sep=" " :: One concise, professional, and slightly 
-block=6a483c4b isSpeech=false blockState=false sep="\n\n" :: Amy rolls her eyes playfully, though a s
-block=6a483c4b isSpeech=false blockState=false sep=" " :: She taps a manicured fingernail against 
-block=6a483c4b isSpeech=false blockState=false sep=" " :: With a graceful, fluid motion, she leans
-block=0ecc6b5b isSpeech=true blockState=true sep="" :: "A summary?
-block=0ecc6b5b isSpeech=true blockState=true sep=" " :: Oh, brilliant.
-block=0ecc6b5b isSpeech=true blockState=true sep=" " :: Because what this mission really needs i
-block=0ecc6b5b isSpeech=false blockState=false sep="\n\n" :: Rusty performed a dramatic, mid-air roll
-block=0ecc6b5b isSpeech=false blockState=false sep=" " :: His radar dish ears spun in a slow, mock
-block=0ecc6b5b isSpeech=false blockState=false sep=" " :: He hovered near Yumiko's shoulder, his i
-block=103551f4 isSpeech=true blockState=true sep="" :: "On it!
-block=103551f4 isSpeech=true blockState=true sep=" " :: Leave the heavy lifting to the professio
-block=103551f4 isSpeech=true blockState=true sep=" " :: I'll distill all that...
-block=103551f4 isSpeech=true blockState=true sep=" " :: _uniquely chaotic_ energy into something
-block=103551f4 isSpeech=false blockState=false sep="\n\n" :: Yumiko's cheerful expression shifts into
-block=103551f4 isSpeech=false blockState=false sep=" " :: She performs a graceful, sweeping twirl 
-block=103551f4 isSpeech=false blockState=false sep=" " :: As she begins to compile the data, a sem
-block=103551f4 isSpeech=false blockState=false sep=" " :: Her hands move with lightning speed acro
-block=103551f4 isSpeech=false blockState=false sep=" " :: She keeps a playful, side-eye glance tow
+block=65c8b0f9 isSpeech=true blockState=true sep="" :: "With you!
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: With you!
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: With you!
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: To greet the guest!
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: To meet the man!
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: To meet the magnificent, mysterious, mig
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: [sparkle emoji]"
+block=65c8b0f9 isSpeech=false blockState=false sep="\n\n" :: Sam's voice reaches a new, unprecedented
+block=65c8b0f9 isSpeech=false blockState=false sep=" " :: You can hear the sound of her practicall
+block=65c8b0f9 isSpeech=true blockState=true sep="\n\n" :: "I'll be on my best, most professional, 
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I promise!
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I won't mention the 'uppity' thing!
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I won't mention the 'Panther Sweat'!
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I'll just be...
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I'll be...
+block=65c8b0f9 isSpeech=true blockState=true sep=" " :: I'll be amazing!"
+block=b103c20f isSpeech=true blockState=true sep="" :: "Aww, Sam is going on a formal mission!
+block=b103c20f isSpeech=true blockState=true sep=" " :: Don't forget to bring back some juicy, j
+block=b103c20f isSpeech=true blockState=true sep=" " :: [wink emoji]"
+block=b103c20f isSpeech=true blockState=true sep=" " :: Yumiko's holographic form performs a pla
+block=b103c20f isSpeech=true blockState=true sep=" " :: She seems delighted by the prospect of S
+block=b103c20f isSpeech=true blockState=true sep=" " :: "I'll stay here and keep an eye on Rusty
+block=b103c20f isSpeech=true blockState=true sep=" " :: [giggle emoji]"
+block=93d725ad isSpeech=true blockState=true sep="" :: "Great.
+block=93d725ad isSpeech=true blockState=true sep=" " :: A welcoming committee.
+block=93d725ad isSpeech=true blockState=true sep=" " :: Because what this mission really needed 
+block=93d725ad isSpeech=true blockState=true sep=" " :: [eye roll emoji]"
+block=93d725ad isSpeech=true blockState=true sep=" " :: Rusty's screen displays a very unimpress
+block=93d725ad isSpeech=true blockState=true sep=" " :: He drifts toward a corner of the docking
+block=93d725ad isSpeech=true blockState=true sep=" " :: "If the Commander tries to give me a lec
+block=93d725ad isSpeech=true blockState=true sep=" " :: [smirk emoji]"
+block=065f0f9d isSpeech=true blockState=true sep="" :: "Understood.
+block=065f0f9d isSpeech=true blockState=true sep=" " :: I'll maintain the perimeter.
+block=065f0f9d isSpeech=true blockState=true sep=" " :: If the guest's shuttle has any issues wi
+block=065f0f9d isSpeech=true blockState=true sep=" " :: Good luck, Zen.
+block=065f0f9d isSpeech=true blockState=true sep=" " :: Try not to let the 'professionalism' ove
+block=065f0f9d isSpeech=false blockState=false sep="\n\n" :: Kiara's voice is dry, but there is a hin
+block=2895d092 isSpeech=true blockState=true sep="" :: "I have updated the arrival manifest to 
+block=2895d092 isSpeech=true blockState=true sep=" " :: I am also prepping the formal greeting p
+block=2895d092 isSpeech=true blockState=true sep=" " :: Zen, please ensure your uniform is withi
+block=2895d092 isSpeech=true blockState=true sep=" " :: We are representing the Europa, and Comm
+block=2895d092 isSpeech=true blockState=true sep=" " :: I will see you in the docking bay shortl
+block=2895d092 isSpeech=false blockState=false sep="\n\n" :: Li Mei's voice is the final, grounding n
+block=2895d092 isSpeech=false blockState=false sep=" " :: On your handheld, a countdown timer appe

@@ -569,6 +569,9 @@ export function chatsRouter(ctx: AppContext): Router {
 
       const beginBlock = (snap: SpeakerSnapshot) => {
         blockSpeechState = null;
+        // A new speaker starts with clean quote state: an unbalanced quote in
+        // the previous block must not glue this speaker's narration.
+        activeQuotation?.reset();
         blockId = uuid();
         blockSpeaker = snap;
         orderedBlocks.push(blockId);
@@ -578,6 +581,7 @@ export function chatsRouter(ctx: AppContext): Router {
 
       let blockSpeechState: boolean | null = null;
       let paraSpeech = false;
+      let activeQuotation: QuotationTracker | null = null;
       let sepDebug = '';
 
       const emitAudio = (index: number, result: AudioResult) => {
@@ -726,6 +730,7 @@ export function chatsRouter(ctx: AppContext): Router {
         // Fresh quotation state per pipeline run so one round's quote state
         // can't poison the next round's speech/narration attribution.
         const roundQuotation = new QuotationTracker();
+        activeQuotation = roundQuotation;
         const roundFormatter = new SpeechFormatter();
         let isFirstParagraph = true;
         // Debug dump: the RAW normalized text of every pipeline run, for inspection.

@@ -1,2 +1,11 @@
-speech=true :: "On it! Leave the heavy lifting to the professional. I'll di
-speech=false :: Yumiko's cheerful expression shifts into one of focused dete
+speech=true :: Sam: "With you! With you! With you! To greet the guest! To m
+speech=false :: Sam's voice reaches a new, unprecedented level of excitement
+speech=true :: "I'll be on my best, most professional, most polished, most 
+speech=true :: Yumiko: "Aww, Sam is going on a formal mission! Don't forget
+speech=true ::  Yumiko's holographic form performs a playful little wave, h
+speech=true :: Rusty: "Great. A welcoming committee. Because what this miss
+speech=true ::  Rusty's screen displays a very unimpressed, flat-lined mout
+speech=true :: Kiara: "Understood. I'll maintain the perimeter. If the gues
+speech=false ::  Kiara's voice is dry, but there is a hint of amusement in h
+speech=true :: Li Mei: "I have updated the arrival manifest to include Sam 
+speech=false :: Li Mei's voice is the final, grounding note. On your handhel
