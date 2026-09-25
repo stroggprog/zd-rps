@@ -15,7 +15,7 @@ import type {
   SpeakerSnapshot,
   VoiceSubject,
 } from '../types.js';
-import { DIR } from '../paths.js';
+import { DIR, ROOT } from '../paths.js';
 import { getConfig } from '../config.js';
 import { buildLlmMessages, callLlm, historyTailFor, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
 import { chatPersona } from '../store.js';
@@ -26,6 +26,7 @@ import { SpeechFormatter } from '../formatting.js';
 import { OrderedAudio, type AudioResult } from '../orderedAudio.js';
 import { ApiError, asString, ensureDir, now, uuid } from '../util.js';
 import { asyncHandler, idParam, readJsonBody } from './helpers.js';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 function resolveKindConnection(kind: 'llm' | 'stt' | 'tts', runtimeValue: Id | null): Connection {
   const config = getConfig();
@@ -727,8 +728,11 @@ export function chatsRouter(ctx: AppContext): Router {
         const roundFormatter = new SpeechFormatter();
         let activeStream: SentenceStream | null = null;
         let isFirstParagraph = true;
+        // Debug dump: the RAW normalized text of every pipeline run, for inspection.
+        let rawText = '';
         const paragraphs = new ParagraphStream((p) => {
-          // The model often hands over by starting a narration paragraph with
+          rawText += `${p}\n\n`;
+
           // "<Name>'s ..." (e.g. `Rusty's screen displays...`) without a label.
           // When that name is a different active participant, start their block.
           const lm = /^(?:\*{0,3}\s*)?["'\u201C]?\s*([A-Za-z0-9 _.'-]{1,60})'s\s/.exec(p);
@@ -776,6 +780,9 @@ export function chatsRouter(ctx: AppContext): Router {
           if (!streamErrorBox.err) streamErrorBox.err = err as Error;
         }
         paragraphs.finish();
+        mkdirSync(path.join(ROOT, 'debug-rounds'), { recursive: true });
+        writeFileSync(path.join(ROOT, 'debug-rounds', 'response.txt'), rawText.trim());
+
       };
 
       if (chatWithUser.runtime.sequentialTurns && activeChars.length > 1) {
