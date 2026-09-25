@@ -518,7 +518,12 @@ export function chatsRouter(ctx: AppContext): Router {
     '/:id/messages',
     asyncHandler(async (req, res) => {
       const chat = chats.getOrThrow(idParam(req));
-      const body = readJsonBody<{ content?: string; audioEnabled?: boolean }>(req);
+          const body = readJsonBody<{
+        content?: string;
+        audioEnabled?: boolean;
+        replyMode?: 'all' | 'selected' | 'llm';
+        replyIds?: Id[];
+      }>(req);
       const text = asString(body.content).trim();
       if (!text) throw new ApiError('Message content is empty', 400);
       const audioEnabled = body.audioEnabled === true;
@@ -850,6 +855,51 @@ export function chatsRouter(ctx: AppContext): Router {
       };
 
       if (chatWithUser.runtime.sequentialTurns && activeChars.length > 1) {
+        // Which participants reply for this message: the send-time control
+        // (all / selected / LLM decides) overrides the full roster.
+        let replyTargets = [...activeChars];
+        const mode = body.replyMode ?? 'all';
+        if (mode === 'selected' && Array.isArray(body.replyIds)) {
+          const picks = new Set(body.replyIds);
+          const subset = activeChars.filter((c) => picks.has(c.id));
+          if (subset.length > 0) replyTargets = subset;
+        } else if (mode === 'llm') {
+          try {
+            const roster = activeChars.map((c) => `- ${c.name}`).join('\n');
+            const recent =
+              chatWithUser.messages
+                .slice(-3)
+                .map((m) => `${m.speaker.name}: ${m.content.slice(0, 400)}`)
+                .join('\n');
+            const verdict = await callLlm(
+              llmConn,
+              [
+                {
+                  role: 'system',
+                  content:
+                    `You decide which characters speak in a roleplay scene. Answer with ONLY a ` +
+                    `comma-separated subset of the names, no commentary:\n${roster}`,
+                },
+                {
+                  role: 'user',
+                  content: `Scene so far:\n${recent}\n\nNew user turn: ${text}\n\nWhich character(s) should reply now?`,
+                },
+              ],
+              { temperature: 0, topP: 1, maxTokens: 60, disableThinking: true },
+            );
+            const guessed = verdict
+              .split(',')
+              .map((n) => n.trim())
+              .filter(Boolean);
+            const subset = activeChars.filter((c) =>
+              guessed.some((g) => g.toLowerCase() === c.name.toLowerCase()),
+            );
+            if (subset.length > 0) replyTargets = subset;
+          } catch (err) {
+            console.warn('[reply-mode] LLM decision failed, replying as everyone:', (err as Error).message);
+          }
+        }
+        void replyTargets;
         // One LLM call per participant; each round gets its own message block
         // and the transcript is persisted between rounds so each next call
         // can see what the previous participants said.
@@ -869,7 +919,7 @@ export function chatsRouter(ctx: AppContext): Router {
             { replyAs: target },
           );
 
-        for (const target of activeChars) {
+        for (const target of replyTargets) {
           // Once the turn starts, finish every round even if the browser
           // disconnected (the dev proxy/SSE can drop on long turns): the
           // transcript still completes and the client's next refresh shows it.

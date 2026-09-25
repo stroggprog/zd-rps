@@ -13,6 +13,7 @@ import type {
   Narrator,
   Persona,
   ProviderInfo,
+  ReplyMode,
   Story,
   Scenario,
 } from './lib/types'
@@ -33,6 +34,10 @@ export interface AppState {
   personas: Persona[]
   groups: CharacterGroup[]
   stories: Story[]
+  replyMode: ReplyMode
+  replySelectedIds: string[]
+  setReplyMode: (m: ReplyMode) => void
+  setReplySelectedIds: (ids: string[]) => void
   lorebooks: Lorebook[]
   scenarios: Scenario[]
   chats: ChatSummary[]
@@ -113,6 +118,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [personas, setPersonas] = useState<Persona[]>([])
   const [groups, setGroups] = useState<CharacterGroup[]>([])
   const [stories, setStories] = useState<Story[]>([])
+  const [replyMode, setReplyMode] = useState<ReplyMode>(() => (localStorage.getItem('zd-reply-mode') as ReplyMode | null) ?? 'all')
+  const [replySelectedIds, setReplySelectedIds] = useState<string[]>([])
   const [lorebooks, setLorebooks] = useState<Lorebook[]>([])
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [chats, setChats] = useState<ChatSummary[]>([])
@@ -133,6 +140,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const toggleAudio = useCallback((v: boolean) => {
     setAudioEnabled(v)
     window.localStorage.setItem(AUDIO_KEY, v ? '1' : '0')
+  }, [])
+
+  const setReplyModePersisted = useCallback((m: ReplyMode) => {
+    setReplyMode(m)
+    window.localStorage.setItem('zd-reply-mode', m)
   }, [])
 
   const refreshAll = useCallback(async () => {
@@ -401,6 +413,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
               )
             },
           },
+          {
+            replyMode,
+            replyIds: replyMode === 'selected' && replySelectedIds.length > 0 ? replySelectedIds : null,
+          },
         )
       } catch (e) {
         setError((e as Error).message)
@@ -409,7 +425,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSending(false)
       }
     },
-    [selectedChatId, sending, audioEnabled, refreshChat],
+    [selectedChatId, sending, audioEnabled, replyMode, replySelectedIds, refreshChat],
   )
 
   const addParticipants = useCallback(
@@ -562,6 +578,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       personas,
       groups,
       stories,
+      replyMode,
+      replySelectedIds,
+      setReplyMode: setReplyModePersisted,
+      setReplySelectedIds,
       lorebooks,
       scenarios,
       chats,
@@ -604,6 +624,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       personas,
       groups,
       stories,
+      replyMode,
+      replySelectedIds,
+      setReplyModePersisted,
+      setReplySelectedIds,
       lorebooks,
       scenarios,
       chats,

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
+import type { ReplyMode } from '../lib/types'
 import { useApp } from '../store'
 import { api } from '../lib/api'
 
@@ -32,14 +33,14 @@ function Section({
 }
 
 export function RightColumn() {
-  const { chat, characters, connections, narrators, stories, refreshChat, setError, addParticipants, removeParticipant, setNarrator, patchRuntime, busy, openOverlay } = useApp()
+  const { chat, characters, connections, narrators, stories, replyMode, replySelectedIds, setReplyMode, setReplySelectedIds, refreshChat, setError, addParticipants, removeParticipant, setNarrator, patchRuntime, busy, openOverlay } = useApp()
   const [showPicker, setShowPicker] = useState(false)
   const [showNarratorPicker, setShowNarratorPicker] = useState(false)
   const [showStorySave, setShowStorySave] = useState(false)
   const [savingStory, setSavingStory] = useState(false)
   const [saveStoryTarget, setSaveStoryTarget] = useState('__new__')
   const [newStoryName, setNewStoryName] = useState('')
-  const [open, setOpen] = useState({ runtime: false, scenario: false, lorebooks: false, story: false })
+  const [open, setOpen] = useState({ runtime: false, scenario: false, lorebooks: false, story: false, replies: false })
   const toggle = (key: keyof typeof open) => setOpen((s) => ({ ...s, [key]: !s[key] }))
 
   if (!chat) {
@@ -155,6 +156,47 @@ export function RightColumn() {
           </div>
         ) : (
           <div className="hint">No scenario attached.</div>
+        )}
+      </Section>
+
+      <Section title="Replies" open={open.replies ?? false} onToggle={() => toggle('replies')}>
+        <label>
+          Who responds
+          <select value={replyMode} onChange={(e) => setReplyMode(e.target.value as ReplyMode)}>
+            <option value="all">All characters respond</option>
+            <option value="selected">Selected characters respond</option>
+            <option value="llm">LLM decides (per message)</option>
+          </select>
+        </label>
+        {replyMode === 'selected' && (
+          <div className="participant-pick" style={{ marginTop: 8 }}>
+            {(chat?.characters ?? []).map((character) => (
+              <div
+                key={character.id}
+                className={`pick-item${replySelectedIds.includes(character.id) ? ' selected' : ''}`}
+                onClick={() =>
+                  setReplySelectedIds(
+                    replySelectedIds.includes(character.id)
+                      ? replySelectedIds.filter((id) => id !== character.id)
+                      : [...replySelectedIds, character.id],
+                  )
+                }
+              >
+                {character.avatarPath ? <img src={character.avatarPath} alt="" /> : <div className="avatar" />}
+                <span className="grow">{character.name}</span>
+                {replySelectedIds.includes(character.id) && <span className="tag">✓</span>}
+              </div>
+            ))}
+            {(chat?.characters ?? []).length === 0 && <div className="hint">Select a chat first.</div>}
+            {replySelectedIds.length === 0 && (chat?.characters ?? []).length > 0 && (
+              <div className="hint">No characters selected — all would reply.</div>
+            )}
+          </div>
+        )}
+        {replyMode === 'llm' && (
+          <span className="hint" style={{ padding: 0 }}>
+            One quick call to the LLM picks which character(s) reply to each message.
+          </span>
         )}
       </Section>
 

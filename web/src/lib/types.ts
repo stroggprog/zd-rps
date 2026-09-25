@@ -41,6 +41,8 @@ export interface CharacterGroup extends Stamped {
   memberIds: Id[]
 }
 
+export type ReplyMode = 'all' | 'selected' | 'llm'
+
 export type PersonaGender = 'male' | 'female' | 'other'
 
 export interface Persona extends Stamped {

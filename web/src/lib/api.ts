@@ -11,6 +11,7 @@ import type {
   CharacterGroup,
   Persona,
   ProviderInfo,
+  ReplyMode,
   Scenario,
   Story,
   TestResult,
@@ -216,8 +217,13 @@ export const api = {
       ),
     rebuildMessageAudio: (id: string, messageId: string, handlers: { onAudio?: (messageId: string | null, clip: MessageAudio) => void; onDone?: (chat: Chat) => void }) =>
       rebuildMessageAudioSse(id, messageId, handlers),
-    messageStream: (id: string, content: string, audioEnabled: boolean, handlers: MessageStreamHandlers) =>
-      sseMessage(id, content, audioEnabled, handlers),
+    messageStream: (
+      id: string,
+      content: string,
+      audioEnabled: boolean,
+      handlers: MessageStreamHandlers,
+      opts?: { replyMode?: ReplyMode; replyIds?: string[] | null },
+    ) => sseMessage(id, content, audioEnabled, handlers, opts),
   },
 
   audio: {
@@ -251,12 +257,21 @@ function sseMessage(
   content: string,
   audioEnabled: boolean,
   handlers: MessageStreamHandlers,
+  opts?: { replyMode?: ReplyMode; replyIds?: string[] | null },
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     void (async () => {
       let res: Response
       try {
-        res = await fetch(`/api/chats/${id}/messages`, jsonInit('POST', { content, audioEnabled }))
+        res = await fetch(
+          `/api/chats/${id}/messages`,
+          jsonInit('POST', {
+            content,
+            audioEnabled,
+            replyMode: opts?.replyMode,
+            replyIds: opts?.replyIds,
+          }),
+        )
       } catch (e) {
         reject(e as Error)
         return
