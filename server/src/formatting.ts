@@ -116,9 +116,13 @@ export class SpeechFormatter {
       return;
     }
     const lead =
-      this.pendingNewlines > 0 || this.result.length === 0 || this.result.endsWith('\n');
+      this.pendingNewlines > 0 ||
+      this.result.length === 0 ||
+      this.result.endsWith('\n') ||
+      // A label-prefixed open (`X: "speech"`) is paragraph-level speech too.
+      /[A-Za-z0-9 _.'-]{1,60}:\s{1,3}$/.test(this.result);
     if (lead) {
-      if (this.pendingNewlines > 0 || this.result.length > 0) {
+      if (this.pendingNewlines > 0) {
         // The first paragraph must not gain leading newlines; only later blocks.
         this.result += '\n\n';
         this.pendingNewlines = 0;
