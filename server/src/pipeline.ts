@@ -178,7 +178,11 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
       .map((id) => (activeCharacters.find((c) => c.id === id) ?? removed.find((r) => r.characterId === id))?.name)
       .filter(Boolean);
     lines.push(`Members (your teammates): ${members.join(', ')}`);
-    lines.push(`You belong to this group: its description is binding for how you address your teammates.`);
+    lines.push(
+      `You belong to this group: binding for all members, with EVERY member obeying the description. ` +
+        `If the description specifies how members address anyone, follow it exactly, even if older ` +
+        `transcript lines show different usage.`,
+    );
     systemParts.push(lines.join('\n'));
   }
   if (removed.length > 0) {
