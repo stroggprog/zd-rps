@@ -42,7 +42,7 @@ function toDraft(c: Character): Draft {
 }
 
 export function CharacterEditor() {
-  const { characters, groups, connections: allConnections, lorebooks, scenarios, closeOverlay, refreshAll, setError } = useApp()
+  const { characters, groups, connections: allConnections, defaults, lorebooks, scenarios, closeOverlay, refreshAll, setError } = useApp()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [imported, setImported] = useState<ImportDraft | null>(null)
   const [importName, setImportName] = useState('')
@@ -378,6 +378,17 @@ export function CharacterEditor() {
                           >
                             {testPlaying ? 'Playing…' : 'Test'}
                           </button>
+                        )}
+                        {activeCharacter?.voiceSamplePath && (
+                          <span className="hint" style={{ padding: 0, width: '100%' }}>
+                            Uses TTS connection:{' '}
+                            {(allConnections.find((c) => c.id === (defaults.defaultTts ?? ''))?.name) ?? '(none configured)'}
+                            {(() => {
+                              const conn = allConnections.find((c) => c.id === (defaults.defaultTts ?? ''))
+                              const steps = (conn?.providerOptions as Record<string, unknown>)?.num_step
+                              return steps ? ` (inference steps: ${steps})` : ' (inference steps: provider default)'
+                            })()}
+                          </span>
                         )}
                         {activeCharacter?.voiceSamplePath && (
                           <button className="danger" onClick={() => void api.characters.removeVoice(activeCharacter.id).then(async (s) => { setDraft(toDraft(s)); await refreshAll() })}>
