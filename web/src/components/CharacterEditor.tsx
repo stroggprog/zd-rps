@@ -236,11 +236,11 @@ export function CharacterEditor() {
                     <input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} />
                   </div>
 
-                  <div className="field">
-                    <label>Groups</label>
+                  <div className="field full">
+                    <label>Groups (a character can belong to several)</label>
                     <div className="row" style={{ flexWrap: 'wrap' }}>
                       {groups.map((g) => {
-                        const selected = groups.filter((grp) => grp.memberIds.includes(draft.id as string)).some((grp) => grp.id === g.id)
+                        const selected = g.memberIds.includes(draft.id as string)
                         const toggle = async () => {
                           if (!draft.id) return
                           const nextMembers = selected
@@ -253,16 +253,24 @@ export function CharacterEditor() {
                           <button
                             key={g.id}
                             className={selected ? 'toggle on' : 'toggle'}
+                            style={selected ? { fontWeight: 700 } : undefined}
                             onClick={() => void toggle()}
                           >
-                            {g.name}
+                            {g.name}{selected ? ' ✓' : ''}
                           </button>
                         )
                       })}
-                      <span className="hint" style={{ padding: 0, width: '100%' }}>
-                        Click to add or remove this character from a group (changes saved immediately).
-                      </span>
+                      {groups.length === 0 && (
+                        <span className="hint" style={{ padding: 0 }}>
+                          No groups yet — create them under the Groups menu.
+                        </span>
+                      )}
                     </div>
+                    <span className="hint" style={{ padding: 0, width: '100%' }} title="Click a group tag above to add or remove this character; the list updates immediately.">
+                      {draft.id && groups.length > 0
+                        ? `Member of: ${groups.filter((g) => g.memberIds.includes(draft.id as string)).map((g) => g.name).join(', ') || 'no groups'}`
+                        : 'Save the character first to assign groups.'}
+                    </span>
                   </div>
                   <div className="field">
                     <label>Own LLM connection (sequential turns)</label>
