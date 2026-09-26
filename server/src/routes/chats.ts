@@ -572,6 +572,10 @@ export function chatsRouter(ctx: AppContext): Router {
         .map((bid) => ctx.store.lorebooks.get(bid))
         .filter((b) => b !== undefined);
       const scenario = scenarioFor(ctx, chatWithUser);
+      // Groups that include at least one active participant (team-aware prompts).
+      const relevantGroups = ctx.store.groups
+        .list()
+        .filter((g) => g.memberIds.some((id) => chatWithUser.participantIds.includes(id)));
 
       // Optional per-connection context window; the history tail is computed
       // where the messages are built.
@@ -939,6 +943,7 @@ export function chatsRouter(ctx: AppContext): Router {
           scenario,
           persona: chatPersona(ctx.store, chatWithUser),
           story: storyOf(),
+          groups: relevantGroups,
         };
         const targetMessages = (target: Character): LlmMessage[] =>
           buildLlmMessages(
@@ -1013,6 +1018,7 @@ export function chatsRouter(ctx: AppContext): Router {
           scenario,
           persona: chatPersona(ctx.store, chatWithUser),
           story: storyOf(),
+          groups: relevantGroups,
         },
         historyTail,
       );

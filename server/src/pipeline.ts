@@ -23,6 +23,8 @@ export interface ChatContext {
   scenario: Scenario | null;
   persona: Persona | null;
   story: { name: string; summary: string } | null;
+  /** Groups with at least one active member, for team-aware behavior. */
+  groups: import('./types.js').CharacterGroup[];
 }
 
 export interface Reply {
@@ -74,7 +76,7 @@ export interface BuildOptions {
 }
 
 export function buildLlmMessages(ctx: ChatContext, historyTail: number, options: BuildOptions = {}): LlmMessage[] {
-  const { chat, activeCharacters, removed, lorebooks, scenario, story } = ctx;
+  const { chat, activeCharacters, removed, lorebooks, scenario, story, groups } = ctx;
   const userName = userNameFor(ctx.persona);
   const names = activeCharacters.map((c) => c.name);
 
@@ -168,6 +170,15 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
     systemParts.push(
       `Reminder: there are no other characters to write for. Produce ${target.name}'s turn only.`,
     );
+  }
+  for (const group of groups ?? []) {
+    const lines = [`[Group: ${group.name}]`];
+    if (group.description.trim()) lines.push(`Description: ${group.description.trim()}`);
+    const members = group.memberIds
+      .map((id) => (activeCharacters.find((c) => c.id === id) ?? removed.find((r) => r.characterId === id))?.name)
+      .filter(Boolean);
+    lines.push(`Members (your teammates): ${members.join(', ')}`);
+    systemParts.push(lines.join('\n'));
   }
   if (removed.length > 0) {
     systemParts.push(
