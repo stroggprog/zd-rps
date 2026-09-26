@@ -63,9 +63,28 @@ export function LeftColumn() {
         <h3>Images</h3>
       {image && (
         <div className="image-viewer">
-          <img className="main" src={image} alt="Clicked image" />
+          <img
+            className="main"
+            src={image}
+            alt="Clicked image"
+            title="Click to open at full size in a new window"
+            style={{ cursor: 'zoom-in' }}
+            onClick={() => {
+              const win = window.open(image, '_blank')
+              if (!win) setError('The browser blocked the pop-up window. Allow pop-ups and try again.')
+            }}
+          />
           {viewerImages.length > 1 && (
             <div className="row">
+              <button
+                title="Open at full size (in a new window)"
+                onClick={() => {
+                  const win = window.open(image, '_blank')
+                  if (!win) setError('The browser blocked the pop-up window. Allow pop-ups and try again.')
+                }}
+              >
+                ⤢
+              </button>
               <button
                 disabled={viewerIndex <= 0}
                 onClick={() => setViewer(viewerImages, viewerIndex - 1)}
