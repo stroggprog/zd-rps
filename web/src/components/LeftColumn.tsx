@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { bustAvatar } from '../lib/api'
 import { useApp } from '../store'
 
 export function LeftColumn() {
@@ -37,7 +38,7 @@ export function LeftColumn() {
             className={`pick-item${c.id === selectedChatId ? ' selected' : ''}`}
             onClick={() => void selectChat(c.id)}
           >
-            {c.avatarPaths[0] ? <img src={c.avatarPaths[0]} alt="" /> : <div className="avatar" />}
+            {c.avatarPaths[0] ? <img src={bustAvatar(c.avatarPaths[0], c.updated) ?? ''} alt="" /> : <div className="avatar" />}
             <div className="grow">
               <div>{c.title}</div>
               <div className="hint" style={{ padding: 0 }}>

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useApp } from '../store'
-import { api } from '../lib/api'
+import { api, bustAvatar } from '../lib/api'
 import type { CharacterGroup } from '../lib/types'
 
 interface Draft {
@@ -107,7 +107,7 @@ export function GroupEditor() {
                   className={`pick-item${draft?.id === g.id ? ' selected' : ''}`}
                   onClick={() => setDraft(toDraft(g))}
                 >
-                  {g.avatarPath ? <img src={g.avatarPath} alt="" /> : <div className="avatar" />}
+                  {g.avatarPath ? <img src={bustAvatar(g.avatarPath, g.updated) ?? ''} alt="" /> : <div className="avatar" />}
                   <span className="grow">{g.name}</span>
                   <span className="tag">{g.memberIds.length} members</span>
                 </div>
@@ -135,7 +135,7 @@ export function GroupEditor() {
                 </div>
                 <div className="field full">
                   <label>Group image (shown in the chat selector)</label>
-                  {activeGroup?.avatarPath && <img src={activeGroup.avatarPath} className="avatar-big" alt="" />}
+                  {activeGroup?.avatarPath && <img src={bustAvatar(activeGroup.avatarPath, activeGroup.updated) ?? ''} className="avatar-big" alt="" />}
                   <div className="row">
                     <button onClick={() => avatarInput.current?.click()}>Upload</button>
                     {activeGroup?.avatarPath && (
@@ -175,7 +175,7 @@ export function GroupEditor() {
                         className={`pick-item${draft.memberIds.includes(c.id) ? ' selected' : ''}`}
                         onClick={() => toggleMember(c.id)}
                       >
-                        {c.avatarPath ? <img src={c.avatarPath} alt="" /> : <div className="avatar" />}
+                        {c.avatarPath ? <img src={bustAvatar(c.avatarPath, c.updated) ?? ''} alt="" /> : <div className="avatar" />}
                         <span className="grow">{c.name}</span>
                         {draft.memberIds.includes(c.id) && <span className="tag">✓</span>}
                       </div>

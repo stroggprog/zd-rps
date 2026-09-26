@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { bustAvatar } from '../lib/api'
 import { useApp } from '../store'
 
 const STEPS = ['Characters', 'Story (optional)', 'Persona', 'Narrator (optional)', 'Lorebooks', 'Scenario']
@@ -123,7 +124,7 @@ export function NewChatWizard() {
                       className={`pick-item${participantIds.includes(person.id) ? ' selected' : ''}`}
                       onClick={() => toggle(participantIds, setParticipantIds, person.id)}
                     >
-                      {person.avatarPath ? <img src={person.avatarPath} alt="" /> : <div className="avatar" />}
+                      {person.avatarPath ? <img src={bustAvatar(person.avatarPath, person.updated) ?? ''} alt="" /> : <div className="avatar" />}
                       <span className="grow">{person.name}</span>
                       {participantIds.includes(person.id) && <span className="tag">✓</span>}
                     </div>
@@ -203,7 +204,7 @@ export function NewChatWizard() {
                 className={`pick-item${personaId === persona.id ? ' selected' : ''}`}
                 onClick={() => setPersonaId(persona.id)}
               >
-                {persona.avatarPath ? <img src={persona.avatarPath} alt="" /> : <div className="avatar" />}
+                {persona.avatarPath ? <img src={bustAvatar(persona.avatarPath, persona.updated) ?? ''} alt="" /> : <div className="avatar" />}
                 <span className="grow">{persona.name}</span>
                 {persona.description ? <span className="tag">{persona.gender}</span> : null}
                 {personaId === persona.id && <span className="tag">✓</span>}
@@ -223,7 +224,7 @@ export function NewChatWizard() {
                 className={`pick-item${narratorId === narrator.id ? ' selected' : ''}`}
                 onClick={() => setNarratorId(narratorId === narrator.id ? null : narrator.id)}
               >
-                {narrator.avatarPath ? <img src={narrator.avatarPath} alt="" /> : <div className="avatar" />}
+                {narrator.avatarPath ? <img src={bustAvatar(narrator.avatarPath, narrator.updated) ?? ''} alt="" /> : <div className="avatar" />}
                 <span className="grow">{narrator.name}</span>
                 {narrator.voiceSamplePath && <span className="tag">🎤</span>}
                 {narratorId === narrator.id && <span className="tag">✓</span>}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { enqueueAudio, useApp } from '../store'
-import { api } from '../lib/api'
+import { api, bustAvatar } from '../lib/api'
 import type { Character, ImportDraft } from '../lib/types'
 
 interface Draft {
@@ -212,7 +212,7 @@ export function CharacterEditor() {
                   className={`pick-item${draft?.id === c.id ? ' selected' : ''}`}
                   onClick={() => { setDraft(toDraft(c)); setImported(null) }}
                 >
-                  {c.avatarPath ? <img src={c.avatarPath} alt="" /> : <div className="avatar" />}
+                  {c.avatarPath ? <img src={bustAvatar(c.avatarPath, c.updated) ?? ''} alt="" /> : <div className="avatar" />}
                   <span className="grow">{c.name}</span>
                   {c.tags.slice(0, 3).map((t) => (
                     <span key={t} className="tag">{t}</span>
@@ -323,7 +323,7 @@ export function CharacterEditor() {
                   <>
                     <div className="field">
                       <label>Avatar</label>
-                      {activeCharacter?.avatarPath && <img src={activeCharacter.avatarPath} className="avatar-big" alt="" />}
+                      {activeCharacter?.avatarPath && <img src={bustAvatar(activeCharacter.avatarPath, activeCharacter.updated) ?? ''} className="avatar-big" alt="" />}
                       <div className="row">
                         <button onClick={() => avatarInput.current?.click()}>Upload</button>
                         <input

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp, enqueueAudio } from '../store'
+import { bustAvatar } from '../lib/api'
 import { api } from '../lib/api'
 import type { ChatMessage } from '../lib/types'
 
@@ -69,7 +70,7 @@ export function CenterColumn() {
               {message.speaker.avatarPath ? (
                 <img
                   className="avatar"
-                  src={message.speaker.avatarPath}
+                  src={bustAvatar(message.speaker.avatarPath) ?? undefined}
                   alt={message.speaker.name}
                   title="View avatar"
                   style={{ cursor: 'zoom-in' }}

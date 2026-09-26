@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useApp } from '../store'
-import { api } from '../lib/api'
+import { api, bustAvatar } from '../lib/api'
 import type { Narrator } from '../lib/types'
 
 interface Draft {
@@ -119,7 +119,7 @@ export function NarratorEditor() {
                   className={`pick-item${draft?.id === n.id ? ' selected' : ''}`}
                   onClick={() => beginEdit(n)}
                 >
-                  {n.avatarPath ? <img src={n.avatarPath} alt="" /> : <div className="avatar" />}
+                  {n.avatarPath ? <img src={bustAvatar(n.avatarPath, n.updated) ?? ''} alt="" /> : <div className="avatar" />}
                   <span className="grow">{n.name}</span>
                   {n.voiceSamplePath && <span className="tag">🎤</span>}
                 </div>
@@ -139,7 +139,7 @@ export function NarratorEditor() {
 
                 <div className="field full">
                   <label>Avatar</label>
-                  {activeNarrator?.avatarPath && <img src={activeNarrator.avatarPath} className="avatar-big" alt="" />}
+                  {activeNarrator?.avatarPath && <img src={bustAvatar(activeNarrator.avatarPath, activeNarrator.updated) ?? ''} className="avatar-big" alt="" />}
                   <div className="row">
                     <button onClick={() => avatarInput.current?.click()}>Upload</button>
                     {activeNarrator?.avatarPath && (

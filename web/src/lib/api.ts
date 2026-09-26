@@ -371,3 +371,8 @@ function sseMessage(
     })()
   })
 }
+/** Avatar/voice-sample URLs are replaced in place; the entity's `updated`
+ *  timestamp busts the browser cache so replacements show immediately. */
+export function bustAvatar(path: string | null, updated?: string | null): string | null {
+  return path ? (updated ? `${path}?v=${encodeURIComponent(updated)}` : path) : null
+}

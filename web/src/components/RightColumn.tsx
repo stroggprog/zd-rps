@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ReplyMode } from '../lib/types'
 import { useApp } from '../store'
-import { api } from '../lib/api'
+import { api, bustAvatar } from '../lib/api'
 
 function Section({
   title,
@@ -182,7 +182,7 @@ export function RightColumn() {
                   )
                 }
               >
-                {character.avatarPath ? <img src={character.avatarPath} alt="" /> : <div className="avatar" />}
+                {character.avatarPath ? <img src={bustAvatar(character.avatarPath, character.updated) ?? ''} alt="" /> : <div className="avatar" />}
                 <span className="grow">{character.name}</span>
                 {replySelectedIds.includes(character.id) && <span className="tag">✓</span>}
               </div>
@@ -277,7 +277,7 @@ export function RightColumn() {
       <h3>Narrator</h3>
       {narrator ? (
         <div className="participant">
-          {narrator.avatarPath ? <img src={narrator.avatarPath} alt="" /> : <div className="avatar" />}
+          {narrator.avatarPath ? <img src={bustAvatar(narrator.avatarPath, narrator.updated) ?? ''} alt="" /> : <div className="avatar" />}
           <span className="grow">{narrator.name}</span>
           <button
             className="icon"
@@ -309,7 +309,7 @@ export function RightColumn() {
                   setShowNarratorPicker(false)
                 }}
               >
-                {n.avatarPath ? <img src={n.avatarPath} alt="" /> : <div className="avatar" />}
+                {n.avatarPath ? <img src={bustAvatar(n.avatarPath, n.updated) ?? ''} alt="" /> : <div className="avatar" />}
                 <span className="grow">{n.name}</span>
                 {n.voiceSamplePath && <span className="tag">🎤</span>}
               </div>
@@ -330,7 +330,7 @@ export function RightColumn() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {active.map((character) => (
           <div key={character.id} className="participant">
-            {character.avatarPath ? <img src={character.avatarPath} alt="" /> : <div className="avatar" />}
+            {character.avatarPath ? <img src={bustAvatar(character.avatarPath, character.updated) ?? ''} alt="" /> : <div className="avatar" />}
             <span className="grow">{character.name}</span>
             <button
               className="icon"
@@ -371,7 +371,7 @@ export function RightColumn() {
                 setShowPicker(false)
               }}
             >
-              {character.avatarPath ? <img src={character.avatarPath} alt="" /> : <div className="avatar" />}
+              {character.avatarPath ? <img src={bustAvatar(character.avatarPath, character.updated) ?? ''} alt="" /> : <div className="avatar" />}
               <span className="grow">{character.name}</span>
             </div>
           ))}
