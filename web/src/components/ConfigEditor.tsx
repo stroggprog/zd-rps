@@ -16,6 +16,8 @@ const KIND_LABEL: Record<ConnectionKind, string> = {
 }
 const KIND_ORDER: ConnectionKind[] = ['llm', 'stt', 'tts']
 
+const DEFAULT_TEST_TEXT = 'This is a test. Counting, one, two, three. Beware the Jabberwock, my son!'
+
 const PROVIDER_DEFAULTS: Record<string, { name: string; baseUrl: string; kind: ConnectionKind }> = {
   'openai-compatible': { name: 'OpenAI', baseUrl: 'https://api.openai.com', kind: 'llm' },
   ollama: { name: 'Ollama', baseUrl: 'http://localhost:11434', kind: 'llm' },
@@ -48,12 +50,16 @@ export function ConfigEditor() {
   const [sttHotkey, setSttHotkeyState] = useState<string>(() => getSttHotkey())
   const [promptOverride, setPromptOverride] = useState<string | null>(null)
   const [savingPrompt, setSavingPrompt] = useState(false)
+  const [ttsTestText, setTtsTestText] = useState('')
 
 
   useEffect(() => {
     api.connections.getSystemPrompt().then((r) => {
       setPromptOverride(r.override ?? '')
     }).catch(() => setPromptOverride(''))
+    api.connections.getTestText().then((r) => {
+      setTtsTestText(r.testText ?? DEFAULT_TEST_TEXT)
+    }).catch(() => {})
   }, [])
 
   const saveSystemPrompt = async (override?: string | null) => {
@@ -214,6 +220,33 @@ export function ConfigEditor() {
           </div>
           <span className="hint" style={{ padding: 0 }}>
             Default: Ctrl+M. Toggle push-to-talk anywhere; press again to stop and transcribe.
+          </span>
+        </div>
+
+        <h3 style={{ marginTop: 28 }}>TTS voice test</h3>
+        <div className="field" style={{ maxWidth: 560 }}>
+          <label>Test text (used by the Test button in the Character editor)</label>
+          <textarea
+            rows={2}
+            value={ttsTestText}
+            onChange={(e) => setTtsTestText(e.target.value)}
+          />
+          <div className="row" style={{ marginTop: 6 }}>
+            <button
+              className="primary"
+              onClick={() =>
+                void api.connections.saveTestText(ttsTestText.trim() ? ttsTestText : null)
+                  .then(() => setError(null))
+              }
+            >
+              Save test text
+            </button>
+            <button onClick={() => { setTtsTestText(DEFAULT_TEST_TEXT); void api.connections.saveTestText(null) }}>
+              Restore default
+            </button>
+          </div>
+          <span className="hint" style={{ padding: 0 }}>
+            Leave empty to use the default: {DEFAULT_TEST_TEXT}
           </span>
         </div>
 

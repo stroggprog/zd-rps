@@ -24,6 +24,7 @@ Multiple characters can be used in each chat, and characters can be added/remove
 - **Stories** — configurable at Configuration/editable from the Stories button. Current chats can be summarised into a story (the LLM writes the summary folding in the story's existing summary), so the story evolves over several chats. New chats can pick a story; its summary is injected ahead of the transcript, which keeps context sizes small.
 - **Speech input** — record and transcribe via STT into the input box (push-to-talk hotkey, default Ctrl+M, configurable in Configuration).
 - **Per-character LLM connections** — a character can have its own LLM connection (used in Sequential turns mode); there's no limit on connection count, each just needs its own base URL (e.g. multiple Ollama instances).
+- **Voice testing** — a configurable test text (default "This is a test. Counting, one, two, three. Beware the Jabberwock, my son!") in the Configuration screen; the Character editor's Test button plays the uploaded voice sample speaking it.
 - **Voice cloning** — TTS can clone a character's or narrator's uploaded voice sample; clones are cached per connection.
 - **Print/PDF** — a Print button lists chats (searchable); picking one opens a printable transcript window (title, metadata, speaker-name paragraphs) with the browser's print dialog for saving as PDF.
 

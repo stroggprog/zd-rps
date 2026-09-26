@@ -63,6 +63,13 @@ export const api = {
         '/api/connections/defaults',
         jsonInit('POST', { kind, connectionId }),
       ),
+    getTestText: () =>
+      http<{ testText: string | null }>('/api/connections/config/test-text'),
+    saveTestText: (testText: string | null) =>
+      http<{ testText: string | null }>(
+        '/api/connections/config/test-text',
+        jsonInit('PUT', { testText }),
+      ),
     getSystemPrompt: () =>
       http<{ override: string | null }>('/api/connections/config/system-prompt'),
     saveSystemPrompt: (override: string | null) =>

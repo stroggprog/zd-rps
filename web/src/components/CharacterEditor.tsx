@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { useApp } from '../store'
+import { useEffect, useRef, useState } from 'react'
+import { enqueueAudio, useApp } from '../store'
 import { api } from '../lib/api'
 import type { Character, ImportDraft } from '../lib/types'
 
@@ -51,6 +51,12 @@ export function CharacterEditor() {
   const [acceptLorebook, setAcceptLorebook] = useState(true)
   const [acceptScenario, setAcceptScenario] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [testPlaying, setTestPlaying] = useState(false)
+  const [testText, setTestText] = useState('')
+
+  useEffect(() => {
+    api.connections.getTestText().then((r) => setTestText((r.testText ?? '').trim())).catch(() => {})
+  }, [])
   const [importing, setImporting] = useState(false)
   const avatarInput = useRef<HTMLInputElement>(null)
   const voiceInput = useRef<HTMLInputElement>(null)
@@ -341,6 +347,30 @@ export function CharacterEditor() {
                       />
                       <div className="row" style={{ marginTop: 6 }}>
                         <button onClick={() => void uploadVoice()}>Save sample</button>
+                        {activeCharacter?.voiceSamplePath && (
+                          <button
+                            disabled={testPlaying}
+                            title="Play the uploaded sample through the default TTS voice"
+                            onClick={() =>
+                              void (async () => {
+                                setTestPlaying(true)
+                                try {
+                                  const { audioPath } = await api.audio.ttsText(
+                                    testText || 'This is a test. Counting, one, two, three. Beware the Jabberwock, my son!',
+                                    activeCharacter.id,
+                                  )
+                                  enqueueAudio(audioPath)
+                                } catch (e) {
+                                  setError((e as Error).message)
+                                } finally {
+                                  setTestPlaying(false)
+                                }
+                              })()
+                            }
+                          >
+                            {testPlaying ? 'Playing…' : 'Test'}
+                          </button>
+                        )}
                         {activeCharacter?.voiceSamplePath && (
                           <button className="danger" onClick={() => void api.characters.removeVoice(activeCharacter.id).then(async (s) => { setDraft(toDraft(s)); await refreshAll() })}>
                             Remove

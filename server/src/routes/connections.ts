@@ -50,6 +50,36 @@ export function connectionsRouter(_ctx: AppContext): Router {
     res.json({ override: getConfig().systemPromptOverride });
   }));
 
+  router.get('/config/test-text', asyncHandler(async (_req, res) => {
+    res.json({ testText: getConfig().testText });
+  }));
+
+  router.put('/config/test-text', asyncHandler(async (req, res) => {
+    const body = readJsonBody<{ testText?: string | null }>(req);
+    const testText =
+      typeof body.testText === 'string' && body.testText.trim() !== ''
+        ? body.testText.trim()
+        : null;
+    getConfig().testText = testText;
+    await saveConfig();
+    res.json({ testText });
+  }));
+
+  router.get('/config/test-text', asyncHandler(async (_req, res) => {
+    res.json({ testText: getConfig().testText });
+  }));
+
+  router.put('/config/test-text', asyncHandler(async (req, res) => {
+    const body = readJsonBody<{ testText?: string | null }>(req);
+    const testText =
+      typeof body.testText === 'string' && body.testText.trim() !== ''
+        ? body.testText.trim()
+        : null;
+    getConfig().testText = testText;
+    await saveConfig();
+    res.json({ testText });
+  }));
+
   router.put('/config/system-prompt', asyncHandler(async (req, res) => {
     const body = readJsonBody<{ override?: string | null }>(req);
     const override =

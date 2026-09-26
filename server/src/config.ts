@@ -8,6 +8,7 @@ const DEFAULTS: AppConfig = {
   defaultLlm: null,
   defaultStt: null,
   defaultTts: null,
+  testText: null,
   debug: false,
   systemPromptOverride: null,
 };
@@ -51,6 +52,10 @@ export async function loadConfig(): Promise<void> {
       defaultStt: asString(raw.defaultStt, '') || null,
       defaultTts: asString(raw.defaultTts, '') || null,
       debug: raw.debug === true ? true : false,
+      testText:
+        typeof raw.testText === 'string' && raw.testText.trim() !== ''
+          ? raw.testText
+          : null,
       systemPromptOverride:
         typeof raw.systemPromptOverride === 'string' && raw.systemPromptOverride.trim()
           ? raw.systemPromptOverride
