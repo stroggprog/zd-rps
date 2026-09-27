@@ -1,8 +1,9 @@
 import { promises as fs } from 'node:fs';
+import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { Router } from 'express';
 import type { AppContext } from '../context.js';
-import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+import type { Request as ERequest, Response as EResponse } from 'express';
 import type {
   Character,
   Chat,
@@ -16,7 +17,7 @@ import type {
   SpeakerSnapshot,
   VoiceSubject,
 } from '../types.js';
-import { DIR, ROOT } from '../paths.js';
+import { DATA_DIR as DATA, DIR, ROOT } from '../paths.js';
 import { getConfig } from '../config.js';
 import { buildLlmMessages, callLlm, historyTailFor, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
 import { chatPersona } from '../store.js';
@@ -56,7 +57,8 @@ function scenarioFor(ctx: AppContext, chat: Chat): Scenario | null {
   return null;
 }
 
-function listSummary(ctx: AppContext, chat: Chat) {  return {
+function listSummary(ctx: AppContext, chat: Chat) {
+  return {
     id: chat.id,
     title: chat.title,
     updated: chat.updated,
@@ -518,8 +520,8 @@ export function chatsRouter(ctx: AppContext): Router {
 
   // Slash commands: server-side, ephemeral (never stored in chat history).
   function handleSlashCommand(
-    req: ExpressRequest<{ id: string }>,
-    res: ExpressResponse,
+    req: ERequest<{ id: string }>,
+    res: EResponse,
     text: string,
   ): void {
     const chat = chats.getOrThrow(idParam(req));
@@ -584,7 +586,7 @@ export function chatsRouter(ctx: AppContext): Router {
 
       // Slash commands: begin with '/' and are handled server-side.
       if (text.startsWith('/')) {
-        await handleSlashCommand(req as unknown as ExpressRequest<{ id: string }>, res, text);
+        await handleSlashCommand(req as unknown as ERequest<{ id: string }>, res, text);
         return;
       }
       const audioEnabled = body.audioEnabled === true;
@@ -1151,6 +1153,152 @@ export function chatsRouter(ctx: AppContext): Router {
       })().catch((err) => console.error('[sp-attribution] failed:', (err as Error).message));
       send('done', { chat: updated ?? chats.getOrThrow(chatWithUser.id) });
       res.end();
+    }),
+  );
+
+  // Audiobook: order every text segment of the chat, synthesize required
+  // audio (persona voice/thought clips, character voices, narrator) and write
+  // a `playlist.m3u`, then run `sox <playlist> <title>.mp3` over it.
+  router.post(
+    '/:id/audiobook',
+    asyncHandler(async (req, res) => {
+      const chat = chats.getOrThrow(idParam(req));
+      const persona = chatPersona(ctx.store, chat);
+      const narrator = chat.narratorId ? ctx.store.narrators.get(chat.narratorId) ?? null : null;
+      const ttsConn = resolveKindConnection('tts', chat.runtime.ttsConnectionId);
+
+      type Item = { kind: 'voice' | 'thought' | 'narrative'; text: string; subject: VoiceSubject | null };
+      const items: Item[] = [];
+
+      const personaVoice: VoiceSubject | null = persona?.voiceSamplePath
+        ? {
+            id: `persona-voice-${persona.id}`,
+            name: `${persona.name} (spoken voice)`,
+            voiceSamplePath: persona.voiceSamplePath,
+            voiceSampleTranscript: persona.voiceSampleTranscript,
+          }
+        : null;
+      const personaThought: VoiceSubject | null = persona?.thoughtSamplePath
+        ? {
+            id: `persona-thought-${persona.id}`,
+            name: `${persona.name} (thoughts)`,
+            voiceSamplePath: persona.thoughtSamplePath,
+            voiceSampleTranscript: persona.thoughtSampleTranscript,
+          }
+        : null;
+      const narratorSubject: VoiceSubject | null = narrator?.voiceSamplePath
+        ? {
+            id: `narrator-${narrator.id}`,
+            name: narrator.name,
+            voiceSamplePath: narrator.voiceSamplePath,
+            voiceSampleTranscript: narrator.voiceSampleTranscript,
+          }
+        : null;
+
+      for (const message of chat.messages) {
+        const speakerChar = message.speaker.characterId
+          ? ctx.store.characters.get(message.speaker.characterId)
+          : null;
+        const isPersona = message.speaker.characterId === null;
+        const quotation = new QuotationTracker();
+        const splitter = new SentenceStream({ activeNames: [], onSentence: (s) => {
+          const trimmed = s.trim();
+          if (!trimmed) return;
+          const isSpeech = quotation.isSpeech(trimmed);
+          const thought = trimmed.endsWith('*');
+          let kind: Item['kind'] = 'narrative';
+          let subject: VoiceSubject | null = null;
+          const fromCharacter = speakerChar
+            ? {
+                id: speakerChar.id,
+                name: speakerChar.name,
+                voiceSamplePath: speakerChar.voiceSamplePath,
+                voiceSampleTranscript: speakerChar.voiceSampleTranscript,
+              }
+            : null;
+          if (isPersona) {
+            if (thought) {
+              kind = 'thought';
+              subject = personaThought ?? personaVoice;
+            } else if (isSpeech) {
+              kind = 'voice';
+              subject = personaVoice ?? narratorSubject;
+            } else {
+              kind = 'narrative';
+              subject = personaVoice ?? narratorSubject;
+            }
+          } else {
+            subject = fromCharacter;
+            kind = thought ? 'thought' : isSpeech ? 'voice' : 'narrative';
+          }
+          if (!subject?.voiceSamplePath) {
+            if (isPersona) {
+              subject = personaVoice ?? narratorSubject;
+            } else {
+              subject = narratorSubject ?? subject;
+            }
+          }
+          items.push({ kind, text: trimmed, subject });
+        } });
+        splitter.push(message.content);
+        splitter.finish();
+      }
+
+      console.log(`[audiobook] segments: ${items.length}, with subject+sample: ${items.filter((x) => x.subject?.voiceSamplePath).length}`);
+      // Synthesize in order into a temp folder + playlist, then sox them.
+      const safeChat = (chat.title || 'audiobook').replace(/[^\w.-]+/g, '_').slice(0, 60) || 'audiobook';
+      const dirName = `${chat.id}-${Date.now()}`;
+      const outDir = path.join(DATA, 'audiobook', dirName);
+      await ensureDir(outDir);
+      const playlistLines: string[] = [];
+      let i = 0;
+      console.log(`[audiobook] items=${items.length}`);
+      let synthOk = 0;
+      let synthFail = 0;
+      for (const item of items) {
+        console.log(`[audiobook] item kind=${item.kind} sample=${item.subject?.voiceSamplePath ?? 'none'} :: ${item.text.slice(0, 50)}`);
+        if (!item.subject?.voiceSamplePath) continue;
+        if (!/\p{L}\p{N}/u.test(item.text)) continue;
+        if (!item.subject?.voiceSamplePath) continue;
+        let audio: Buffer;
+        try {
+          audio = await synthesizeCharacterSpeech(ttsConn, item.subject, item.text, ctx.voiceCache);
+        } catch (err) {
+          synthFail += 1;
+          console.error(`[audiobook] synth failed for "${item.text.slice(0, 40)}":`, (err as Error).message);
+          continue;
+        }
+        synthOk += 1;
+        console.log(`[audiobook] synthesized ${item.text.slice(0, 30)} (${audio.length} bytes)`);
+        const filename = `${String(i).padStart(4, '0')}.${audioExt(audio)}`;
+        await fs.writeFile(path.join(outDir, filename), audio);
+        playlistLines.push(filename);
+        i += 1;
+      }
+      const playlistPath = path.join(outDir, 'playlist.m3u');
+      await fs.writeFile(playlistPath, playlistLines.join('\n') + '\n', 'utf8');
+
+      const outputName = `${safeChat}.mp3`;
+      const outputPath = path.join(outDir, outputName);
+      console.log('[audiobook] sox args:', playlistPath);
+      // sox cannot read m3u playlists directly; expand the clip list and pass
+      // the files as inputs (playlist.m3u is still written for reference).
+      const clipFiles = playlistLines.map((l) => path.join(outDir, l));
+      if (clipFiles.length > 0) {
+        await new Promise<void>((resolve) => {
+          execFile('sox', [...clipFiles, '-C', '192', outputPath], { cwd: outDir, timeout: 10 * 60_000 }, (err) => {
+            if (err) console.error('[audiobook] sox failed:', (err as Error).message);
+            else console.log(`[audiobook] created ${outputPath}`);
+            resolve();
+          });
+        });
+      }
+      res.json({
+        dir: `/media/audiobook/${dirName}`,
+        playlist: `/media/audiobook/${dirName}/playlist.m3u`,
+        audio: `/media/audiobook/${dirName}/${outputName}`,
+        items: i,
+      });
     }),
   );
 

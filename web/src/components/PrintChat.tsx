@@ -47,8 +47,34 @@ function chatToHtml(title: string, detail: Awaited<ReturnType<typeof api.chats.g
 
 export function PrintChat() {
   const { chats, closeOverlay, setError } = useApp()
+  const [wantTranscript, setWantTranscript] = useState(true)
+  const [wantAudiobook, setWantAudiobook] = useState(false)
   const [rendering, setRendering] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+
+  const selectChatPrint = async (
+    id: string,
+    title: string,
+    doTranscript: boolean,
+    doAudiobook: boolean,
+  ) => {
+    if (doAudiobook) {
+      setError(null)
+      setRendering(title)
+      try {
+        const r = await api.chats.audiobook(id)
+        setError(`Audiobook ready: ${r.audio}` + (doTranscript ? '' : ''))
+        if (doTranscript) await print(id, title)
+        else void (window.open(r.dir, '_blank'))
+      } catch (e) {
+        setError((e as Error).message)
+      } finally {
+        setRendering(null)
+      }
+      return
+    }
+    await print(id, title)
+  }
 
   const print = async (id: string, title: string) => {
     setRendering(title)
@@ -85,9 +111,33 @@ export function PrintChat() {
           <label>Search chats</label>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter by title…" />
         </div>
+        <div className="row" style={{ marginBottom: 8 }}>
+          <label className="row" style={{ gap: 4 }}>
+            <input
+              type="checkbox"
+              checked={wantTranscript}
+              onChange={(e) => setWantTranscript(e.target.checked)}
+            />
+            Transcript (print to PDF)
+          </label>
+          <label className="row" style={{ gap: 4 }}>
+            <input
+              type="checkbox"
+              checked={wantAudiobook}
+              onChange={(e) => setWantAudiobook(e.target.checked)}
+            />
+            Audio book (m3u + mp3)
+          </label>
+        </div>
         <div className="pick-list" style={{ marginTop: 12 }}>
           {list.map((c) => (
-            <div key={c.id} className="pick-item" onClick={() => void print(c.id, c.title)}>
+            <div
+              key={c.id}
+              className="pick-item"
+              onClick={() =>
+                void selectChatPrint(c.id, c.title, wantTranscript, wantAudiobook)
+              }
+            >
               {c.avatarPaths[0] ? <img src={c.avatarPaths[0]} alt="" /> : <div className="avatar" />}
               <span className="grow">{c.title}</span>
               {rendering === c.title && <span className="tag">…</span>}

@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { createStore, loadStore } from './store.js';
 import { createVoiceCache } from './voices.js';
 import { loadConfig } from './config.js';
-import { DIR, ROOT } from './paths.js';
+import { DATA_DIR, DIR, ROOT } from './paths.js';
 import { connectionsRouter } from './routes/connections.js';
 import { catalog } from './providers/factory.js';
 import { charactersRouter } from './routes/characters.js';
@@ -64,7 +64,7 @@ async function main() {
   app.use('/media/personas', express.static(DIR.personas, mediaNoCache));
   app.use('/media/groups', express.static(DIR.groups, mediaNoCache));
   app.use('/media/audio', express.static(DIR.audio));
-  app.use('/media/images', express.static(DIR.images));
+  app.use('/media/audiobook', express.static(path.join(DATA_DIR, 'audiobook')));
 
   const webDist = path.join(ROOT, 'web', 'dist');
   if (existsSync(path.join(webDist, 'index.html'))) {
