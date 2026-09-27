@@ -12,6 +12,7 @@ import { charactersRouter } from './routes/characters.js';
 import { narratorsRouter } from './routes/narrators.js';
 import { personasRouter } from './routes/personas.js';
 import { groupsRouter } from './routes/groups.js';
+import { versionRouter } from './version.js';
 import { storiesRouter } from './routes/stories.js';
 import { lorebooksRouter } from './routes/lorebooks.js';
 import { scenariosRouter } from './routes/scenarios.js';
@@ -38,6 +39,7 @@ async function main() {
   app.get('/api/providers', (_req, res) => {
     res.json(catalog);
   });
+  app.use('/api/version', versionRouter());
   app.use('/api/connections', connectionsRouter(ctx));
   app.use('/api/characters', charactersRouter(ctx));
   app.use('/api/narrators', narratorsRouter(ctx));

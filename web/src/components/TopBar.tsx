@@ -1,10 +1,31 @@
+import { useEffect, useState } from 'react'
+import { api } from '../lib/api'
 import { useApp } from '../store'
+import type { VersionCheck } from '../lib/api'
 
 export function TopBar() {
+  const [version, setVersion] = useState<VersionCheck | null>(null)
+
+  useEffect(() => {
+    void api.version?.().then((v) => {
+      if (v.updateAvailable) setVersion(v)
+    })
+  }, [])
   const { openOverlay, chat, chats, audioEnabled, setAudioEnabled } = useApp()
   return (
     <header className="topbar">
       <span className="title">zd-rps</span>
+      {version?.updateAvailable && (
+        <a
+          href="https://nas3:3000/phil/zd-rps"
+          target="_blank"
+          rel="noreferrer"
+          className="tag"
+          title={`Update available: ${version.latest?.slice(0, 7)}`}
+        >
+          ⟳ Update available
+        </a>
+      )}
       <span className="chat-title">
         {chat ? chat.chat.title : chats.length > 0 ? 'Pick a chat' : 'No chat yet'}
       </span>

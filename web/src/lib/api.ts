@@ -44,6 +44,7 @@ function jsonInit(method: string, body: unknown): RequestInit {
 
 export const api = {
   providers: () => http<ProviderInfo[]>('/api/providers'),
+  version: () => http<VersionCheck>('/api/version'),
 
   connections: {
     list: () => http<Connection[]>('/api/connections'),
@@ -245,6 +246,13 @@ export const api = {
         jsonInit('POST', { text, characterId, connectionId }),
       ),
   },
+}
+
+export interface VersionCheck {
+  commit: string
+  built?: string
+  latest: string | null
+  updateAvailable: boolean
 }
 
 export interface MessageStreamHandlers {

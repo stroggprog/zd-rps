@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node -e \"const fs=require('fs');let c='unknown';try{c=require('child_process').execSync('git rev-parse HEAD',{cwd:'..'}).toString().trim()}catch{}fs.writeFileSync('dist/version.json',JSON.stringify({commit:c,built:new Date().toISOString()}))\"",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
