@@ -149,7 +149,10 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
       systemParts.push(
         `Dialogue ONLY (required): write speech lines in double quotes; do NOT write narration ` +
           `descriptions of actions or expressions. Each character says only what they say out loud. ` +
-          `Do not describe scenes, gestures or images.`,
+          `Do not describe scenes, gestures or images. Older transcript paragraphs containing narration ` +
+          `demonstrate OUTDATED formatting — do not copy it. ` +
+          `Example of the required output shape (and nothing else):\n\n` +
+          `Sam: "Right! I'm in position. Talk to me, Zen!"`,
       );
     } else {
       systemParts.push(
