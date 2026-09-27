@@ -145,13 +145,21 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
   if (override !== null && override.trim() !== '') {
     // Custom framing supersedes the built-in narration/handover rules.
   } else {
-    systemParts.push(
-      `Narration (required): each character's turn must include narration — description of actions, ` +
-        `expressions and small details — not just dialogue. Narration is never shortened or omitted because ` +
-        `of any character's instructions. Instructions labelled "Private instruction" apply exclusively to ` +
-        `that one character's own speech; they must not change the length, tone, or narration of any other ` +
-        `character or of the prose itself.`,
-    );
+    if (chat.runtime.dialogueOnly) {
+      systemParts.push(
+        `Dialogue ONLY (required): write speech lines in double quotes; do NOT write narration ` +
+          `descriptions of actions or expressions. Each character says only what they say out loud. ` +
+          `Do not describe scenes, gestures or images.`,
+      );
+    } else {
+      systemParts.push(
+        `Narration (required): each character's turn must include narration — description of actions, ` +
+          `expressions and small details — not just dialogue. Narration is never shortened or omitted because ` +
+          `of any character's instructions. Instructions labelled "Private instruction" apply exclusively to ` +
+          `that one character's own speech; they must not change the length, tone, or narration of any other ` +
+          `character or of the prose itself.`,
+      );
+    }
   }
   if (!override && !target && activeCharacters.length > 1) {
     systemParts.push(

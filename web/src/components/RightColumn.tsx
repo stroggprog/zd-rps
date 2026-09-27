@@ -99,6 +99,16 @@ export function RightColumn() {
             </select>
           </label>
           <label>
+            Dialogue only (no narrative)
+            <select
+              value={c.runtime.dialogueOnly ? '1' : '0'}
+              onChange={(e) => void patchRuntime({ dialogueOnly: e.target.value === '1' })}
+            >
+              <option value="0">Off (speech + narrative)</option>
+              <option value="1">On (spoken lines only)</option>
+            </select>
+          </label>
+          <label>
             Sequential turns (one reply per character)
             <select
               value={c.runtime.sequentialTurns ? '1' : '0'}
