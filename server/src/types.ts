@@ -48,6 +48,12 @@ export interface Persona extends Stamped {
   avatarPath: string | null;
   description: string;
   gender: PersonaGender;
+  /** Audio + transcript for the persona's spoken lines (audiobooks). */
+  voiceSamplePath: string | null;
+  voiceSampleTranscript: string | null;
+  /** Audio + transcript for the persona's internal thoughts (audiobooks). */
+  thoughtSamplePath: string | null;
+  thoughtSampleTranscript: string | null;
 }
 
 /** Minimal shape both characters and narrators expose for TTS synthesis. */

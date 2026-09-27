@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import type { AppContext } from '../context.js';
 import type { Persona, PersonaGender } from '../types.js';
 import { DIR } from '../paths.js';
@@ -19,6 +19,10 @@ const GENDERS: PersonaGender[] = ['male', 'female', 'other'];
 
 function parseGender(raw: unknown, fallback: PersonaGender): PersonaGender {
   return GENDERS.includes(raw as PersonaGender) ? (raw as PersonaGender) : fallback;
+}
+
+function firstFile(req: Request): Express.Multer.File | undefined {
+  return (req.files as Express.Multer.File[] | undefined)?.[0] ?? (req.file as Express.Multer.File | undefined);
 }
 
 export function personasRouter(ctx: AppContext): Router {
@@ -48,6 +52,10 @@ export function personasRouter(ctx: AppContext): Router {
         avatarPath: null,
         description: typeof body.description === 'string' ? body.description : '',
         gender: parseGender(body.gender, 'male'),
+        voiceSamplePath: null,
+        voiceSampleTranscript: null,
+        thoughtSamplePath: null,
+        thoughtSampleTranscript: null,
       });
       res.status(201).json(persona);
     }),
@@ -83,13 +91,12 @@ export function personasRouter(ctx: AppContext): Router {
     '/:id/avatar',
     asyncHandler(async (req, res) => {
       const persona = personas.getOrThrow(idParam(req));
-      const file = (req.files as Express.Multer.File[] | undefined)?.[0] ?? (req.file as Express.Multer.File | undefined);
+      const file = firstFile(req);
       if (!file) throw new ApiError('Expected an avatar file field', 400);
       const ext = MIME_EXT[file.mimetype.toLowerCase()] ?? 'png';
       const dir = path.join(DIR.personas, persona.id);
       await ensureDir(dir);
-      const entries = await fs.readdir(dir).catch(() => []);
-      for (const entry of entries) {
+      for (const entry of await fs.readdir(dir).catch(() => [])) {
         if (entry.startsWith('avatar.')) await fs.rm(path.join(dir, entry), { force: true });
       }
       await fs.writeFile(path.join(dir, `avatar.${ext}`), file.buffer);
@@ -104,8 +111,7 @@ export function personasRouter(ctx: AppContext): Router {
     asyncHandler(async (req, res) => {
       const persona = personas.getOrThrow(idParam(req));
       const dir = path.join(DIR.personas, persona.id);
-      const entries = await fs.readdir(dir).catch(() => []);
-      for (const entry of entries) {
+      for (const entry of await fs.readdir(dir).catch(() => [])) {
         if (entry.startsWith('avatar.')) {
           await fs.rm(path.join(dir, entry), { force: true });
         }
@@ -113,6 +119,51 @@ export function personasRouter(ctx: AppContext): Router {
       res.json(personas.update(persona.id, { avatarPath: null }));
     }),
   );
+
+  // Audiobook sample endpoints: persona spoken lines (voice) + internal
+  // thoughts (thought), each with a sample file + transcript.
+  const SAMPLE_FIELD: Record<string, 'voiceSample' | 'thoughtSample'> = {
+    'voice': 'voiceSample',
+    'thought': 'thoughtSample',
+  };
+  const SAMPLE_FILE: Record<string, string> = {
+    'voice': 'voice-sample.wav',
+    'thought': 'thought-sample.wav',
+  };
+  const SAMPLE_MEDIA: Record<string, string> = {
+    'voice': '/media/personas/${id}/voice-sample.wav',
+    'thought': '/media/personas/${id}/thought-sample.wav',
+  };
+
+  for (const kind of ['voice', 'thought'] as const) {
+    router.post(`/:id/${kind}`, asyncHandler(async (req, res) => {
+      const persona = personas.getOrThrow(idParam(req));
+      const file = firstFile(req);
+      if (!file) throw new ApiError(`Expected a ${kind} sample file field`, 400);
+      const transcript = typeof req.body?.transcript === 'string' ? req.body.transcript : '';
+      const dir = path.join(DIR.personas, persona.id);
+      await ensureDir(dir);
+      const filename = SAMPLE_FILE[kind];
+      await fs.writeFile(path.join(dir, filename), file.buffer);
+      const mediaPath = `/media/personas/${persona.id}/${filename}`;
+      const field = SAMPLE_FIELD[kind];
+      res.json(personas.update(persona.id, {
+        [`${field}Path`]: mediaPath,
+        [`${field}Transcript`]: transcript || null,
+      }));
+    }));
+
+    router.delete(`/:id/${kind}`, asyncHandler(async (req, res) => {
+      const persona = personas.getOrThrow(idParam(req));
+      await fs.rm(path.join(DIR.personas, persona.id, SAMPLE_FILE[kind]), { force: true });
+      const field = SAMPLE_FIELD[kind];
+      res.json(personas.update(persona.id, {
+        [`${field}Path`]: null,
+        [`${field}Transcript`]: null,
+      }));
+    }));
+  }
+  void SAMPLE_MEDIA;
 
   return router;
 }

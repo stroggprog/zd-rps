@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useApp } from '../store'
-import { api } from '../lib/api'
+import { api, bustAvatar } from '../lib/api'
 import type { Persona, PersonaGender } from '../lib/types'
 
 interface Draft {
@@ -15,7 +15,12 @@ function emptyDraft(): Draft {
 }
 
 function toDraft(p: Persona): Draft {
-  return { id: p.id, name: p.name, description: p.description, gender: p.gender }
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    gender: p.gender,
+  }
 }
 
 const GENDERS: { value: PersonaGender; label: string }[] = [
@@ -27,14 +32,22 @@ const GENDERS: { value: PersonaGender; label: string }[] = [
 export function PersonaEditor() {
   const { personas, closeOverlay, refreshAll, setError } = useApp()
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [voiceTranscript, setVoiceTranscript] = useState('')
+  const [thoughtTranscript, setThoughtTranscript] = useState('')
   const [saving, setSaving] = useState(false)
   const avatarInput = useRef<HTMLInputElement>(null)
+  const voiceInput = useRef<HTMLInputElement>(null)
+  const thoughtInput = useRef<HTMLInputElement>(null)
 
   const activePersona = draft?.id ? personas.find((p) => p.id === draft.id) ?? null : null
 
   const beginCreate = () => setDraft(emptyDraft())
 
-  const beginEdit = (p: Persona) => setDraft(toDraft(p))
+  const beginEdit = (p: Persona) => {
+    setDraft(toDraft(p))
+    setVoiceTranscript(p.voiceSampleTranscript ?? '')
+    setThoughtTranscript(p.thoughtSampleTranscript ?? '')
+  }
 
   const save = async (): Promise<Persona | null> => {
     if (!draft || !draft.name.trim()) {
@@ -85,6 +98,87 @@ export function PersonaEditor() {
     }
   }
 
+  // Audiobook samples: voice (spoken lines) + thought (internal thoughts).
+  // Requires a saved persona, so it saves one first when needed.
+  const uploadSample = async (kind: 'voice' | 'thought', file: File) => {
+    setError(null)
+    try {
+      const target = draft?.id
+        ? activePersona
+        : await save()
+      if (!target) return
+      const transcript = (kind === 'voice' ? voiceTranscript : thoughtTranscript).trim()
+      const saved =
+        kind === 'voice'
+          ? await api.personas.uploadVoice(target.id, file, transcript)
+          : await api.personas.uploadThought(target.id, file, transcript)
+      setDraft(toDraft(saved))
+      await refreshAll()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const removeSample = async (kind: 'voice' | 'thought') => {
+    try {
+      const saved =
+        kind === 'voice'
+          ? await api.personas.removeVoice(activePersona!.id)
+          : await api.personas.removeThought(activePersona!.id)
+      setDraft(toDraft(saved))
+      if (kind === 'voice') setVoiceTranscript('')
+      else setThoughtTranscript('')
+      await refreshAll()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const sampleBlock = (
+    kind: 'voice' | 'thought',
+    label: string,
+    samplePath: string | null,
+    transcript: string,
+    setTranscript: (v: string) => void,
+    inputRef: React.RefObject<HTMLInputElement | null>,
+  ) => (
+    <div className="field full">
+      <label>{label}</label>
+      {samplePath && (
+        <audio
+          src={`${samplePath}?v=${bustStamp(samplePath)}`}
+          controls
+          style={{ width: '100%' }}
+        />
+      )}
+      <div className="row" style={{ marginTop: 6 }}>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="audio/wav,.wav,audio/*"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) void uploadSample(kind, f)
+            e.target.value = ''
+          }}
+        />
+        <button onClick={() => inputRef.current?.click()}>Upload sample</button>
+        {samplePath && (
+          <button className="danger" onClick={() => void removeSample(kind)}>
+            Remove
+          </button>
+        )}
+      </div>
+      <input
+        style={{ marginTop: 6 }}
+        value={transcript}
+        placeholder="Transcript of the sample (recommended)"
+        onChange={(e) => setTranscript(e.target.value)}
+      />
+    </div>
+  )
+
   return (
     <div className="overlay-wrap">
       <div className="overlay-head">
@@ -104,7 +198,7 @@ export function PersonaEditor() {
                   className={`pick-item${draft?.id === p.id ? ' selected' : ''}`}
                   onClick={() => beginEdit(p)}
                 >
-                  {p.avatarPath ? <img src={p.avatarPath} alt="" /> : <div className="avatar" />}
+                  {p.avatarPath ? <img src={bustAvatar(p.avatarPath, p.updated) ?? ''} alt="" /> : <div className="avatar" />}
                   <span className="grow">{p.name}</span>
                   <span className="tag">{GENDERS.find((g) => g.value === p.gender)?.label ?? 'Male'}</span>
                 </div>
@@ -148,7 +242,9 @@ export function PersonaEditor() {
 
                 <div className="field full">
                   <label>Avatar (optional)</label>
-                  {activePersona?.avatarPath && <img src={activePersona.avatarPath} className="avatar-big" alt="" />}
+                  {activePersona?.avatarPath && (
+                    <img src={bustAvatar(activePersona.avatarPath, activePersona.updated) ?? ''} className="avatar-big" alt="" />
+                  )}
                   <div className="row">
                     <button onClick={() => avatarInput.current?.click()}>Upload</button>
                     {activePersona?.avatarPath && (
@@ -180,6 +276,21 @@ export function PersonaEditor() {
                   </div>
                 </div>
 
+                {!draft.id && (
+                  <span className="hint full" style={{ padding: 0 }}>
+                    Save the persona first to attach voice samples.
+                  </span>
+                )}
+                {draft.id && (
+                  <>
+                    {sampleBlock('voice', 'Persona voice (spoken lines) — audiobook', activePersona?.voiceSamplePath ?? null, voiceTranscript, setVoiceTranscript, voiceInput)}
+                    {activePersona?.voiceSamplePath && activePersona.voiceSampleTranscript && (
+                      <audio src={activePersona.voiceSamplePath} controls style={{ width: '100%', display: 'none' }} />
+                    )}
+                    {sampleBlock('thought', 'Persona thoughts (internal monologue) — audiobook', activePersona?.thoughtSamplePath ?? null, thoughtTranscript, setThoughtTranscript, thoughtInput)}
+                  </>
+                )}
+
                 <div className="row full">
                   <button className="primary" disabled={saving} onClick={() => void save()}>
                     {saving ? 'Saving…' : draft.id ? 'Save changes' : 'Create persona'}
@@ -197,4 +308,13 @@ export function PersonaEditor() {
       </div>
     </div>
   )
+}
+
+function bustStamp(path: string): string {
+  try {
+    const url = new URL(path, 'http://x')
+    return url.search.split('=')[1] ?? ''
+  } catch {
+    return ''
+  }
 }

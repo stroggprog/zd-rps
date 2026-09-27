@@ -127,6 +127,20 @@ export function normalizePersona(persona: Persona): Persona {
     avatarPath: typeof persona.avatarPath === 'string' ? persona.avatarPath : null,
     description: typeof persona.description === 'string' ? persona.description : '',
     gender: PERSONA_GENDERS.includes(gender as PersonaGender) ? (gender as PersonaGender) : 'male',
+    voiceSamplePath: typeof (persona as { voiceSamplePath?: unknown }).voiceSamplePath === 'string'
+      ? (persona as { voiceSamplePath: string | null }).voiceSamplePath
+      : null,
+    voiceSampleTranscript:
+      typeof (persona as { voiceSampleTranscript?: unknown }).voiceSampleTranscript === 'string'
+        ? (persona as { voiceSampleTranscript: string | null }).voiceSampleTranscript
+        : null,
+    thoughtSamplePath: typeof (persona as { thoughtSamplePath?: unknown }).thoughtSamplePath === 'string'
+      ? (persona as { thoughtSamplePath: string | null }).thoughtSamplePath
+      : null,
+    thoughtSampleTranscript:
+      typeof (persona as { thoughtSampleTranscript?: unknown }).thoughtSampleTranscript === 'string'
+        ? (persona as { thoughtSampleTranscript: string | null }).thoughtSampleTranscript
+        : null,
   };
 }
 
@@ -334,6 +348,10 @@ export async function loadStore(store: DataStore): Promise<void> {
       avatarPath: null,
       description: '',
       gender: 'male',
+      voiceSamplePath: null,
+      voiceSampleTranscript: null,
+      thoughtSamplePath: null,
+      thoughtSampleTranscript: null,
     });
     console.log('[store] created default persona "You"');
   }

@@ -50,6 +50,10 @@ export interface Persona extends Stamped {
   avatarPath: string | null
   description: string
   gender: PersonaGender
+  voiceSamplePath: string | null
+  voiceSampleTranscript: string | null
+  thoughtSamplePath: string | null
+  thoughtSampleTranscript: string | null
 }
 
 export interface InlineScenario {

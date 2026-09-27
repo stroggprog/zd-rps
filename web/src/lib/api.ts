@@ -146,6 +146,20 @@ export const api = {
       return http<Persona>(`/api/personas/${id}/avatar`, { method: 'POST', body: form })
     },
     removeAvatar: (id: string) => http<Persona>(`/api/personas/${id}/avatar`, { method: 'DELETE' }),
+    uploadVoice: (id: string, file: File, transcript: string) => {
+      const form = new FormData()
+      form.append('sample', file)
+      form.append('transcript', transcript)
+      return http<Persona>(`/api/personas/${id}/voice`, { method: 'POST', body: form })
+    },
+    removeVoice: (id: string) => http<Persona>(`/api/personas/${id}/voice`, { method: 'DELETE' }),
+    uploadThought: (id: string, file: File, transcript: string) => {
+      const form = new FormData()
+      form.append('sample', file)
+      form.append('transcript', transcript)
+      return http<Persona>(`/api/personas/${id}/thought`, { method: 'POST', body: form })
+    },
+    removeThought: (id: string) => http<Persona>(`/api/personas/${id}/thought`, { method: 'DELETE' }),
   },
 
   stories: {
