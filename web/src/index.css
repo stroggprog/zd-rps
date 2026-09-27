@@ -122,6 +122,12 @@ label {
 .topbar button.toggle {
   border-color: var(--border);
 }
+/* Toggle chips (also used outside .topbar, e.g. wizard tag filters) */
+button.toggle.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
 .topbar button.toggle.on {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 18%, transparent);
