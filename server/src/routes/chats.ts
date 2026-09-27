@@ -1283,12 +1283,9 @@ export function chatsRouter(ctx: AppContext): Router {
       const outputName = `${safeChat}.mp3`;
       const outputPath = path.join(outDir, outputName);
       console.log('[audiobook] sox args:', playlistPath);
-      // sox cannot read m3u playlists directly; expand the clip list and pass
-      // the files as inputs (playlist.m3u is still written for reference).
-      const clipFiles = playlistLines.map((l) => path.join(outDir, l));
-      if (clipFiles.length > 0) {
+      if (playlistLines.length > 0) {
         await new Promise<void>((resolve) => {
-          execFile('sox', [...clipFiles, '-C', '192', outputPath], { cwd: outDir, timeout: 10 * 60_000 }, (err) => {
+          execFile('sox', [playlistPath, outputPath], { cwd: outDir, timeout: 10 * 60_000 }, (err) => {
             if (err) console.error('[audiobook] sox failed:', (err as Error).message);
             else console.log(`[audiobook] created ${outputPath}`);
             resolve();
