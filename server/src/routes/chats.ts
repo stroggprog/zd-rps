@@ -545,6 +545,16 @@ export function chatsRouter(ctx: AppContext): Router {
       res.end();
     };
 
+    if (cmd === 'help') {
+      print(
+        'help',
+        'Available commands:' +
+          '\n• /scenario — print the scenario text and opening message' +
+          '\n• /help — list the available slash commands',
+      );
+      return;
+    }
+
     if (cmd === 'scenario') {
       const scenario = scenarioFor(ctx, chat);
       print(
