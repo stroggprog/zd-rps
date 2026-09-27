@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import { execFile } from 'node:child_process';
+import { statSync } from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import type { AppContext } from '../context.js';
@@ -17,7 +18,7 @@ import type {
   SpeakerSnapshot,
   VoiceSubject,
 } from '../types.js';
-import { DATA_DIR as DATA, DIR, ROOT } from '../paths.js';
+import { DATA_DIR, DIR, ROOT } from '../paths.js';
 import { getConfig } from '../config.js';
 import { buildLlmMessages, callLlm, historyTailFor, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
 import { chatPersona } from '../store.js';
@@ -185,6 +186,7 @@ export function chatsRouter(ctx: AppContext): Router {
         scenarioId,
         scenarioInline: inlineScenario,
         storyId: body.storyId && ctx.store.stories.exists(body.storyId) ? body.storyId : null,
+        audioBookDir: null,
         narratorId,
         personaId: persona?.id ?? null,
         messages: messages.length > 0 ? messages : [],
@@ -1156,9 +1158,10 @@ export function chatsRouter(ctx: AppContext): Router {
     }),
   );
 
-  // Audiobook: order every text segment of the chat, synthesize required
-  // audio (persona voice/thought clips, character voices, narrator) and write
-  // a `playlist.m3u`, then run `sox <playlist> <title>.mp3` over it.
+  // Audiobook: builds an ordered playlist over the chat's text segments,
+  // reusing clips already stored on the messages; only missing audio (mostly
+  // the persona's user-side content) is synthesized. New clips get chips in
+  // the chat json; then `sox <playlist.m3u> <title>.mp3` merges everything.
   router.post(
     '/:id/audiobook',
     asyncHandler(async (req, res) => {
@@ -1167,7 +1170,7 @@ export function chatsRouter(ctx: AppContext): Router {
       const narrator = chat.narratorId ? ctx.store.narrators.get(chat.narratorId) ?? null : null;
       const ttsConn = resolveKindConnection('tts', chat.runtime.ttsConnectionId);
 
-      type Item = { kind: 'voice' | 'thought' | 'narrative'; text: string; subject: VoiceSubject | null };
+      type Item = { kind: 'voice' | 'thought' | 'narrative'; text: string; subject: VoiceSubject | null; msgId: string; msgIndex: number };
       const items: Item[] = [];
 
       const personaVoice: VoiceSubject | null = persona?.voiceSamplePath
@@ -1195,28 +1198,28 @@ export function chatsRouter(ctx: AppContext): Router {
           }
         : null;
 
-      for (const message of chat.messages) {
+      chat.messages.forEach((message, msgIndex) => {
         const speakerChar = message.speaker.characterId
           ? ctx.store.characters.get(message.speaker.characterId)
           : null;
         const isPersona = message.speaker.characterId === null;
+        const userSubj = speakerChar
+          ? {
+              id: speakerChar.id,
+              name: speakerChar.name,
+              voiceSamplePath: speakerChar.voiceSamplePath,
+              voiceSampleTranscript: speakerChar.voiceSampleTranscript,
+            }
+          : null;
         const quotation = new QuotationTracker();
         const splitter = new SentenceStream({ activeNames: [], onSentence: (s) => {
           const trimmed = s.trim();
           if (!trimmed) return;
           const isSpeech = quotation.isSpeech(trimmed);
           const thought = trimmed.endsWith('*');
-          let kind: Item['kind'] = 'narrative';
-          let subject: VoiceSubject | null = null;
-          const fromCharacter = speakerChar
-            ? {
-                id: speakerChar.id,
-                name: speakerChar.name,
-                voiceSamplePath: speakerChar.voiceSamplePath,
-                voiceSampleTranscript: speakerChar.voiceSampleTranscript,
-              }
-            : null;
           if (isPersona) {
+            let kind: Item['kind'] = 'narrative';
+            let subject: VoiceSubject | null = null;
             if (thought) {
               kind = 'thought';
               subject = personaThought ?? personaVoice;
@@ -1227,79 +1230,144 @@ export function chatsRouter(ctx: AppContext): Router {
               kind = 'narrative';
               subject = personaVoice ?? narratorSubject;
             }
-          } else {
-            subject = fromCharacter;
-            kind = thought ? 'thought' : isSpeech ? 'voice' : 'narrative';
+            items.push({ kind, text: trimmed, subject, msgId: message.id, msgIndex });
+            return;
           }
-          if (!subject?.voiceSamplePath) {
-            if (isPersona) {
-              subject = personaVoice ?? narratorSubject;
-            } else {
-              subject = narratorSubject ?? subject;
-            }
-          }
-          items.push({ kind, text: trimmed, subject });
+          const kind: Item['kind'] = thought ? 'thought' : isSpeech ? 'voice' : 'narrative';
+          items.push({ kind, text: trimmed, subject: userSubj, msgId: message.id, msgIndex });
         } });
         splitter.push(message.content);
         splitter.finish();
+      });
+
+      console.log(`[audiobook] segments=${items.length}, stored chips=${chat.messages.reduce((a, m) => a + m.audio.length, 0)}`);
+
+      // Reuse the folder from any earlier run so existing clips are skipped.
+      const outDir = path.join(DATA_DIR, 'audiobook', chat.audioBookDir ?? `${chat.id}-${Date.now()}`);
+      await ensureDir(outDir);
+      const dirName = path.basename(outDir);
+
+      const playlistLines: string[] = [];
+      const updatedMessages = [...chat.messages];
+      let synthesized = 0;
+
+      for (const item of items) {
+        if (!/[\p{L}\p{N}]/u.test(item.text)) continue;
+
+        let filename: string | null = null;
+        // 1) Existing chips: match by clip text prefix for this message.
+        const message = updatedMessages[item.msgIndex];
+        const existing = message.audio.find(
+          (clip) => clip.text.slice(0, 60) === item.text.slice(0, 60) && clip.path,
+        );
+        if (existing) {
+          filename = path.basename(existing.path);
+        }
+
+        // 2) Persona content: no chips exist, synthesize (persona chain with
+        //    fallbacks: thought → voice → narrator; voice → narrator).
+        if (!filename && isPersonaItem(item)) {
+          let subject = item.subject;
+          // fall back per spec
+          if (!subject?.voiceSamplePath) {
+            const chain = item.kind === 'thought'
+              ? [personaVoice, narratorSubject]
+              : item.kind === 'voice'
+                ? [personaVoice, narratorSubject]
+                : [narratorSubject, personaVoice];
+            subject = chain.find((s) => s?.voiceSamplePath) ?? null;
+            item.subject = subject;
+          }
+          if (!subject) {
+            // No persona/narrator clips at all: use the TTS connection's
+            // default voice (same as a bare /api/audio/tts call).
+            subject = {
+              id: `default-${persona?.id ?? 'user'}`,
+              name: persona?.name ?? 'User',
+              voiceSamplePath: null,
+              voiceSampleTranscript: null,
+            };
+          }
+          {
+            console.log(`[audiobook] persona synth kind=${item.kind} subject=${subject?.name} sample=${subject?.voiceSamplePath ?? 'default-voice'}`);
+            let audio: Buffer | null = null;
+            let synthErr: string | null = null;
+            try {
+              audio = await synthesizeCharacterSpeech(ttsConn, subject, item.text, ctx.voiceCache);
+            } catch (err) {
+              synthErr = (err as Error).message;
+            }
+            if (synthErr) {
+              console.error(`[audiobook] persona synth failed: ${synthErr}`);
+            } else if (audio) {
+              filename = `${String(synthCounter()).padStart(4, '0')}-${item.msgIndex}-${sanitizeText(item.text)}.${audioExt(audio)}`;
+              await fs.writeFile(path.join(outDir, filename), audio);
+              const clip: MessageAudio = {
+                id: `abk-${message.id}-${item.msgIndex}-${playlistLines.length}`,
+                text: item.text,
+                path: `/media/audiobook/${dirName}/${filename}`,
+                ts: now(),
+              };
+              const base = updatedMessages[item.msgIndex]
+              updatedMessages[item.msgIndex] = { ...base, audio: [...base.audio, clip] } as ChatMessage;
+              synthesized += 1;
+            }
+          }
+        }
+
+        if (!filename) continue;
+        playlistLines.push(`/media/audiobook/${dirName}/${filename}`);
       }
 
-      console.log(`[audiobook] segments: ${items.length}, with subject+sample: ${items.filter((x) => x.subject?.voiceSamplePath).length}`);
-      // Synthesize in order into a temp folder + playlist, then sox them.
-      const safeChat = (chat.title || 'audiobook').replace(/[^\w.-]+/g, '_').slice(0, 60) || 'audiobook';
-      const dirName = `${chat.id}-${Date.now()}`;
-      const outDir = path.join(DATA, 'audiobook', dirName);
-      await ensureDir(outDir);
-      const playlistLines: string[] = [];
-      let i = 0;
-      console.log(`[audiobook] items=${items.length}`);
-      let synthOk = 0;
-      let synthFail = 0;
-      for (const item of items) {
-        console.log(`[audiobook] item kind=${item.kind} sample=${item.subject?.voiceSamplePath ?? 'none'} :: ${item.text.slice(0, 50)}`);
-        if (!item.subject?.voiceSamplePath) {
-          console.log(`[audiobook] skip ${item.kind} (no sample) :: ${item.text.slice(0, 40)}`);
-          continue;
-        }
-        if (!/[\p{L}\p{N}]/u.test(item.text)) continue;
-        let audio: Buffer;
-        try {
-          audio = await synthesizeCharacterSpeech(ttsConn, item.subject, item.text, ctx.voiceCache);
-        } catch (err) {
-          synthFail += 1;
-          console.error(`[audiobook] synth failed for "${item.text.slice(0, 40)}":`, (err as Error).message);
-          continue;
-        }
-        synthOk += 1;
-        console.log(`[audiobook] synthesized ${item.text.slice(0, 30)} (${audio.length} bytes)`);
-        const filename = `${String(i).padStart(4, '0')}.${audioExt(audio)}`;
-        await fs.writeFile(path.join(outDir, filename), audio);
-        playlistLines.push(filename);
-        i += 1;
+      function isPersonaItem(item: { msgId: string; msgIndex: number }): boolean {
+        const m = updatedMessages[item.msgIndex];
+        return m?.speaker.characterId === null;
       }
+
+      let personaCounter = (() => { let n = 0; return () => n++; })();
+
+      function synthCounter(): number {
+        return playlistLines.length;
+      }
+      function sanitizeText(text: string): string {
+        return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24);
+      }
+      const existsSyncDir = async (dir: string): Promise<boolean> => {
+        try {
+          await fs.stat(path.join(DATA_DIR, 'audiobook', dir));
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      void personaVoice; void narratorSubject;
+
       const playlistPath = path.join(outDir, 'playlist.m3u');
       await fs.writeFile(playlistPath, playlistLines.join('\n') + '\n', 'utf8');
 
-      const outputName = `${safeChat}.mp3`;
+      const outputName = `${(chat.title || 'audiobook').replace(/[^\w.-]+/g, '_').slice(0, 60) || 'audiobook'}.mp3`;
       const outputPath = path.join(outDir, outputName);
-      console.log('[audiobook] sox args:', playlistPath);
       if (playlistLines.length > 0) {
         await new Promise<void>((resolve) => {
           execFile('sox', [playlistPath, outputPath], { cwd: outDir, timeout: 10 * 60_000 }, (err) => {
             if (err) console.error('[audiobook] sox failed:', (err as Error).message);
-            else console.log(`[audiobook] created ${outputPath}`);
+            else console.log(`[audiobook] created ${outputPath} (${synthesized} synthesized, ${playlistLines.length} segments)`);
             resolve();
           });
         });
       }
+
+      chats.update(chat.id, { messages: updatedMessages.filter(Boolean), audioBookDir: dirName });
       res.json({
         dir: `/media/audiobook/${dirName}`,
         playlist: `/media/audiobook/${dirName}/playlist.m3u`,
         audio: `/media/audiobook/${dirName}/${outputName}`,
-        items: i,
+        synthesized,
+        items: playlistLines.length,
       });
     }),
   );
 
-  return router;
+  '';   return router;
 }

@@ -44,6 +44,7 @@ export function normalizeChat(chat: Chat): Chat {
     scenarioId: typeof chat.scenarioId === 'string' ? chat.scenarioId : null,
     scenarioInline: normalizeInlineScenario(chat),
     storyId: typeof (chat as { storyId?: unknown }).storyId === 'string' ? (chat as { storyId: Id | null }).storyId : null,
+    audioBookDir: typeof (chat as { audioBookDir?: unknown }).audioBookDir === 'string' ? (chat as { audioBookDir: string | null }).audioBookDir : null,
     narratorId: typeof chat.narratorId === 'string' ? chat.narratorId : null,
     personaId: typeof (chat as { personaId?: unknown }).personaId === 'string' ? (chat as { personaId: Id | null }).personaId : null,
     messages: Array.isArray(chat.messages)

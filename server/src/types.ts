@@ -163,6 +163,8 @@ export interface Chat extends Stamped {
   storyId: Id | null;
   narratorId: Id | null;
   personaId: Id | null;
+  /** Folder name of a previously generated audiobook (reuse of clips). */
+  audioBookDir: string | null;
   messages: ChatMessage[];
   runtime: ChatRuntime;
 }
