@@ -39,6 +39,27 @@ data/       characters/, narrators/, personas/, lorebooks/, scenarios/, chats/, 
 
 The server serves the built web app (`web/dist`) plus uploaded media under `/media/*`. It uses Express 5 with a history fallback for the SPA (non-`/api` GETs).
 
+## Production
+
+Vite is only needed at build time. To run the app in a production environment:
+
+1. Build both workspaces:
+   ```sh
+   npm run build        # or per workspace:
+   npm run build -w @zd-rps/web
+   npm run build -w server
+   ```
+2. The server embeds the built SPA: `node server/dist/index.js` serves
+   `web/dist` on its port (default 3000) — that is the whole app; there is
+   nothing else to serve and the browser talks only to this port.
+3. Keep the process alive with your normal tooling (systemd, pm2, a docker
+   container …). `config.json` and `data/` live next to it (or wherever
+   `ZD_RPS_CONFIG`/`ZD_RPS_DATA` point).
+
+Tip: `npm run dev` stays the tool for development — it recompiles on save and
+proxies to the running server; production only ever consumes the artifacts
+produced by the two build commands above.
+
 ## Quick start
 
 Requires Node 20.19+ or 22.12+ (Vite 8 requirement; uses native `fetch`/web-streams).
