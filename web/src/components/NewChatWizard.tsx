@@ -11,7 +11,7 @@ export function NewChatWizard() {
   const [storyId, setStoryId] = useState<string | null>(null)
   const [personaId, setPersonaId] = useState<string | null>(null)
   const [narratorId, setNarratorId] = useState<string | null>(null)
-  const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const [tagFilters, setTagFilters] = useState<string[]>([])
   const [charTab, setCharTab] = useState<'characters' | 'groups'>('characters')
   const [lorebookIds, setLorebookIds] = useState<string[]>([])
   const [scenarioId, setScenarioId] = useState<string | null>(null)
@@ -100,14 +100,22 @@ export function NewChatWizard() {
                       {allTags.map((tag) => (
                         <button
                           key={tag}
-                          className={tagFilter === tag ? 'toggle on' : 'toggle'}
+                          className={tagFilters.includes(tag) ? 'toggle on' : 'toggle'}
                           style={{ alignSelf: 'stretch', width: '100%' }}
-                          onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+                          onClick={() =>
+                            setTagFilters(
+                              tagFilters.includes(tag)
+                                ? tagFilters.filter((x) => x !== tag)
+                                : [...tagFilters, tag],
+                            )
+                          }
                         >
                           {tag}
                         </button>
                       ))}
-                      {tagFilter && <button className="icon" onClick={() => setTagFilter(null)}>✕ clear</button>}
+                      {tagFilters.length > 0 && (
+                        <button className="icon" onClick={() => setTagFilters([])}>✕ clear</button>
+                      )}
                     </>
                   )
                 })()}
@@ -117,7 +125,7 @@ export function NewChatWizard() {
               {charTab === 'characters' && (
                 <>
                   {people
-                    .filter((p) => !tagFilter || p.tags.includes(tagFilter))
+                    .filter((p) => tagFilters.length === 0 || tagFilters.every((t) => p.tags.includes(t)))
                     .map((person) => (
                     <div
                       key={person.id}
