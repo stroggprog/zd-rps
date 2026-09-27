@@ -26,7 +26,9 @@ Multiple characters can be used in each chat, and characters can be added/remove
 - **Per-character LLM connections** — a character can have its own LLM connection (used in Sequential turns mode); there's no limit on connection count, each just needs its own base URL (e.g. multiple Ollama instances).
 - **Voice testing** — a configurable test text (default "This is a test. Counting, one, two, three. Beware the Jabberwock, my son!") in the Configuration screen; the Character editor's Test button plays the uploaded voice sample speaking it.
 - **Voice cloning** — TTS can clone a character's or narrator's uploaded voice sample; clones are cached per connection.
+- **Print / Audio book** — a Print button lists chats (searchable); pick one and choose Transcript (print to PDF) and/or Audio book. The audio book synthesizes every segment with the right voice (persona speech/thought clips for user content, character voices for dialogue, narrator for the rest), writes `playlist.m3u` + a `<chat title>.mp3` via sox, and shows the generated files.
 - **Print/PDF** — a Print button lists chats (searchable); picking one opens a printable transcript window (title, metadata, speaker-name paragraphs) with the browser's print dialog for saving as PDF.
+
 
 ## Architecture
 

@@ -1257,9 +1257,11 @@ export function chatsRouter(ctx: AppContext): Router {
       let synthFail = 0;
       for (const item of items) {
         console.log(`[audiobook] item kind=${item.kind} sample=${item.subject?.voiceSamplePath ?? 'none'} :: ${item.text.slice(0, 50)}`);
-        if (!item.subject?.voiceSamplePath) continue;
-        if (!/\p{L}\p{N}/u.test(item.text)) continue;
-        if (!item.subject?.voiceSamplePath) continue;
+        if (!item.subject?.voiceSamplePath) {
+          console.log(`[audiobook] skip ${item.kind} (no sample) :: ${item.text.slice(0, 40)}`);
+          continue;
+        }
+        if (!/[\p{L}\p{N}]/u.test(item.text)) continue;
         let audio: Buffer;
         try {
           audio = await synthesizeCharacterSpeech(ttsConn, item.subject, item.text, ctx.voiceCache);
