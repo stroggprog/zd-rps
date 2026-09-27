@@ -356,6 +356,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })
 
       let lastSpeech: boolean | null = null
+      const ephemeralIds = new Set<string>()
       try {
         await api.chats.messageStream(
           selectedChatId,
@@ -369,6 +370,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 return
               }
               currentStreamId = messageId
+              ephemeralIds.add(messageId)
               setChat((prev) => {
                 if (!prev) return prev
                 if (prev.chat.messages.some((m) => m.id === messageId)) return prev
@@ -403,7 +405,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
               updateStream((m) => ({ ...m, audio: [...m.audio, clip] }), messageId)
             },
             onDone: (chat) => {
-              setChat((prev) => (prev ? { ...prev, chat } : prev))
+              setChat((prev) => {
+                if (!prev) return prev
+                // Re-attach ephemeral prints streamed this turn (slash commands):
+                // they live in the UI only and were never persisted server-side.
+                const extras = prev.chat.messages.filter(
+                  (m) => ephemeralIds.has(m.id) && !chat.messages.some((sm) => sm.id === m.id),
+                )
+                const mergedChat = { ...chat.chat, messages: [...chat.chat.messages, ...extras] }
+                const merged: ChatDetail = { ...chat, chat: mergedChat }
+                return merged
+              })
               setChats((prev) =>
                 prev.map((s) =>
                   s.id === chat.id

@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import type { AppContext } from '../context.js';
+import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import type {
   Character,
   Chat,
@@ -515,6 +516,49 @@ export function chatsRouter(ctx: AppContext): Router {
     }),
   );
 
+  // Slash commands: server-side, ephemeral (never stored in chat history).
+  function handleSlashCommand(
+    req: ExpressRequest<{ id: string }>,
+    res: ExpressResponse,
+    text: string,
+  ): void {
+    const chat = chats.getOrThrow(idParam(req));
+    const send = (event: string, data: unknown) => {
+      if (res.writableEnded) return;
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const [cmdRaw, ...rest] = text.slice(1).split(/\s+/);
+    const args = rest.join(' ').trim();
+    const cmd = cmdRaw.toLowerCase();
+    void args;
+
+    const print = (name: string, body: string) => {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders();
+      const blockId = uuid();
+      send('speaker', { messageId: blockId, name: `/${name}`, characterId: null, avatarPath: null });
+      send('sentence', { messageId: blockId, index: 0, text: body, isLast: true, isSpeech: true });
+      send('done', { chat: chats.getOrThrow(idParam(req)) });
+      res.end();
+    };
+
+    if (cmd === 'scenario') {
+      const scenario = scenarioFor(ctx, chat);
+      print(
+        'scenario',
+        scenario
+          ? `Scenario text:\n${scenario.scenario || '(none)'}${scenario.first_mes ? `\n\nOpening message:\n${scenario.first_mes}` : ''}`
+          : 'No scenario attached to this chat.',
+      );
+      return;
+    }
+
+    print(cmd, `Unknown command "/${cmd}". No handler is registered for it.`);
+  }
+
   router.post(
     '/:id/messages',
     asyncHandler(async (req, res) => {
@@ -527,6 +571,12 @@ export function chatsRouter(ctx: AppContext): Router {
       }>(req);
       const text = asString(body.content).trim();
       if (!text) throw new ApiError('Message content is empty', 400);
+
+      // Slash commands: begin with '/' and are handled server-side.
+      if (text.startsWith('/')) {
+        await handleSlashCommand(req as unknown as ExpressRequest<{ id: string }>, res, text);
+        return;
+      }
       const audioEnabled = body.audioEnabled === true;
       const persona = chatPersona(ctx.store, chat);
 
