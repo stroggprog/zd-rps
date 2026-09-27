@@ -404,22 +404,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
               if (clip.path) enqueueAudio(clip.path)
               updateStream((m) => ({ ...m, audio: [...m.audio, clip] }), messageId)
             },
-            onDone: (chat) => {
+            onDone: (doneChat) => {
               setChat((prev) => {
                 if (!prev) return prev
                 // Re-attach ephemeral prints streamed this turn (slash commands):
                 // they live in the UI only and were never persisted server-side.
                 const extras = prev.chat.messages.filter(
-                  (m) => ephemeralIds.has(m.id) && !chat.messages.some((sm) => sm.id === m.id),
+                  (m) => ephemeralIds.has(m.id) && !doneChat.messages.some((sm) => sm.id === m.id),
                 )
-                const mergedChat = { ...chat.chat, messages: [...chat.chat.messages, ...extras] }
-                const merged: ChatDetail = { ...chat, chat: mergedChat }
+                const mergedChat = { ...doneChat, messages: [...doneChat.messages, ...extras] }
+                const merged: ChatDetail = { ...prev, chat: mergedChat }
                 return merged
               })
               setChats((prev) =>
                 prev.map((s) =>
-                  s.id === chat.id
-                    ? { ...s, updated: chat.updated, messageCount: chat.messages.length }
+                  s.id === doneChat.id
+                    ? { ...s, updated: doneChat.updated, messageCount: doneChat.messages.length }
                     : s,
                 ),
               )
