@@ -113,7 +113,7 @@ export function CenterColumn() {
                     ))}
                   </div>
                 )}
-                {!isUser && message.audio.length > 0 && (
+                {message.audio.length > 0 && (
                   <div className="chips">
                     {message.audio.map((clip, i) => (
                       <button
