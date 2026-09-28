@@ -63,9 +63,8 @@ export function PrintChat() {
       setRendering(title)
       try {
         const r = await api.chats.audiobook(id)
-        setError(`Audiobook ready: ${r.audio}` + (doTranscript ? '' : ''))
         if (doTranscript) await print(id, title)
-        else void (window.open(r.dir, '_blank'))
+        window.open(r.audio, '_blank')
       } catch (e) {
         setError((e as Error).message)
       } finally {
