@@ -1310,13 +1310,13 @@ export function chatsRouter(ctx: AppContext): Router {
               const base = updatedMessages[item.msgIndex];
               updatedMessages[item.msgIndex] = { ...base, audio: [...base.audio, clip] } as ChatMessage;
               synthesized += 1;
-              playlistLines.push(`/media/audio/${filename}`);
+              playlistLines.push(path.join(DIR.audio, filename));
             }
           }
         }
 
         if (!filename || !existing) continue;
-        playlistLines.push(existing.path);
+        playlistLines.push(path.join(DIR.audio, path.basename(existing.path)));
       }
 
       function isPersonaItem(item: { msgId: string; msgIndex: number }): boolean {
