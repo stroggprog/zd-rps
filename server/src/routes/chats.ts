@@ -1256,18 +1256,24 @@ export function chatsRouter(ctx: AppContext): Router {
         //    referenced clip must actually exist on disk — chips from older
         //    runs may point at deleted/obsolete folders; those re-synthesize.
         const message = updatedMessages[item.msgIndex];
-        const existing = message.audio.find((clip) => {
-          if (!clip.path) return false;
-          if (clip.text.slice(0, 60) !== item.text.slice(0, 60)) return false;
-          // Candidates: the current clip folder + the chip's own media mapping.
+        let existingFile: string | null = null;
+        for (const clip of message.audio) {
+          if (!clip.path) continue;
+          if (clip.text.slice(0, 60) !== item.text.slice(0, 60)) continue;
+          const rest = clip.path.replace(/^\/media\//, '');
           const candidates = [
+            path.join(DATA_DIR, rest),
+            path.join(DATA_DIR, 'audiobook', path.basename(clip.path)),
             path.join(DIR.audio, path.basename(clip.path)),
-            path.join(DATA_DIR, clip.path.replace(/^\/media\//, '')),
           ];
-          return candidates.some((file) => existsSync(file));
-        });
-        if (existing) {
-          filename = path.join(DIR.audio, path.basename(existing.path));
+          const found = candidates.find((file) => existsSync(file));
+          if (found) {
+            existingFile = found;
+            break;
+          }
+        }
+        if (existingFile) {
+          filename = existingFile;
         }
 
         // 2) Missing/obsolete clips: synthesize with the dialogue's own voice
@@ -1324,8 +1330,8 @@ export function chatsRouter(ctx: AppContext): Router {
           }
         }
 
-        if (!filename || !existing) continue;
-        playlistLines.push(path.join(DIR.audio, path.basename(existing.path)));
+        if (!filename) continue;
+        playlistLines.push(filename);
       }
 
       function isPersonaItem(item: { msgId: string; msgIndex: number }): boolean {
