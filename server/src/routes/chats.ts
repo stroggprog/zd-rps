@@ -1249,6 +1249,12 @@ export function chatsRouter(ctx: AppContext): Router {
             return;
           }
           const kind: Item['kind'] = thought ? 'thought' : isSpeech ? 'voice' : 'narrative';
+          if (kind === 'narrative' && narratorSubject) {
+            // Narration always belongs to the narrator, even inside a
+            // character's message.
+            items.push({ kind, text: trimmed, subject: narratorSubject, msgId: message.id, msgIndex });
+            return;
+          }
           items.push({ kind, text: trimmed, subject: userSubj, msgId: message.id, msgIndex });
         } });
         splitter.push(message.content);
@@ -1279,7 +1285,7 @@ export function chatsRouter(ctx: AppContext): Router {
           if (clip.text.slice(0, 60) !== item.text.slice(0, 60)) continue;
           const rest = clip.path.replace(/^\/media\//, '');
           const candidates = [
-            path.join(DATA_DIR, rest),
+            path.join(DATA_DIR, 'media', rest),
             path.join(DATA_DIR, 'audiobook', path.basename(clip.path)),
             path.join(DIR.audio, path.basename(clip.path)),
           ];
