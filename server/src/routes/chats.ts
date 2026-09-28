@@ -1293,9 +1293,11 @@ export function chatsRouter(ctx: AppContext): Router {
             } catch (err) {
               synthErr = (err as Error).message;
             }
-            if (synthErr) {
+            if (synthErr && !synthErr.includes('404')) {
               console.error(`[audiobook] persona synth failed: ${synthErr}`);
-            } else if (audio) {
+            }
+            if (!synthErr && audio) {
+              // (host without cloning endpoints is reported above)
               // Same folder + naming convention as the other chat clips.
               const filename = `${message.id}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
               await fs.writeFile(path.join(DIR.audio, filename), audio);
