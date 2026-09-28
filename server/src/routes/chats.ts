@@ -1242,10 +1242,7 @@ export function chatsRouter(ctx: AppContext): Router {
 
       console.log(`[audiobook] segments=${items.length}, stored chips=${chat.messages.reduce((a, m) => a + m.audio.length, 0)}`);
 
-      // Reuse the folder from any earlier run so existing clips are skipped.
-      const outDir = path.join(DATA_DIR, 'audiobook', chat.audioBookDir ?? `${chat.id}-${Date.now()}`);
-      await ensureDir(outDir);
-      const dirName = path.basename(outDir);
+      await ensureDir(DIR.audio);
 
       const playlistLines: string[] = [];
       const updatedMessages = [...chat.messages];
@@ -1289,7 +1286,6 @@ export function chatsRouter(ctx: AppContext): Router {
             };
           }
           {
-            console.log(`[audiobook] persona synth kind=${item.kind} subject=${subject?.name} sample=${subject?.voiceSamplePath ?? 'default-voice'}`);
             let audio: Buffer | null = null;
             let synthErr: string | null = null;
             try {
@@ -1300,23 +1296,25 @@ export function chatsRouter(ctx: AppContext): Router {
             if (synthErr) {
               console.error(`[audiobook] persona synth failed: ${synthErr}`);
             } else if (audio) {
-              filename = `${String(synthCounter()).padStart(4, '0')}-${item.msgIndex}-${sanitizeText(item.text)}.${audioExt(audio)}`;
-              await fs.writeFile(path.join(outDir, filename), audio);
+              // Same folder + naming convention as the other chat clips.
+              const filename = `${message.id}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
+              await fs.writeFile(path.join(DIR.audio, filename), audio);
               const clip: MessageAudio = {
-                id: `abk-${message.id}-${item.msgIndex}-${playlistLines.length}`,
+                id: uuid(),
                 text: item.text,
-                path: `/media/audiobook/${dirName}/${filename}`,
+                path: `/media/audio/${filename}`,
                 ts: now(),
               };
-              const base = updatedMessages[item.msgIndex]
+              const base = updatedMessages[item.msgIndex];
               updatedMessages[item.msgIndex] = { ...base, audio: [...base.audio, clip] } as ChatMessage;
               synthesized += 1;
+              playlistLines.push(`/media/audio/${filename}`);
             }
           }
         }
 
-        if (!filename) continue;
-        playlistLines.push(`/media/audiobook/${dirName}/${filename}`);
+        if (!filename || !existing) continue;
+        playlistLines.push(existing.path);
       }
 
       function isPersonaItem(item: { msgId: string; msgIndex: number }): boolean {
@@ -1343,31 +1341,30 @@ export function chatsRouter(ctx: AppContext): Router {
 
       void personaVoice; void narratorSubject;
 
-      const playlistPath = path.join(outDir, 'playlist.m3u');
+      const playlistPath = path.join(DIR.audio, 'playlist.m3u');
       await fs.writeFile(playlistPath, playlistLines.join('\n') + '\n', 'utf8');
 
-      const outputName = `${(chat.title || 'audiobook').replace(/[^\w.-]+/g, '_').slice(0, 60) || 'audiobook'}.mp3`;
-      const outputPath = path.join(outDir, outputName);
+      const mp3Name = `${(chat.title || 'audiobook').replace(/[^\w.-]+/g, '_').slice(0, 60) || 'audiobook'}.mp3`;
+      const mp3Path = path.join(DIR.audio, mp3Name);
       if (playlistLines.length > 0) {
         await new Promise<void>((resolve) => {
-          execFile('sox', [playlistPath, outputPath], { cwd: outDir, timeout: 10 * 60_000 }, (err) => {
+          execFile('sox', [playlistPath, mp3Path], { cwd: DIR.audio, timeout: 10 * 60_000 }, (err) => {
             if (err) console.error('[audiobook] sox failed:', (err as Error).message);
-            else console.log(`[audiobook] created ${outputPath} (${synthesized} synthesized, ${playlistLines.length} segments)`);
+            else console.log(`[audiobook] created ${mp3Path} (${synthesized} synthesized, ${playlistLines.length} segments)`);
             resolve();
           });
         });
       }
 
-      chats.update(chat.id, { messages: updatedMessages.filter(Boolean), audioBookDir: dirName });
+      chats.update(chat.id, { messages: updatedMessages.filter(Boolean), audioBookDir: playlistPath });
       res.json({
-        dir: `/media/audiobook/${dirName}`,
-        playlist: `/media/audiobook/${dirName}/playlist.m3u`,
-        audio: `/media/audiobook/${dirName}/${outputName}`,
+        playlist: `/media/audio/playlist.m3u`,
+        audio: `/media/audio/${mp3Name}`,
         synthesized,
         items: playlistLines.length,
       });
     }),
   );
 
-  '';   return router;
+  return router;
 }
