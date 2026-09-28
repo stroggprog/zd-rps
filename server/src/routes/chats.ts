@@ -486,7 +486,7 @@ export function chatsRouter(ctx: AppContext): Router {
       const narratorChar = chat.narratorId ? ctx.store.narrators.get(chat.narratorId) ?? null : null;
       const speakerChar = message.speaker.characterId
         ? ctx.store.characters.get(message.speaker.characterId) ?? null
-        : null;
+        : chatPersona(ctx.store, chat);
       const parts: { text: string; isSpeech: boolean }[] = [];
       const quotation = new QuotationTracker();
       const splitter = new SentenceStream({
