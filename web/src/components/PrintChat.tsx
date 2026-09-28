@@ -73,8 +73,8 @@ export function PrintChat() {
       try {
         const r = await api.chats.audiobook(id)
         setProgress(null)
-        if (doTranscript) await print(id, title)
         window.open(r.audio, '_blank')
+        if (doTranscript) await print(id, title)
       } catch (e) {
         setError((e as Error).message)
       } finally {
