@@ -31,6 +31,9 @@ import { ApiError, asString, ensureDir, now, uuid } from '../util.js';
 import { asyncHandler, idParam, readJsonBody } from './helpers.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
+// Audiobook progress registry (chat id → 0..1), shared with the status route.
+const audiobookProgress = new Map<string, { done: number; total: number }>();
+
 function resolveKindConnection(kind: 'llm' | 'stt' | 'tts', runtimeValue: Id | null): Connection {
   const config = getConfig();
   const defaultKey = kind === 'llm' ? 'defaultLlm' : kind === 'stt' ? 'defaultStt' : 'defaultTts';
@@ -278,6 +281,18 @@ export function chatsRouter(ctx: AppContext): Router {
 
   // Save the chat's transcript to a story: generate a summary with the LLM
   // that folds in (and evolves) the story's existing summary when present.
+  router.get(
+    '/:id/audiobook-status',
+    asyncHandler(async (req, res) => {
+      const progress = audiobookProgress.get(idParam(req)) ?? null;
+      if (!progress) {
+        res.json({ running: false });
+        return;
+      }
+      res.json({ running: true, done: progress.done, total: progress.total });
+    }),
+  );
+
   router.post(
     '/:id/save-story',
     asyncHandler(async (req, res) => {
@@ -1245,10 +1260,12 @@ export function chatsRouter(ctx: AppContext): Router {
       await ensureDir(DIR.audio);
 
       const playlistLines: string[] = [];
+      let totalReached = false;
       const updatedMessages = [...chat.messages];
       let synthesized = 0;
 
       for (const item of items) {
+        totalReached = playlistLines.length >= items.length;
         if (!/[\p{L}\p{N}]/u.test(item.text)) continue;
 
         let filename: string | null = null;
@@ -1274,6 +1291,7 @@ export function chatsRouter(ctx: AppContext): Router {
         }
         if (existingFile) {
           filename = existingFile;
+          totalReached = true;
         }
 
         // 2) Missing/obsolete clips: synthesize with the dialogue's own voice
@@ -1325,13 +1343,15 @@ export function chatsRouter(ctx: AppContext): Router {
               const base = updatedMessages[item.msgIndex];
               updatedMessages[item.msgIndex] = { ...base, audio: [...base.audio, clip] } as ChatMessage;
               synthesized += 1;
-              playlistLines.push(path.join(DIR.audio, filename));
+              totalReached = true;
+              audiobookProgress.set(chat.id, { done: playlistLines.length, total: items.length });
             }
           }
         }
 
         if (!filename) continue;
         playlistLines.push(filename);
+        audiobookProgress.set(chat.id, { done: playlistLines.length, total: items.length });
       }
 
       function isPersonaItem(item: { msgId: string; msgIndex: number }): boolean {
@@ -1358,6 +1378,7 @@ export function chatsRouter(ctx: AppContext): Router {
 
       void personaVoice; void narratorSubject;
 
+      audiobookProgress.delete(chat.id);
       const playlistPath = path.join(DIR.audio, 'playlist.m3u');
       await fs.writeFile(playlistPath, playlistLines.join('\n') + '\n', 'utf8');
 

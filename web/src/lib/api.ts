@@ -232,6 +232,10 @@ export const api = {
       http<Chat>(`/api/chats/${id}/messages/${messageId}`, jsonInit('PATCH', { content })),
     removeMessage: (id: string, messageId: string) =>
       http<Chat>(`/api/chats/${id}/messages/${messageId}`, { method: 'DELETE' }),
+    audiobookStatus: (id: string) =>
+      http<{ running: boolean; done?: number; total?: number }>(
+        `/api/chats/${id}/audiobook-status`,
+      ),
     audiobook: (id: string) =>
       http<{ dir: string; playlist: string; audio: string; items: number }>(
         `/api/chats/${id}/audiobook`,

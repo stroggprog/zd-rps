@@ -51,6 +51,7 @@ export function PrintChat() {
   const [wantAudiobook, setWantAudiobook] = useState(false)
   const [rendering, setRendering] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
 
   const selectChatPrint = async (
     id: string,
@@ -61,14 +62,25 @@ export function PrintChat() {
     if (doAudiobook) {
       setError(null)
       setRendering(title)
+      setProgress({ done: 0, total: 0 })
+      const poll = window.setInterval(() => {
+        void api.chats.audiobookStatus(id).then((st) => {
+          if (st.running && st.done !== undefined && st.total !== undefined) {
+            setProgress({ done: st.done, total: st.total })
+          }
+        })
+      }, 1000)
       try {
         const r = await api.chats.audiobook(id)
+        setProgress(null)
         if (doTranscript) await print(id, title)
         window.open(r.audio, '_blank')
       } catch (e) {
         setError((e as Error).message)
       } finally {
+        window.clearInterval(poll)
         setRendering(null)
+        setProgress(null)
       }
       return
     }
@@ -138,8 +150,16 @@ export function PrintChat() {
               }
             >
               {c.avatarPaths[0] ? <img src={c.avatarPaths[0]} alt="" /> : <div className="avatar" />}
-              <span className="grow">{c.title}</span>
-              {rendering === c.title && <span className="tag">…</span>}
+              <span className="grow">
+                {c.title}
+                {rendering === c.title && progress && progress.total > 0 && (
+                  <span className="tag" style={{ marginLeft: 6 }}>
+                    {Math.round((progress.done / progress.total) * 100)}%
+                  </span>
+                )}
+              </span>
+              {rendering === c.title && progress?.total === 0 && <span className="tag">…</span>}
+              {rendering === c.title && !progress && <span className="tag">…</span>}
             </div>
           ))}
           {list.length === 0 && <div className="hint">No chats match.</div>}
