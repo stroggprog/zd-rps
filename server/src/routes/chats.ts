@@ -1,4 +1,4 @@
-import { promises as fs } from 'node:fs';
+import { promises as fs, existsSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { statSync } from 'node:fs';
 import path from 'node:path';
@@ -1252,18 +1252,27 @@ export function chatsRouter(ctx: AppContext): Router {
         if (!/[\p{L}\p{N}]/u.test(item.text)) continue;
 
         let filename: string | null = null;
-        // 1) Existing chips: match by clip text prefix for this message.
+        // 1) Existing chips: match by clip text prefix for this message. The
+        //    referenced clip must actually exist on disk — chips from older
+        //    runs may point at deleted/obsolete folders; those re-synthesize.
         const message = updatedMessages[item.msgIndex];
-        const existing = message.audio.find(
-          (clip) => clip.text.slice(0, 60) === item.text.slice(0, 60) && clip.path,
-        );
+        const existing = message.audio.find((clip) => {
+          if (!clip.path) return false;
+          if (clip.text.slice(0, 60) !== item.text.slice(0, 60)) return false;
+          // Candidates: the current clip folder + the chip's own media mapping.
+          const candidates = [
+            path.join(DIR.audio, path.basename(clip.path)),
+            path.join(DATA_DIR, clip.path.replace(/^\/media\//, '')),
+          ];
+          return candidates.some((file) => existsSync(file));
+        });
         if (existing) {
-          filename = path.basename(existing.path);
+          filename = path.join(DIR.audio, path.basename(existing.path));
         }
 
-        // 2) Persona content: no chips exist, synthesize (persona chain with
-        //    fallbacks: thought → voice → narrator; voice → narrator).
-        if (!filename && isPersonaItem(item)) {
+        // 2) Missing/obsolete clips: synthesize with the dialogue's own voice
+        //    (persona user content uses the fallback chain below).
+        if (!filename) {
           let subject = item.subject;
           // fall back per spec
           if (!subject?.voiceSamplePath) {
