@@ -146,7 +146,7 @@ export function PersonaEditor() {
       <label>{label}</label>
       {samplePath && (
         <audio
-          src={`${samplePath}?v=${bustStamp(samplePath)}`}
+          src={`${samplePath}?v=${activePersona?.updated ?? ''}`}
           controls
           style={{ width: '100%' }}
         />
@@ -284,9 +284,6 @@ export function PersonaEditor() {
                 {draft.id && (
                   <>
                     {sampleBlock('voice', 'Persona voice (spoken lines) — audiobook', activePersona?.voiceSamplePath ?? null, voiceTranscript, setVoiceTranscript, voiceInput)}
-                    {activePersona?.voiceSamplePath && activePersona.voiceSampleTranscript && (
-                      <audio src={activePersona.voiceSamplePath} controls style={{ width: '100%', display: 'none' }} />
-                    )}
                     {sampleBlock('thought', 'Persona thoughts (internal monologue) — audiobook', activePersona?.thoughtSamplePath ?? null, thoughtTranscript, setThoughtTranscript, thoughtInput)}
                   </>
                 )}
@@ -310,11 +307,3 @@ export function PersonaEditor() {
   )
 }
 
-function bustStamp(path: string): string {
-  try {
-    const url = new URL(path, 'http://x')
-    return url.search.split('=')[1] ?? ''
-  } catch {
-    return ''
-  }
-}
