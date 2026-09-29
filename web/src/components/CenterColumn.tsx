@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useApp, enqueueAudio } from '../store'
 import { bustAvatar } from '../lib/api'
 import { api } from '../lib/api'
 import type { ChatMessage } from '../lib/types'
+
+function renderPersonaContent(content: string): ReactNode[] {
+  // Persona bubbles: *inner dialogue* renders as emphasis, asterisks stripped.
+  const parts = content.split(/(\*[^*\n]+\*)/g)
+  return parts.map((part, i) => {
+    const m = /^\*([^*\n]+)\*$/.exec(part)
+    if (m) return <em key={i}>{m[1]}</em>
+    return <span key={i}>{part}</span>
+  })
+}
 
 async function speakViaApi(message: ChatMessage) {
   const { audioPath } = await api.audio.ttsText(
@@ -101,7 +112,7 @@ export function CenterColumn() {
                   </div>
                 ) : (
                   <div className="bubble">
-                    {message.content}
+                    {renderPersonaContent(message.content)}
                     {message.images.map((src) => (
                       <img
                         key={src}

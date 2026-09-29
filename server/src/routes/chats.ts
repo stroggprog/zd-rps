@@ -1279,7 +1279,8 @@ export function chatsRouter(ctx: AppContext): Router {
               kind = 'narrative';
               subject = personaVoice ?? narratorSubject;
             }
-            items.push({ kind, text: trimmed, subject, msgId: message.id, msgIndex });
+            const chipText = kind === 'thought' ? trimmed.replace(/^\*|\*$/g, '') : trimmed;
+            items.push({ kind, text: chipText, subject, msgId: message.id, msgIndex });
             return;
           }
           const kind: Item['kind'] = thought ? 'thought' : isSpeech ? 'voice' : 'narrative';
@@ -1289,7 +1290,8 @@ export function chatsRouter(ctx: AppContext): Router {
             items.push({ kind, text: trimmed, subject: narratorSubject, msgId: message.id, msgIndex });
             return;
           }
-          items.push({ kind, text: trimmed, subject: userSubj, msgId: message.id, msgIndex });
+          const chipText = kind === 'thought' ? trimmed.replace(/^\*|\*$/g, '') : trimmed;
+          items.push({ kind, text: chipText, subject: kind === 'narrative' && narratorSubject ? narratorSubject : userSubj, msgId: message.id, msgIndex });
         } });
         splitter.push(message.content);
         splitter.finish();
