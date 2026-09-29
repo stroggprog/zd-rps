@@ -80,6 +80,7 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
   const userName = userNameFor(ctx.persona);
   const names = activeCharacters.map((c) => c.name);
 
+  let lastSystemRule: string | null = null;
   const systemParts: string[] = [];
   const target = options.replyAs ?? null;
   // A user-defined framing (optional) replaces the built-in one wholesale;
@@ -146,16 +147,19 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
     // Custom framing supersedes the built-in narration/handover rules.
   } else {
     if (chat.runtime.dialogueOnly) {
-      systemParts.push(
-        `Dialogue ONLY (required): write speech lines in double quotes; do NOT write narration ` +
-          `descriptions of actions or expressions. Each character says only what they say out loud. ` +
-          `Do not describe scenes, gestures or images. One turn = ONE quoted speech block: ` +
-          `open a single " at the start and close it at the end of your turn, never open a new ` +
-          `" or insert a closing " in the middle of your reply. Older transcript paragraphs with ` +
-          `several quote blocks or narration demonstrate OUTDATED formatting — do not copy it. ` +
-          `Example of the required output shape (and nothing else):\n\n` +
-          `Sam: "Right! I'm in position. Talk to me, Zen!"`,
-      );
+      const dialogueRule =
+        `Dialogue ONLY (ABSOLUTE RULE): write ONLY spoken lines in double quotes. ` +
+          `NO narration whatsoever - do not describe actions, expressions, scenes, gestures or images. ` +
+          `Each character says only what they say out loud. Your entire turn is one continuous quoted ` +
+          `speech block: open " at the start, close " at the end, nothing quoted in between. ` +
+          `Older transcript paragraphs containing narration demonstrate OUTDATED formatting - never copy it.\n\n` +
+          `CORRECT output shape (and nothing else):\n` +
+          `Sam: "Right! I'm in position. Talk to me, Zen!"\n\n` +
+          `WRONG (never do this):\n` +
+          `Sam: "Right! I'm in position." Sam adjusts her headset and grins.\n\n` +
+          `This rule overrides every other instruction about writing prose.`;
+      systemParts.push(dialogueRule);
+      lastSystemRule = dialogueRule;
     } else {
       systemParts.push(
         `Narration (required): each character's turn must include narration — description of actions, ` +
@@ -226,6 +230,10 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
   const lore = scanLore(lorebooks, roleplayText);
   if (lore.before.length > 0) {
     system.content += `\n\nWorld knowledge (relevant lore):\n${lore.before.join('\n\n')}`;
+  }
+
+  if (lastSystemRule) {
+    system.content += `\n\nSTRICT REMINDER: ${lastSystemRule}`;
   }
 
   const messages: LlmMessage[] = [system];
