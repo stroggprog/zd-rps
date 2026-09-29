@@ -523,13 +523,18 @@ export function chatsRouter(ctx: AppContext): Router {
             }
           : null;
         const personaMessage = message.speaker.characterId === null;
+        const thought = part.text.endsWith('*');
         const voiceShare = personaMessage
           ? part.isSpeech
             ? personaVoice
-            : personaThought ?? personaVoice
+            : thought
+              ? personaThought ?? personaVoice
+              : narratorChar ?? personaVoice
           : part.isSpeech
             ? speakerChar
-            : narratorChar ?? speakerChar;
+            : thought
+              ? personaThought ?? personaVoice
+              : narratorChar ?? speakerChar;
         const subject: VoiceSubject = voiceShare ?? {
           id: `user-${message.speaker.name}`,
           name: message.speaker.name,
