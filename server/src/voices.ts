@@ -54,7 +54,7 @@ export async function createVoiceCache(): Promise<VoiceCache> {
     },
     invalidate(charId) {
       for (const key of [...map.keys()]) {
-        if (key.endsWith(`:${charId}`)) {
+        if (key.endsWith(`:${charId}`) || key.includes(charId)) {
           map.delete(key);
           dirty = true;
         }
