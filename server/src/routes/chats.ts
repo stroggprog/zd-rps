@@ -601,6 +601,11 @@ export function chatsRouter(ctx: AppContext): Router {
       const text = asString(body.content).trim();
       if (!text) throw new ApiError('Message content is empty', 400);
 
+      // '\' (two consecutive backslashes) entered by the user marks an
+      // explicit paragraph break: expanded to a blank line so the bubble,
+      // the prompt and the audiobook playlist all honor it.
+      const expanded = text.replaceAll('\\\\', '\n\n');
+
       // Slash commands: begin with '/' and are handled server-side.
       if (text.startsWith('/')) {
         await handleSlashCommand(req as unknown as ERequest<{ id: string }>, res, text);
@@ -631,7 +636,7 @@ export function chatsRouter(ctx: AppContext): Router {
         id: uuid(),
         role: 'user',
         speaker: userSnapshot,
-        content: text,
+        content: expanded,
         audioPath: null,
         audio: [],
         images: [],
