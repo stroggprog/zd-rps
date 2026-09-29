@@ -147,6 +147,7 @@ export function personasRouter(ctx: AppContext): Router {
       await fs.writeFile(path.join(dir, filename), file.buffer);
       const mediaPath = `/media/personas/${persona.id}/${filename}`;
       const field = SAMPLE_FIELD[kind];
+      ctx.voiceCache.invalidate(persona.id);
       res.json(personas.update(persona.id, {
         [`${field}Path`]: mediaPath,
         [`${field}Transcript`]: transcript || null,
@@ -157,6 +158,7 @@ export function personasRouter(ctx: AppContext): Router {
       const persona = personas.getOrThrow(idParam(req));
       await fs.rm(path.join(DIR.personas, persona.id, SAMPLE_FILE[kind]), { force: true });
       const field = SAMPLE_FIELD[kind];
+      ctx.voiceCache.invalidate(persona.id);
       res.json(personas.update(persona.id, {
         [`${field}Path`]: null,
         [`${field}Transcript`]: null,
