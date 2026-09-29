@@ -505,7 +505,31 @@ export function chatsRouter(ctx: AppContext): Router {
       for (let i = 0; i < parts.length; i += 1) {
         const part = parts[i];
         if (!/[\p{L}\p{N}]/u.test(part.text)) continue;
-        const voiceShare = part.isSpeech ? speakerChar : narratorChar ?? speakerChar;
+        const persona = chatPersona(ctx.store, chat);
+        const personaVoice: VoiceSubject | null = persona?.voiceSamplePath
+          ? {
+              id: `persona-voice-${persona.id}`,
+              name: `${persona.name} (spoken voice)`,
+              voiceSamplePath: persona.voiceSamplePath,
+              voiceSampleTranscript: persona.voiceSampleTranscript,
+            }
+          : null;
+        const personaThought: VoiceSubject | null = persona?.thoughtSamplePath
+          ? {
+              id: `persona-thought-${persona.id}`,
+              name: `${persona.name} (thoughts)`,
+              voiceSamplePath: persona.thoughtSamplePath,
+              voiceSampleTranscript: persona.thoughtSampleTranscript,
+            }
+          : null;
+        const personaMessage = message.speaker.characterId === null;
+        const voiceShare = personaMessage
+          ? part.isSpeech
+            ? personaVoice
+            : personaThought ?? personaVoice
+          : part.isSpeech
+            ? speakerChar
+            : narratorChar ?? speakerChar;
         const subject: VoiceSubject = voiceShare ?? {
           id: `user-${message.speaker.name}`,
           name: message.speaker.name,
