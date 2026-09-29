@@ -20,6 +20,8 @@ const SPEECH_END = new Set(['.', '!', '?', '\u2026', ',', ';', ':', ']', ')']);
 
 export class SpeechFormatter {
   private result = '';
+  /** When true, narration paragraphs are dropped entirely (dialogue-only mode). */
+  private readonly dialogueOnly: boolean;
   private consumed = 0;
   private speechOpen = false;
   private pendingNewlines = 0;
@@ -27,6 +29,10 @@ export class SpeechFormatter {
   /** True when the current speech block opened at a line start (paragraph-level speech). */
   private blockAtLineStart = false;
   private lastProcessed = '';
+
+  constructor(dialogueOnly = false) {
+    this.dialogueOnly = dialogueOnly;
+  }
 
   /** Full normalized text emitted so far (after any `finish()` flush). */
   get text(): string {
@@ -59,6 +65,15 @@ export class SpeechFormatter {
         this.result += '\n'.repeat(this.justClosed ? Math.max(2, this.pendingNewlines) : Math.min(2, Math.max(1, this.pendingNewlines)));
         this.pendingNewlines = 0;
         this.justClosed = false;
+        if (this.dialogueOnly && !this.speechOpen) {
+          this.pendingNewlines = Math.min(this.pendingNewlines, 2);
+          continue;
+        }
+      } else if (this.dialogueOnly && !this.speechOpen) {
+        // Narration prose: dropped entirely. Whitespace also dropped, but a
+        // pending paragraph break remains capped so spoken blocks stay clean.
+        this.pendingNewlines = Math.min(this.pendingNewlines, 2);
+        continue;
       } else if (this.justClosed) {
         // Narration glued straight after a closing speech quote (no newline
         // at all, e.g. `hull." Kiara's voice is steady...`): force the

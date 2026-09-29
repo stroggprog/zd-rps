@@ -684,7 +684,7 @@ export function chatsRouter(ctx: AppContext): Router {
       let emitted = 0;
       const audioQueue = new OrderedAudio();
       const quotation = new QuotationTracker();
-      const formatter = new SpeechFormatter();
+      const formatter = new SpeechFormatter(chatWithUser.runtime.dialogueOnly);
 
       // Per-speaker message blocks: the model may hand over to another active
       // character mid-reply with a "Name: " prefix; every such handover starts a
@@ -884,7 +884,7 @@ export function chatsRouter(ctx: AppContext): Router {
         // can't poison the next round's speech/narration attribution.
         const roundQuotation = new QuotationTracker();
         activeQuotation = roundQuotation;
-        const roundFormatter = new SpeechFormatter();
+        const roundFormatter = new SpeechFormatter(chatWithUser.runtime.dialogueOnly);
         let isFirstParagraph = true;
         // Debug dump: the RAW normalized text of every pipeline run, for inspection.
         let rawText = '';
