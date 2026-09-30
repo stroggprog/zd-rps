@@ -6,6 +6,12 @@ Single-user, localhost roleplay-chat app: a Node/Express middleware that wires L
 
 Multiple characters can be used in each chat, and characters can be added/removed on the fly. Character descriptions and personality are separated from Scenario and Lorebooks, so when starting a chat you can select any characters, any lorebooks (multiple) and any scenario. New lorebooks and Scenarios can be created independantly ready for future use. Ad-hoc scenarios can be created on the fly.
 
+The idea is to make characters reusable in different scenarios and worlds, so if you really want Gandalf, Freiren and Hermione Granger arguing with Obi-Wan Kenobi about Force vs Magic down at the Dog & Duck in Chelmsford watching live TV coverage of England winning the World Cup in 1966, then you can.
+
+SillyTavern cards are supported, although it's not been tested with cards that contain multiple characters. You can also export SillyTavern compatible cards, embedding any lorebook or scenario you want.
+
+zd-rps also features exporting its own characters, narrators and personas. These come as packed archives with the extensions zdc (character), zdn (narrator), zdp (persona), and contain any necessary image (with character, lorebook, scenario info embedded), any audio samples and their transcriptions and configuration file, which can be shared and imported.
+
 ## Features
 
 - **Chats with characters** — add/remove characters mid-chat (removed ones get dimmed with a "removed" label and a ＋ button to bring them back), per-chat runtime settings (temperature, top-p, max tokens, LLM/TTS connection, instant-reply mode, plus an optional one-reply-per-participant sequential-turns mode that stops speaker leakage between bubbles). Any message bubble can be edited or deleted (✎/🗑 under the bubble), which rewrites the LLM context so you can steer the conversation.
