@@ -48,5 +48,6 @@ export interface TtsProvider {
     sample: Buffer,
     name: string,
     transcript?: string,
+    subjectId?: string,
   ): Promise<string>;
 }

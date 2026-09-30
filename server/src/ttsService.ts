@@ -58,6 +58,7 @@ export async function synthesizeCharacterSpeech(
           sample,
           subject.name,
           subject.voiceSampleTranscript ?? undefined,
+          subject.id,
         );
         voiceCache.set(conn.id, subject.id, { voiceId, provider: conn.provider });
       }

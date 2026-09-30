@@ -72,15 +72,18 @@ export const omnivoice: TtsProvider = {
     return Buffer.from(await res.arrayBuffer());
   },
 
-  async cloneVoice(conn: Connection, sample: Buffer, name: string, transcript?: string): Promise<string> {
+  async cloneVoice(conn: Connection, sample: Buffer, name: string, transcript?: string, subjectId?: string): Promise<string> {
+    // Subject-scoped profile id: two identically-named domains (e.g. test
+    // instances with the same character names) must not share one profile.
     const cleaned = name.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const slug = subjectId ? `${cleaned}-${subjectId.slice(0, 8)}` : cleaned;
     const form = new FormData();
-    form.append('profile_id', cleaned);
+    form.append('profile_id', slug);
     form.append('overwrite', 'true');
     form.append('ref_audio', new Blob([sample], { type: 'audio/wav' }), 'sample.wav');
     if (transcript) form.append('ref_text', transcript);
     await multipartPost(`${base(conn)}/v1/voices/profiles`, form);
-    return `clone:${cleaned}`;
+    return `clone:${slug}`;
   },
 };
 
