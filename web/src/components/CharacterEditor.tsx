@@ -444,6 +444,14 @@ export function CharacterEditor() {
                           >
                             Download card
                           </a>
+                          <a
+                            className="button-link"
+                            href={`/api/characters/${draft.id}/export-zd?lorebookId=${exportLorebookId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Export as zd-file
+                          </a>
                         </div>
                       </details>
                       <button className="danger" onClick={() => void remove(draft.id as string, draft.name)}>

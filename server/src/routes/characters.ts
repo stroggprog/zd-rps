@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs';
+import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { Router } from 'express';
 import type { AppContext } from '../context.js';
@@ -311,6 +312,78 @@ export function charactersRouter(ctx: AppContext): Router {
       res.setHeader('Content-Type', 'image/png');
       res.setHeader('Content-Disposition', `attachment; filename="${safeName}.png"`);
       res.send(png);
+    }),
+  );
+
+  // zd-file export: a zip bundling the SillyTavern PNG card (with optional
+  // embedded lorebook), the voice sample WAV and its transcript text file.
+  router.get(
+    '/:id/export-zd',
+    asyncHandler(async (req, res) => {
+      const character = characters.getOrThrow(idParam(req));
+      const avatar = await readCharacterFile(character.id, 'avatar.png');
+      if (!avatar) {
+        throw new ApiError('Cannot export: character has no PNG avatar. Upload a PNG avatar first.', 400);
+      }
+      const lorebookId = typeof req.query.lorebookId === 'string' ? req.query.lorebookId : '';
+      const book = lorebookId ? ctx.store.lorebooks.get(lorebookId) ?? null : null;
+      const charaJson = JSON.stringify(
+        buildCardObject({
+          name: character.name,
+          description: character.description,
+          personality: character.personality,
+          system_prompt: character.system_prompt,
+          post_history_instructions: character.post_history_instructions,
+          mes_example: character.mes_example,
+          tags: character.tags,
+          creator_notes: character.creator_notes && character.creator_notes.trim() !== ''
+            ? character.creator_notes
+            : undefined,
+          character_book: book ? bookToCharacterBook(book, character.name) : null,
+        }),
+      );
+      const png = writePngText(avatar, 'chara', Buffer.from(charaJson, 'utf8').toString('base64'));
+
+      // Stage the export contents, then zip them with the `zip` CLI (files as
+      // arguments; deterministic names applied directly to archive entries).
+      const staging = path.join(DIR.characters, character.id, 'zdexport');
+      await ensureDir(staging);
+      for (const entry of await fs.readdir(staging).catch(() => [])) {
+        await fs.rm(path.join(staging, entry), { recursive: true, force: true });
+      }
+      const cardFile = `${(character.name || 'character').replace(/[^\w.-]+/g, '_') || 'character'}.png`;
+      await fs.writeFile(path.join(staging, cardFile), png);
+      let hasVoice = false;
+      try {
+        await fs.copyFile(path.join(DIR.characters, character.id, 'voice-sample.wav'), path.join(staging, 'voice-sample.wav'));
+        hasVoice = true;
+        await fs.writeFile(
+          path.join(staging, 'transcript.txt'),
+          character.voiceSampleTranscript ?? '',
+          'utf8',
+        );
+      } catch {
+        // no voice sample — the zip simply contains the card alone
+      }
+      const zipName = `${(character.name || 'character').replace(/[^\w.-]+/g, '_') || 'character'}.zd`;
+      const zipPath = path.join(staging, zipName);
+      const files = cardFile + (hasVoice ? ' voice-sample.wav transcript.txt' : '');
+      await new Promise<void>((resolve) => {
+        execFile(
+          'zip',
+          ['-j', zipPath, cardFile, ...(hasVoice ? ['voice-sample.wav', 'transcript.txt'] : [])],
+          { cwd: staging, timeout: 60_000 },
+          (err) => {
+            if (err) console.error('[zdexport] zip failed:', (err as Error).message);
+            else console.log(`[zdexport] created ${zipPath} (${files})`);
+            resolve();
+          },
+        );
+      });
+
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
+      res.send(await fs.readFile(zipPath));
     }),
   );
 
