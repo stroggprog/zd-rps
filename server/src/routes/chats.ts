@@ -1146,28 +1146,14 @@ export function chatsRouter(ctx: AppContext): Router {
       }
       await audioQueue.waitIdle();
 
-      const finalBlocks: ChatMessage[] = orderedBlocks.map((id) => {
-        const spec = blockSpecs.get(id)!;
-        return {
-          id,
-          role: 'assistant',
-          speaker: spec.speaker,
-          content: spec.content.trim(),
-          audioPath: null,
-          audio: spec.clips,
-          images: [],
-          ts: now(),
-        };
-      });
-      const updated = chats.update(chatWithUser.id, {
-        messages: [...chatWithUser.messages, ...finalBlocks],
-      });
-      void (async () => {
-// If the model opened with no `Name:` label, the first block falls back
+      // If the model opened with no `Name:` label, the first block falls back
       // to "Assistant". Ask the LLM itself (tiny, num_predict=budget-free)
-      // which active character owns that first block and re-attribute it.
-      if (orderedBlocks.length > 0 && blockSpecs.get(orderedBlocks[0])!.speaker.characterId === null && activeChars.length > 0) {
-        const firstSpec = blockSpecs.get(orderedBlocks[0])!;
+      // which active character owns that first block. Resolved BEFORE
+      // persisting: the stored speaker decides future attributions, echoes,
+      // and TTS voice — an unresolved one poisons the transcript.
+      const firstBlockId = orderedBlocks[0] ?? null;
+      if (firstBlockId && blockSpecs.get(firstBlockId)!.speaker.characterId === null && activeChars.length > 0) {
+        const firstSpec = blockSpecs.get(firstBlockId)!;
         try {
           const namesList = activeChars.map((c) => c.name);
           const attribution = await callLlm(
@@ -1187,12 +1173,15 @@ export function chatsRouter(ctx: AppContext): Router {
           const guessed = attribution.trim().split('\n')[0].trim();
           const match = activeChars.find((c) => c.name.toLowerCase() === guessed.toLowerCase());
           if (match) {
-            blockSpecs.get(orderedBlocks[0])!.speaker = {
+            firstSpec.speaker = {
               characterId: match.id,
               name: match.name,
               avatarPath: match.avatarPath,
               voiceSamplePath: match.voiceSamplePath,
             };
+            // Correct the live bubble (the sent speaker event earlier used the
+            // Assistant fallback) before the client swaps in the saved chat.
+            send('speaker', { messageId: firstBlockId, name: match.name, characterId: match.id, avatarPath: match.avatarPath });
             console.log(`[sp-attribution] unlabeled opener attributed to ${match.name}`);
           } else {
             console.log('[sp-attribution] model did not return a matching name:', guessed);
@@ -1201,7 +1190,22 @@ export function chatsRouter(ctx: AppContext): Router {
           console.warn('[sp-attribution] attribution call failed:', (err as Error).message);
         }
       }
-      })().catch((err) => console.error('[sp-attribution] failed:', (err as Error).message));
+      const finalBlocks: ChatMessage[] = orderedBlocks.map((id) => {
+        const spec = blockSpecs.get(id)!;
+        return {
+          id,
+          role: 'assistant',
+          speaker: spec.speaker,
+          content: spec.content.trim(),
+          audioPath: null,
+          audio: spec.clips,
+          images: [],
+          ts: now(),
+        };
+      });
+      const updated = chats.update(chatWithUser.id, {
+        messages: [...chatWithUser.messages, ...finalBlocks],
+      });
       send('done', { chat: updated ?? chats.getOrThrow(chatWithUser.id) });
       res.end();
     }),
