@@ -61,7 +61,12 @@ Vite is only needed at build time. To run the app in a production environment:
 2. The server embeds the built SPA: `node server/dist/index.js` serves
    `web/dist` on its port (default 3000) — that is the whole app; there is
    nothing else to serve and the browser talks only to this port.
-3. Keep the process alive with your normal tooling (systemd, pm2, a docker
+3. Run the server:
+   ```sh
+   npm start -w server      # = node server/dist/index.js
+   ```
+   (from the repo root; or `npm start` inside `server/`)
+4. Keep the process alive with your normal tooling (systemd, pm2, a docker
    container …). `config.json` and `data/` live next to it (or wherever
    `ZD_RPS_CONFIG`/`ZD_RPS_DATA` point).
 
