@@ -162,7 +162,7 @@ npm use 22 # if using nvm
 npm install
 npm run build
 sudo systemctl start zd-rps
-sudo systemctl status zd-rps -no-pager
+sudo systemctl status zd-rps --no-pager
 ```
 
 ## Quick start
