@@ -779,6 +779,12 @@ export function chatsRouter(ctx: AppContext): Router {
             firstSpec.speaker.characterId !== null
               ? activeChars.find((c) => c.id === firstSpec.speaker.characterId)
               : activeChars.find((c) => c.name.length >= 3 && lower.includes(c.name.toLowerCase()));
+          if (!match && heldSlots.length < 2) {
+            // Not enough content yet for a confident decision: defer to the
+            // paragraph-end trigger (one more sentence to judge by).
+            attributing = false;
+            return;
+          }
           if (!match) {
             attribution = await callLlm(
               llmConn,
@@ -949,6 +955,9 @@ export function chatsRouter(ctx: AppContext): Router {
         ) {
           console.log(`[tts-hold] holding sentence (${heldSlots.length + 1} held)`);
           heldSlots.push({ idx, isSpeech, text: trimmed });
+          // Attribution starts NOW (first held sentence), not at paragraph
+          // end: the content-so-far is the reply opener and resolves fast.
+          if (!attributing) void attributeUnlabeledLeader();
           return;
         }
         const canSpeak =
