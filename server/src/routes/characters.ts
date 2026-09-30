@@ -5,7 +5,7 @@ import { Router } from 'express';
 import type { AppContext } from '../context.js';
 import type { Character, ImportSuggestion } from '../types.js';
 import { DIR } from '../paths.js';
-import { bookToCharacterBook, buildCardObject, buildImportResult, parseCard, writePngText } from '../cards.js';
+import { bookToCharacterBook, buildCardObject, buildImportResult, parseCard, parseZdFile, writePngText } from '../cards.js';
 import { ApiError, asBoolean, asString, ensureDir, uuid } from '../util.js';
 import { asyncHandler, idParam, readJsonBody } from './helpers.js';
 
@@ -24,6 +24,8 @@ function avatarExt(mime: string): string {
 interface PendingImport {
   payload: ReturnType<typeof buildImportResult>;
   expires: number;
+  /** Optional voice sample + transcript bundled in a .zd import. */
+  voiceSample: Buffer | null;
 }
 
 const pendingImports = new Map<string, PendingImport>();
@@ -209,10 +211,31 @@ export function charactersRouter(ctx: AppContext): Router {
     asyncHandler(async (req, res) => {
       const file = (req.files as Express.Multer.File[] | undefined)?.[0] ?? (req.file as Express.Multer.File | undefined);
       if (!file) throw new ApiError('Expected a card file field', 400);
+      // zd-files: a zip bundling the PNG card + voice-sample.wav + transcript.txt.
+      if (file.originalname.toLowerCase().endsWith('.zd') || file.mimetype === 'application/zip') {
+        const zd = await parseZdFile(file.buffer);
+        const importId = uuid();
+        pendingImports.set(importId, { payload: zd.payload, expires: Date.now() + TTL_MS, voiceSample: zd.voiceSample });
+        const avatarDataUrl =
+          zd.payload.avatarBuffer && zd.parsed.imageBuffer === null
+            ? `data:image/png;base64,${zd.payload.avatarBuffer.toString('base64')}`
+            : null;
+        res.json({
+          importId,
+          character: zd.payload.character,
+          lorebook: zd.payload.lorebook,
+          scenario: zd.payload.scenario,
+          hasAvatar: zd.payload.avatarBuffer !== null,
+          avatarDataUrl,
+          cardKind: 'png',
+          voiceSample: true,
+        });
+        return;
+      }
       const parsed = parseCard(file.buffer);
       const payload = buildImportResult(parsed);
       const importId = uuid();
-      pendingImports.set(importId, { payload, expires: Date.now() + TTL_MS });
+      pendingImports.set(importId, { payload, expires: Date.now() + TTL_MS, voiceSample: null });
       const avatarDataUrl =
         payload.avatarBuffer && parsed.imageBuffer === null
           ? `data:image/png;base64,${payload.avatarBuffer.toString('base64')}`
@@ -238,7 +261,7 @@ export function charactersRouter(ctx: AppContext): Router {
         acceptLorebook?: boolean;
         acceptScenario?: boolean;
       }>(req);
-      const { payload } = takePending(asString(body.importId));
+      const { payload, voiceSample: zdVoiceSample } = takePending(asString(body.importId));
       const name = asString(body.name, payload.character.name);
 
       const character = characters.create({
@@ -249,6 +272,14 @@ export function charactersRouter(ctx: AppContext): Router {
         voiceSampleTranscript: null,
         llmConnectionId: null,
       });
+      // .zd imports carry the persona-side voice sample + transcript.
+      if (zdVoiceSample) {
+        await writeCharacterFile(character.id, 'voice-sample.wav', zdVoiceSample);
+        characters.update(character.id, {
+          voiceSamplePath: `/media/characters/${character.id}/voice-sample.wav`,
+          voiceSampleTranscript: payload.character.voiceSampleTranscript ?? null,
+        });
+      }
       if (payload.avatarBuffer) {
         await saveAvatar(character.id, payload.avatarBuffer, 'image/png');
         characters.update(character.id, { avatarPath: `/media/characters/${character.id}/avatar.png` });

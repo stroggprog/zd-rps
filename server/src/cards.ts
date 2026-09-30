@@ -1,4 +1,8 @@
 import type { Lorebook, LoreEntry } from './types.js';
+import { promises as fs, existsSync } from 'node:fs';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { execFile } from 'node:child_process';
 import { ApiError, asBoolean, asNumber, asString, isObject, uuid } from './util.js';
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -21,7 +25,11 @@ export interface ImportResult {
     mes_example: string;
     tags: string[];
     creator_notes: string | null;
+    /** Marker: '__PENDING__' means a sample zip entry is waiting (handled by the caller). */
+    voiceSamplePath: string | null;
+    voiceSampleTranscript: string | null;
   };
+  voiceSample: Buffer | null;
   avatarBuffer: Buffer | null;
   lorebook: Lorebook | null;
   scenario: {
@@ -167,6 +175,50 @@ export function dataUrlBuffer(dataUrl: string): { buffer: Buffer; mime: string }
   return { buffer: Buffer.from(match[2], 'base64'), mime: match[1] };
 }
 
+/** Minimal zip reader: stages the buffer and shells out to `unzip`. */
+async function readZip(zipBuffer: Buffer): Promise<Map<string, Buffer>> {
+  const out = new Map<string, Buffer>();
+  const dir = path.join(tmpdir(), `zdread-${uuid()}`);
+  await fs.mkdir(dir, { recursive: true });
+  const zipPath = path.join(dir, 'in.zd');
+  await fs.writeFile(zipPath, zipBuffer);
+  await new Promise<void>((resolve) => {
+    execFile('unzip', ['-o', zipPath, '-d', dir], { cwd: dir, timeout: 60_000 }, (err) => {
+      if (err) console.error('[zdimport] unzip failed:', (err as Error).message);
+      resolve();
+    });
+  });
+  for (const entry of await fs.readdir(dir)) {
+    const file = path.join(dir, entry);
+    if ((await fs.stat(file)).isFile()) out.set(entry, await fs.readFile(file));
+  }
+  await fs.rm(dir, { recursive: true, force: true });
+  return out;
+}
+
+/**
+ * Parses a `.zd` export zip: locates the .png character card, the
+ * voice-sample.wav and transcript.txt entries, then builds the import payload
+ * (plus the sample buffers the caller copies into the character folder).
+ */
+export async function parseZdFile(zipBuffer: Buffer): Promise<{
+  payload: ImportResult;
+  parsed: ParsedCard;
+  voiceSample: Buffer | null;
+  transcript: string | null;
+}> {
+  const entries = await readZip(zipBuffer);
+  const pngName = [...entries.keys()].find((n) => n.toLowerCase().endsWith('.png'));
+  if (!pngName) throw new ApiError('The .zd file contains no character card PNG', 400);
+  const parsed = parseCard(entries.get(pngName) as Buffer);
+  const payload = buildImportResult(parsed);
+  const voiceSample = entries.get('voice-sample.wav') ?? null;
+  const transcript = entries.get('transcript.txt')?.toString('utf8') ?? null;
+  payload.character.voiceSamplePath = voiceSample ? '__PENDING__' : null;
+  payload.character.voiceSampleTranscript = transcript;
+  return { payload, parsed, voiceSample, transcript };
+}
+
 export function buildImportResult(parsed: ParsedCard): ImportResult {
   // Spec v2 cards nest the fields under `data`; flat exports (SillyTavern v1
   // style or our own older exports) keep them at the top level.
@@ -200,7 +252,10 @@ export function buildImportResult(parsed: ParsedCard): ImportResult {
       mes_example: asString(card.mes_example),
       tags: Array.isArray(card.tags) ? card.tags.map((t) => asString(t)).filter(Boolean) : [],
       creator_notes: typeof card.creator_notes === 'string' ? card.creator_notes : null,
+      voiceSamplePath: null,
+      voiceSampleTranscript: null,
     },
+    voiceSample: null,
     avatarBuffer,
     lorebook,
     scenario,
