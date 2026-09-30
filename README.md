@@ -41,6 +41,33 @@ data/       characters/, narrators/, personas/, lorebooks/, scenarios/, chats/, 
 
 The server serves the built web app (`web/dist`) plus uploaded media under `/media/*`. It uses Express 5 with a history fallback for the SPA (non-`/api` GETs).
 
+## HTTPS
+
+The server itself only speaks plain HTTP by design — TLS is handled by a
+reverse proxy on the same or fronting machine:
+
+- **Caddy** (simplest, auto-certificates):
+  ```
+  rps.yourdomain.tld {
+      reverse_proxy localhost:3000
+  }
+  ```
+- **nginx**:
+  ```
+  server {
+      listen 443 ssl;
+      ssl_certificate     /path/fullchain.pem;
+      ssl_certificate_key /path/to/privkey.key;
+      location / {
+          proxy_pass http://localhost:3000;
+          proxy_set_header Host $host;
+      }
+  }
+  ```
+
+Then browse `https://ai300-96/…` instead of `http://…`. This also fixes
+mixed-content failures on browsers that block the application's HTTP assets.
+
 ## Production
 
 Vite is only needed at build time. To run the app in a production environment:
