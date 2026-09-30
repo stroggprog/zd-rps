@@ -43,8 +43,20 @@ The server serves the built web app (`web/dist`) plus uploaded media under `/med
 
 ## HTTPS
 
-The server itself only speaks plain HTTP by design — TLS is handled by a
-reverse proxy on the same or fronting machine:
+Direct TLS is supported via environment variables — set both in the service
+file (systemd `Environment=` lines, pm2, etc.):
+
+| Env var | Value |
+| --- | --- |
+| `ZD_RPS_CERT` | path to the certificate file (PEM, fullchain) |
+| `ZD_RPS_KEY` | path to the private key file (PEM) |
+
+When both are set the server speaks HTTPS (`https://…:${PORT}`); otherwise
+plain HTTP.
+
+A reverse proxy on the same or fronting machine works equally well:
+
+
 
 - **Caddy** (simplest, auto-certificates):
   ```

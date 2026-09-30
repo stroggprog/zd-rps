@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createStore, loadStore } from './store.js';
 import { createVoiceCache } from './voices.js';
 import { loadConfig } from './config.js';
@@ -77,9 +77,30 @@ async function main() {
 
   app.use(errorMiddleware);
 
-  const server = app.listen(PORT, () => {
-    console.log(`zd-rps server listening on http://localhost:${PORT}`);
-  });
+  // HTTPS support: point ZD_RPS_CERT and ZD_RPS_KEY at the certificate and
+  // private key files (PEM). When both are set the server speaks https and
+  // http clients are redirected. Otherwise plain http as before.
+  const certFile = process.env.ZD_RPS_CERT;
+  const keyFile = process.env.ZD_RPS_KEY;
+  let server: import('node:http').Server | import('node:https').Server;
+  if (certFile && keyFile) {
+    const https = await import('node:https');
+    server = https
+      .createServer(
+        {
+          cert: readFileSync(certFile, 'utf8'),
+          key: readFileSync(keyFile, 'utf8'),
+        },
+        app,
+      )
+      .listen(PORT, () => {
+        console.log(`zd-rps server listening on https://localhost:${PORT}`);
+      });
+  } else {
+    server = app.listen(PORT, () => {
+      console.log(`zd-rps server listening on http://localhost:${PORT}`);
+    });
+  }
 
   const shutdown = async (signal: string) => {
     console.log(`\n${signal}: shutting down`);
