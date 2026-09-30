@@ -183,6 +183,10 @@ npm run dev
 - Server: http://localhost:3000
 - Web: http://localhost:5173 (Vite proxies `/api` and `/media` to :3000)
 
+You should point your browser at the web (port 5173) for testing. This allows any code changes to be picked up without (usualy) having to restart the server.
+
+Production mode (npm run build) will only have port 3000 exposed.
+
 Then open **Configuration** to add connections (see below) and click **Test & fetch** to verify and populate model/voice lists.
 
 ## Configuring connections
