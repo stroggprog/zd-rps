@@ -1160,9 +1160,10 @@ export function chatsRouter(ctx: AppContext): Router {
           // almost certainly names the actual speaker — skip the LLM call.
           const lower = firstSpec.content.slice(0, 120).toLowerCase();
           let match = activeChars.find((c) => c.name.length >= 3 && lower.includes(c.name.toLowerCase()));
+          const namesList = activeChars.map((c) => c.name);
+          let attribution: string | null = null;
           if (!match) {
-            const namesList = activeChars.map((c) => c.name);
-            const attribution = await callLlm(
+            attribution = await callLlm(
               llmConn,
               [
                 {
@@ -1191,7 +1192,7 @@ export function chatsRouter(ctx: AppContext): Router {
             send('speaker', { messageId: firstBlockId, name: match.name, characterId: match.id, avatarPath: match.avatarPath });
             console.log(`[sp-attribution] unlabeled opener attributed to ${match.name}`);
           } else {
-            console.log('[sp-attribution] model did not return a matching name:', guessed);
+            console.log('[sp-attribution] model did not return a matching name:', attribution?.trim());
           }
         } catch (err) {
           console.warn('[sp-attribution] attribution call failed:', (err as Error).message);
