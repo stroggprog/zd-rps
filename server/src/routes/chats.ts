@@ -19,9 +19,9 @@ import type {
   VoiceSubject,
 } from '../types.js';
 import { DATA_DIR, DIR, ROOT } from '../paths.js';
-import { getConfig } from '../config.js';
+import { getConfig, patchConfig } from '../config.js';
 import { buildLlmMessages, callLlm, historyTailFor, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
-import { chatPersona } from '../store.js';
+import { chatPersona, chatRuntimeDefaults } from '../store.js';
 import { synthesizeCharacterSpeech, audioExt } from '../ttsService.js';
 import { ParagraphStream, SentenceStream } from '../streaming.js';
 import { QuotationTracker } from '../speech.js';
@@ -193,17 +193,7 @@ export function chatsRouter(ctx: AppContext): Router {
         narratorId,
         personaId: persona?.id ?? null,
         messages: messages.length > 0 ? messages : [],
-        runtime: {
-          temperature: 0.8,
-          topP: 0.95,
-          maxTokens: 4096,
-          autoTts: false,
-          disableThinking: true,
-          dialogueOnly: false,
-          sequentialTurns: false,
-          llmConnectionId: null,
-          ttsConnectionId: null,
-        },
+        runtime: { ...chatRuntimeDefaults(), dialogueOnly: getConfig().dialogueOnly },
       });
 
       // Treat the seeded opening message like a streamed LLM reply: split it
@@ -369,6 +359,10 @@ export function chatsRouter(ctx: AppContext): Router {
             : undefined,
         runtime: body.runtime ? { ...current.runtime, ...body.runtime } : undefined,
       });
+      if (body.runtime && body.runtime.dialogueOnly !== undefined && body.runtime.dialogueOnly !== getConfig().dialogueOnly) {
+        void patchConfig({ dialogueOnly: body.runtime.dialogueOnly });
+        console.log(`[runtime] dialogueOnly persisted: ${body.runtime.dialogueOnly}`);
+      }
       res.json(updated);
     }),
   );

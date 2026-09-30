@@ -200,6 +200,8 @@ export interface AppConfig {
   debug: boolean;
   /** Optional replacement for the framing portion of the LLM system prompt. */
   systemPromptOverride: string | null;
+  /** Last Dialogue-Only runtime toggle; new chats inherit it. */
+  dialogueOnly: boolean;
 }
 
 /** Non-dynamic core of the built-in framing instructions (the parts users may edit). */

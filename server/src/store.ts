@@ -3,22 +3,30 @@ import path from 'node:path';
 import type { Character, CharacterGroup, Chat, Lorebook, MessageAudio, Narrator, Persona, PersonaGender, Scenario, Stamped, Story } from './types.js';
 import type { Id } from './types.js';
 import { DIR } from './paths.js';
+import { getConfig } from './config.js';
 import { atomicWrite, ensureDir, lookup, now, uuid } from './util.js';
 
 type Input<T extends Stamped> = Omit<T, 'id' | 'created' | 'updated'>;
 type Patch<T extends Stamped> = Partial<Omit<T, 'id' | 'created' | 'updated'>>;
 
-const DEFAULT_RUNTIME = {
-  temperature: 0.8,
-  topP: 0.95,
-  maxTokens: 4096,
-  autoTts: false,
-  disableThinking: true,
-  dialogueOnly: false,
-  sequentialTurns: false,
-  llmConnectionId: null,
-  ttsConnectionId: null,
-} satisfies Chat['runtime'];
+/** Runtime defaults; `dialogueOnly` inherits the last remembered toggle. */
+export function chatRuntimeDefaults(): Chat['runtime'] {
+  return defaultRuntime();
+}
+
+function defaultRuntime(): Chat['runtime'] {
+  return {
+    temperature: 0.8,
+    topP: 0.95,
+    maxTokens: 4096,
+    autoTts: false,
+    disableThinking: true,
+    dialogueOnly: getConfig().dialogueOnly,
+    sequentialTurns: false,
+    llmConnectionId: null,
+    ttsConnectionId: null,
+  };
+}
 
 /** Accepts an inline ad-hoc scenario attached to a chat; tolerant of bad shapes. */
 function normalizeInlineScenario(chat: Chat): Chat['scenarioInline'] {
@@ -57,7 +65,17 @@ export function normalizeChat(chat: Chat): Chat {
           images: Array.isArray(m.images) ? m.images : [],
         }))
       : [],
-    runtime: { ...DEFAULT_RUNTIME, ...(chat.runtime ?? {}) },
+    runtime: (() => {
+      const defaults = defaultRuntime();
+      const given = chat.runtime && typeof chat.runtime === 'object' ? chat.runtime : undefined;
+      if (!given) return defaults;
+      return {
+        ...defaults,
+        ...given,
+        // dialogueOnly defaults live: only the explicitly absent field inherits.
+        dialogueOnly: given.dialogueOnly !== undefined ? given.dialogueOnly : defaults.dialogueOnly,
+      };
+    })(),
   };
 }
 

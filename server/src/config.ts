@@ -11,6 +11,8 @@ const DEFAULTS: AppConfig = {
   testText: null,
   debug: false,
   systemPromptOverride: null,
+  /** Last Dialogue-Only runtime toggle; new chats inherit it. */
+  dialogueOnly: false,
 };
 
 let config: AppConfig = structuredClone(DEFAULTS);
@@ -60,11 +62,18 @@ export async function loadConfig(): Promise<void> {
         typeof raw.systemPromptOverride === 'string' && raw.systemPromptOverride.trim()
           ? raw.systemPromptOverride
           : null,
+      dialogueOnly: raw.dialogueOnly === true ? true : false,
     };
   } catch {
     config = structuredClone(DEFAULTS);
     await saveConfig();
   }
+}
+
+/** Persists a shallow config patch to disk and memory. */
+export async function patchConfig(patch: Partial<AppConfig>): Promise<Awaited<void>> {
+  config = { ...config, ...patch };
+  await saveConfig();
 }
 
 export async function saveConfig(): Promise<void> {
