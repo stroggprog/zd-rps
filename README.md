@@ -157,6 +157,7 @@ Notes:
 - LLM connections can optionally limit the context window (**Context window (tokens)**); with it set, older chat history is trimmed to `contextTokens − maxTokens` estimated tokens. Leave empty to send full history every turn.
 - `ollama` uses `/api/tags` for models and supports `think: false` (the chat's **Instant replies (no thinking)** toggle) so reasoning models reply without spending their generation budget on a CoT block.
 - Voice cloning uses the character's uploaded voice sample; connections without cloning support pass it as reference audio.
+- The chat's **Dialogue only** runtime toggle is remembered globally: it persists to `config.json` (`dialogueOnly`) and every new chat starts with the last chosen value.
 
 ## Data storage
 
