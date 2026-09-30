@@ -83,7 +83,7 @@ A reverse proxy on the same or fronting machine works equally well:
   }
   ```
 
-Then browse `https://ai300-96/…` instead of `http://…`. This also fixes
+Then browse `https://server-name-or-ip/…` instead of `http://…`. This also fixes
 mixed-content failures on browsers that block the application's HTTP assets.
 
 ## Production
