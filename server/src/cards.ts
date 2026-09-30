@@ -180,7 +180,7 @@ async function readZip(zipBuffer: Buffer): Promise<Map<string, Buffer>> {
   const out = new Map<string, Buffer>();
   const dir = path.join(tmpdir(), `zdread-${uuid()}`);
   await fs.mkdir(dir, { recursive: true });
-  const zipPath = path.join(dir, 'in.zd');
+  const zipPath = path.join(dir, 'in.zdc');
   await fs.writeFile(zipPath, zipBuffer);
   await new Promise<void>((resolve) => {
     execFile('unzip', ['-o', zipPath, '-d', dir], { cwd: dir, timeout: 60_000 }, (err) => {
@@ -197,7 +197,7 @@ async function readZip(zipBuffer: Buffer): Promise<Map<string, Buffer>> {
 }
 
 /**
- * Parses a `.zd` export zip: locates the .png character card, the
+ * Parses a `.zdc` export zip: locates the .png character card, the
  * voice-sample.wav and transcript.txt entries, then builds the import payload
  * (plus the sample buffers the caller copies into the character folder).
  */
@@ -209,7 +209,7 @@ export async function parseZdFile(zipBuffer: Buffer): Promise<{
 }> {
   const entries = await readZip(zipBuffer);
   const pngName = [...entries.keys()].find((n) => n.toLowerCase().endsWith('.png'));
-  if (!pngName) throw new ApiError('The .zd file contains no character card PNG', 400);
+  if (!pngName) throw new ApiError('The .zdc file contains no character card PNG', 400);
   const parsed = parseCard(entries.get(pngName) as Buffer);
   const payload = buildImportResult(parsed);
   const voiceSample = entries.get('voice-sample.wav') ?? null;

@@ -196,7 +196,7 @@ export function CharacterEditor() {
               <input
                 ref={importInput}
                 type="file"
-                accept=".png,.json,image/png,application/json"
+                accept=".png,.json,.zdc,image/png,application/json,application/zip"
                 style={{ display: 'none' }}
                 onChange={(e) => {
                   const f = e.target.files?.[0]
@@ -450,7 +450,7 @@ export function CharacterEditor() {
                             target="_blank"
                             rel="noreferrer"
                           >
-                            Export as zd-file
+                            Export as .zdc file
                           </a>
                         </div>
                       </details>

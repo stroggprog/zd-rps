@@ -24,7 +24,7 @@ function avatarExt(mime: string): string {
 interface PendingImport {
   payload: ReturnType<typeof buildImportResult>;
   expires: number;
-  /** Optional voice sample + transcript bundled in a .zd import. */
+  /** Optional voice sample + transcript bundled in a .zdc import. */
   voiceSample: Buffer | null;
 }
 
@@ -211,8 +211,8 @@ export function charactersRouter(ctx: AppContext): Router {
     asyncHandler(async (req, res) => {
       const file = (req.files as Express.Multer.File[] | undefined)?.[0] ?? (req.file as Express.Multer.File | undefined);
       if (!file) throw new ApiError('Expected a card file field', 400);
-      // zd-files: a zip bundling the PNG card + voice-sample.wav + transcript.txt.
-      if (file.originalname.toLowerCase().endsWith('.zd') || file.mimetype === 'application/zip') {
+      // zdc-files: a zip bundling the PNG card + voice-sample.wav + transcript.txt.
+      if (file.originalname.toLowerCase().endsWith('.zdc') || file.mimetype === 'application/zip') {
         const zd = await parseZdFile(file.buffer);
         const importId = uuid();
         pendingImports.set(importId, { payload: zd.payload, expires: Date.now() + TTL_MS, voiceSample: zd.voiceSample });
@@ -272,7 +272,7 @@ export function charactersRouter(ctx: AppContext): Router {
         voiceSampleTranscript: null,
         llmConnectionId: null,
       });
-      // .zd imports carry the persona-side voice sample + transcript.
+      // .zdc imports carry the persona-side voice sample + transcript.
       if (zdVoiceSample) {
         await writeCharacterFile(character.id, 'voice-sample.wav', zdVoiceSample);
         characters.update(character.id, {
@@ -396,7 +396,7 @@ export function charactersRouter(ctx: AppContext): Router {
       } catch {
         // no voice sample — the zip simply contains the card alone
       }
-      const zipName = `${(character.name || 'character').replace(/[^\w.-]+/g, '_') || 'character'}.zd`;
+      const zipName = `${(character.name || 'character').replace(/[^\w.-]+/g, '_') || 'character'}.zdc`;
       const zipPath = path.join(staging, zipName);
       const files = cardFile + (hasVoice ? ' voice-sample.wav transcript.txt' : '');
       await new Promise<void>((resolve) => {
