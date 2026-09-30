@@ -1006,26 +1006,29 @@ export function chatsRouter(ctx: AppContext): Router {
             });
           }
         }
-        // Also catch narration that opens with a bare participant name
-        // ("Li Mei bounced slightly on the balls of her feet…"). Models that
-        // drop `Name:` labels still signal handovers this way; without the
-        // split the whole reply merges into one (un)attributed block and gets
-        // no voice. Names are matched longest-first as a prefix of the
-        // paragraph's opening word run.
+        // Also catch paragraphs that name a participant in their opening run —
+        // narration ("Li Mei bounced slightly on the balls of her feet…") or
+        // quoted speech whose speaker identifies themselves ("Li Mei, reading
+        // you loud and clear."). Models that drop `Name:` labels signal
+        // handovers exactly this way; without the split the whole reply merges
+        // into one (un)attributed block and gets no voice. Names are matched
+        // longest-first, bounded by punctuation or a space so short names
+        // don't false-match inside longer words.
         if (activeChars.length > 1) {
-          const lead = /^(?:\*{0,3}\s*)?["'“”]?\s*([A-Za-z][A-Za-z0-9 _'.-]{0,59})/.exec(p);
-          if (lead) {
-            const lower = lead[1].toLowerCase();
-            const named = [...activeChars]
-              .filter((c) => lower.startsWith(c.name.toLowerCase()) && c.name.length >= 3)
-              .sort((a, b) => b.name.length - a.name.length)[0];
-            if (named && lower[named.name.length] === ' ' && (!blockSpeaker || blockSpeaker.name !== named.name)) {
+          for (const named of [...activeChars].sort((a, b) => b.name.length - a.name.length)) {
+            if (named.name.length < 3) continue;
+            const re = new RegExp(
+              `^(?:\\*{0,3}\\s*)?["'\u201C\u201D]?\\s*${named.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(?=[,.;:!?—-]|\\s|$)`,
+              'i',
+            );
+            if (re.test(p) && (!blockSpeaker || blockSpeaker.name !== named.name)) {
               beginBlock({
                 characterId: named.id,
                 name: named.name,
                 avatarPath: named.avatarPath,
                 voiceSamplePath: named.voiceSamplePath,
               });
+              break;
             }
           }
         }
