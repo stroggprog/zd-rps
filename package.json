@@ -8,7 +8,11 @@
     "web"
   ],
   "scripts": {
-    "dev": "concurrently -k -n server,web -c blue,green \"npm run dev -w server\" \"npm run dev -w web\""
+    "dev": "concurrently -k -n server,web -c blue,green \"npm run dev -w server\" \"npm run dev -w web\"",
+    "build": "npm run build -w server && npm run build -w @zd-rps/web",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w @zd-rps/web",
+    "test": "npm run test -w server",
+    "lint": "npm run lint -w @zd-rps/web"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
