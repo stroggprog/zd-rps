@@ -38,6 +38,7 @@ export function PersonaEditor() {
   const avatarInput = useRef<HTMLInputElement>(null)
   const voiceInput = useRef<HTMLInputElement>(null)
   const thoughtInput = useRef<HTMLInputElement>(null)
+  const importInput = useRef<HTMLInputElement>(null)
 
   const activePersona = draft?.id ? personas.find((p) => p.id === draft.id) ?? null : null
 
@@ -78,6 +79,17 @@ export function PersonaEditor() {
       await api.personas.remove(id)
       if (draft?.id === id) setDraft(null)
       await refreshAll()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const importZdp = async (file: File) => {
+    setError(null)
+    try {
+      const created = await api.personas.importZdp(file)
+      await refreshAll()
+      beginEdit(created)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -191,6 +203,20 @@ export function PersonaEditor() {
             <button className="primary" style={{ marginBottom: 8 }} onClick={beginCreate}>
               ＋ New persona
             </button>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button onClick={() => importInput.current?.click()}>Import file (.zdp)</button>
+              <input
+                ref={importInput}
+                type="file"
+                accept=".zdp,application/zip"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void importZdp(f)
+                  e.target.value = ''
+                }}
+              />
+            </div>
             <div className="pick-list">
               {personas.map((p) => (
                 <div
@@ -293,9 +319,14 @@ export function PersonaEditor() {
                     {saving ? 'Saving…' : draft.id ? 'Save changes' : 'Create persona'}
                   </button>
                   {draft.id && (
-                    <button className="danger" onClick={() => void remove(draft.id as string, draft.name)}>
-                      Delete
-                    </button>
+                    <>
+                      <a className="button-link" href={api.personas.exportZdpUrl(draft.id)} target="_blank" rel="noreferrer">
+                        Export as .zdp file
+                      </a>
+                      <button className="danger" onClick={() => void remove(draft.id as string, draft.name)}>
+                        Delete
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

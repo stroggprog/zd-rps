@@ -166,6 +166,12 @@ export const api = {
       return http<Persona>(`/api/personas/${id}/thought`, { method: 'POST', body: form })
     },
     removeThought: (id: string) => http<Persona>(`/api/personas/${id}/thought`, { method: 'DELETE' }),
+    exportZdpUrl: (id: string) => `/api/personas/${id}/export-zdp`,
+    importZdp: (file: File) => {
+      const form = new FormData()
+      form.append('file', file)
+      return http<Persona>('/api/personas/import', { method: 'POST', body: form })
+    },
   },
 
   stories: {

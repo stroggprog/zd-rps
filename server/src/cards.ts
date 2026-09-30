@@ -244,6 +244,39 @@ export async function parseZdnFile(zipBuffer: Buffer): Promise<{
   };
 }
 
+/** Parses a `.zdp` export zip for personas: persona.json + avatar + both samples. */
+export async function parseZdpFile(zipBuffer: Buffer): Promise<{
+  meta: { name: string; description: string; gender: string };
+  avatarBuffer: Buffer | null;
+  avatarName: string | null;
+  voiceSample: Buffer | null;
+  voiceTranscript: string | null;
+  thoughtSample: Buffer | null;
+  thoughtTranscript: string | null;
+}> {
+  const entries = await readZip(zipBuffer);
+  const metaRaw = entries.get('persona.json');
+  if (!metaRaw) throw new ApiError('The .zdp file contains no persona.json', 400);
+  const meta = isObject(JSON.parse(metaRaw.toString('utf8')))
+    ? (JSON.parse(metaRaw.toString('utf8')) as { name?: unknown; description?: unknown; gender?: unknown })
+    : {};
+  const avatarName =
+    [...entries.keys()].find((n) => /^avatar\./i.test(n) && !n.includes('/')) ?? null;
+  return {
+    meta: {
+      name: typeof meta.name === 'string' && meta.name.trim() !== '' ? meta.name : 'Unnamed persona',
+      description: typeof meta.description === 'string' ? meta.description : '',
+      gender: typeof meta.gender === 'string' && ['male', 'female', 'other'].includes(meta.gender) ? meta.gender : 'other',
+    },
+    avatarBuffer: avatarName ? (entries.get(avatarName) ?? null) : null,
+    avatarName,
+    voiceSample: entries.get('voice-sample.wav') ?? null,
+    voiceTranscript: entries.get('voice-transcript.txt')?.toString('utf8') ?? null,
+    thoughtSample: entries.get('thought-sample.wav') ?? null,
+    thoughtTranscript: entries.get('thought-transcript.txt')?.toString('utf8') ?? null,
+  };
+}
+
 export function buildImportResult(parsed: ParsedCard): ImportResult {
   // Spec v2 cards nest the fields under `data`; flat exports (SillyTavern v1
   // style or our own older exports) keep them at the top level.

@@ -1,8 +1,10 @@
 import { promises as fs } from 'node:fs';
+import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { Router, type Request } from 'express';
 import type { AppContext } from '../context.js';
 import type { Persona, PersonaGender } from '../types.js';
+import { parseZdpFile } from '../cards.js';
 import { DIR } from '../paths.js';
 import { ApiError, asString, ensureDir } from '../util.js';
 import { asyncHandler, idParam, readJsonBody } from './helpers.js';
@@ -166,6 +168,99 @@ export function personasRouter(ctx: AppContext): Router {
     }));
   }
   void SAMPLE_MEDIA;
+
+  // zdp export: a zip bundling persona.json (name/description/gender), the
+  // avatar image and both audio samples (voice + thought) with their
+  // transcripts.
+  router.get(
+    '/:id/export-zdp',
+    asyncHandler(async (req, res) => {
+      const persona = personas.getOrThrow(idParam(req));
+      const dir = path.join(DIR.personas, persona.id);
+      const entries = await fs.readdir(dir).catch(() => []);
+      const avatarFile = entries.find((entry) => entry.startsWith('avatar.'));
+      if (!avatarFile) throw new ApiError('Cannot export: persona has no avatar image.', 400);
+
+      const staging = path.join(dir, 'zdpexport');
+      await ensureDir(staging);
+      for (const entry of await fs.readdir(staging).catch(() => [])) {
+        await fs.rm(path.join(staging, entry), { recursive: true, force: true });
+      }
+      await fs.writeFile(
+        path.join(staging, 'persona.json'),
+        JSON.stringify({ name: persona.name, description: persona.description, gender: persona.gender }),
+        'utf8',
+      );
+      await fs.copyFile(path.join(dir, avatarFile), path.join(staging, avatarFile));
+      const files = ['persona.json', avatarFile];
+      for (const kind of ['voice', 'thought'] as const) {
+        try {
+          await fs.copyFile(path.join(dir, SAMPLE_FILE[kind]), path.join(staging, SAMPLE_FILE[kind]));
+          files.push(SAMPLE_FILE[kind], `${kind}-transcript.txt`);
+          await fs.writeFile(
+            path.join(staging, `${kind}-transcript.txt`),
+            (SAMPLE_FIELD[kind] === 'voiceSample' ? persona.voiceSampleTranscript : persona.thoughtSampleTranscript) ?? '',
+            'utf8',
+          );
+        } catch {
+          // sample not present — skip it
+        }
+      }
+      const zipName = `${(persona.name || 'persona').replace(/[^\w.-]+/g, '_') || 'persona'}.zdp`;
+      await new Promise<void>((resolve) => {
+        execFile('zip', ['-j', path.join(staging, zipName), ...files], { cwd: staging, timeout: 60_000 }, (err) => {
+          if (err) console.error('[zdpexport] zip failed:', (err as Error).message);
+          resolve();
+        });
+      });
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
+      res.send(await fs.readFile(path.join(staging, zipName)));
+    }),
+  );
+
+  // zdp import: one-step restore (creates the persona, copies avatar + both
+  // samples and their transcripts).
+  router.post(
+    '/import',
+    asyncHandler(async (req, res) => {
+      const file = firstFile(req);
+      if (!file) throw new ApiError('Expected a .zdp file field', 400);
+      const zd = await parseZdpFile(file.buffer);
+      const persona = personas.create({
+        name: zd.meta.name,
+        avatarPath: null,
+        description: zd.meta.description,
+        gender: parseGender(zd.meta.gender, 'other'),
+        voiceSamplePath: null,
+        voiceSampleTranscript: null,
+        thoughtSamplePath: null,
+        thoughtSampleTranscript: null,
+      });
+      const dir = path.join(DIR.personas, persona.id);
+      await ensureDir(dir);
+      if (zd.avatarBuffer && zd.avatarName) {
+        await fs.writeFile(path.join(dir, zd.avatarName), zd.avatarBuffer);
+        personas.update(persona.id, { avatarPath: `/media/personas/${persona.id}/${zd.avatarName}` });
+      }
+      if (zd.voiceSample) {
+        await fs.writeFile(path.join(dir, 'voice-sample.wav'), zd.voiceSample);
+        personas.update(persona.id, {
+          voiceSamplePath: `/media/personas/${persona.id}/voice-sample.wav`,
+          voiceSampleTranscript: zd.voiceTranscript,
+        });
+      }
+      if (zd.thoughtSample) {
+        await fs.writeFile(path.join(dir, 'thought-sample.wav'), zd.thoughtSample);
+        personas.update(persona.id, {
+          thoughtSamplePath: `/media/personas/${persona.id}/thought-sample.wav`,
+          thoughtSampleTranscript: zd.thoughtTranscript,
+        });
+      }
+      ctx.voiceCache.invalidate(persona.id);
+      res.status(201).json(personas.getOrThrow(persona.id));
+    }),
+  );
 
   return router;
 }
