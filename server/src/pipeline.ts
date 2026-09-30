@@ -182,11 +182,11 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
     );
     systemParts.push(
       `ALL PARTICIPANTS RESPOND (mandatory): every participant in this scene — ${allNames} — MUST ` +
-        `contribute at least one paragraph in every reply, each introduced with their \`Name:\` label ` +
-        `on its own line. Start with the first speaker unlabeled, then hand over to each remaining ` +
-        `participant in turn. A reply that contains fewer paragraphs than there are participants is ` +
-        `INCOMPLETE and violates this rule. This applies even to short exchanges like check-ins or ` +
-        `acknowledgements: one line per remaining participant with their label is still required.`,
+        `contribute at least one paragraph in every reply. Every paragraph a participant contributes ` +
+        `must begin with their \`Name:\` label (including the very first paragraph of the reply — ` +
+        `do not start unlabeled). A reply that contains fewer labeled paragraphs than there are ` +
+        `participants is INCOMPLETE and violates this rule. This applies even to short exchanges like ` +
+        `check-ins or acknowledgements: one labeled line per participant is still required.`,
     );
   }
   for (const character of target ? [target] : activeCharacters) {
