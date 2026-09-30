@@ -135,6 +135,8 @@ WorkingDirectory=/home/USER/Software/zd-rps
 # ExecStart=/home/youruser/myapp/start.sh
 # If using Option 2 (Direct Path):
 ExecStart=/home/USER/.nvm/versions/node/v22.23.3/bin/npm start -w server
+# if not using nvm...
+# ExecStart=npm start -w server
 Restart=on-failure
 
 # HTTPS Environment Variables
