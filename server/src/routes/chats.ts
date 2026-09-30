@@ -1145,10 +1145,17 @@ export function chatsRouter(ctx: AppContext): Router {
 
       // Sequential rounds also run when the user narrowed the roster for this
       // message (reply controls make no sense in a single ensemble call).
+      // Dialogue-only additionally needs them to keep attribution deterministic:
+      // pure quoted speech carries no narrator "Name: " signals to split on.
       const replyNarrowed =
         (body.replyMode === 'selected' || body.replyMode === 'llm') &&
         activeChars.length > 1;
-      if ((chatWithUser.runtime.sequentialTurns || replyNarrowed) && activeChars.length > 1) {
+      const dialogueOnlyEnsemble =
+        chatWithUser.runtime.dialogueOnly && !chatWithUser.runtime.sequentialTurns && activeChars.length > 1;
+      if (dialogueOnlyEnsemble) {
+        console.log('[dialogue-only] 2+ participants: switching to sequential rounds for reliable attribution');
+      }
+      if ((chatWithUser.runtime.sequentialTurns || replyNarrowed || dialogueOnlyEnsemble) && activeChars.length > 1) {
         // Which participants reply for this message: the send-time control
         // (all / selected / LLM decides) overrides the full roster.
         let replyTargets = [...activeChars];

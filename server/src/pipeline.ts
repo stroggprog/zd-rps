@@ -150,14 +150,18 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
       const dialogueRule =
         `Dialogue ONLY (ABSOLUTE RULE): write ONLY spoken lines in double quotes. ` +
           `NO narration whatsoever - do not describe actions, expressions, scenes, gestures or images. ` +
-          `Each character says only what they say out loud. Your entire turn is one continuous quoted ` +
-          `speech block: open " at the start, close " at the end, nothing quoted in between. ` +
-          `Older transcript paragraphs containing narration demonstrate OUTDATED formatting - never copy it.\n\n` +
-          `CORRECT output shape (and nothing else):\n` +
-          `Sam: "Right! I'm in position. Talk to me, Zen!"\n\n` +
+          `Each character's speech is its own quoted paragraph: EVERY paragraph begins with the speaking ` +
+          `character's \`Name:\` label immediately followed by their quoted speech. When another ` +
+          `character's turn begins, start a NEW paragraph with THEIR label. Never put two characters' ` +
+          `speech into the same paragraph, and never write another character's label inside your own ` +
+          `speech. Older transcript paragraphs containing narration or unlabeled speech demonstrate ` +
+          `OUTDATED formatting - never copy it.\n\n` +
+          `CORRECT output shape for a two-character reply (and nothing else):\n` +
+          `Sam: "Right! I'm in position. Talk to me, Zen!"\n` +
+          `Rin: "Copy that. Radio silence from here on."\n\n` +
           `WRONG (never do this):\n` +
-          `Sam: "Right! I'm in position." Sam adjusts her headset and grins.\n\n` +
-          `This rule overrides every other instruction about writing prose.`;
+          `"Right! I'm in position. Talk to me, Zen!" "Copy that, Sam."\n\n` +
+          `This rule includes the name labels and overrides every other instruction about writing prose.`;
       systemParts.push(dialogueRule);
       lastSystemRule = dialogueRule;
     } else {
