@@ -8,10 +8,12 @@ interface Draft {
   name: string
   description: string
   gender: PersonaGender
+  voiceSampleTranscript: string
+  thoughtSampleTranscript: string
 }
 
 function emptyDraft(): Draft {
-  return { id: null, name: '', description: '', gender: 'male' }
+  return { id: null, name: '', description: '', gender: 'male', voiceSampleTranscript: '', thoughtSampleTranscript: '' }
 }
 
 function toDraft(p: Persona): Draft {
@@ -20,6 +22,8 @@ function toDraft(p: Persona): Draft {
     name: p.name,
     description: p.description,
     gender: p.gender,
+    voiceSampleTranscript: p.voiceSampleTranscript ?? '',
+    thoughtSampleTranscript: p.thoughtSampleTranscript ?? '',
   }
 }
 
@@ -58,7 +62,7 @@ export function PersonaEditor() {
     setSaving(true)
     setError(null)
     try {
-      const payload: Partial<Persona> = { name: draft.name, description: draft.description, gender: draft.gender }
+      const payload: Partial<Persona> = { name: draft.name, description: draft.description, gender: draft.gender, voiceSampleTranscript: voiceTranscript, thoughtSampleTranscript: thoughtTranscript }
       const saved = draft.id
         ? await api.personas.update(draft.id, payload)
         : await api.personas.create(payload)

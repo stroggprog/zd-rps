@@ -6,14 +6,15 @@ import type { Narrator } from '../lib/types'
 interface Draft {
   id: string | null
   name: string
+  voiceSampleTranscript: string
 }
 
 function emptyDraft(): Draft {
-  return { id: null, name: '' }
+  return { id: null, name: '', voiceSampleTranscript: '' }
 }
 
 function toDraft(n: Narrator): Draft {
-  return { id: n.id, name: n.name }
+  return { id: n.id, name: n.name, voiceSampleTranscript: n.voiceSampleTranscript ?? '' }
 }
 
 export function NarratorEditor() {
@@ -28,7 +29,7 @@ export function NarratorEditor() {
   const activeNarrator = draft?.id ? narrators.find((n) => n.id === draft.id) ?? null : null
 
   const openDraft = (n: { id: string | null; name: string; transcript?: string }) => {
-    setDraft({ id: n.id, name: n.name })
+    setDraft({ id: n.id, name: n.name, voiceSampleTranscript: n.transcript ?? '' })
     setTranscript(n.transcript ?? '')
   }
 
@@ -45,7 +46,7 @@ export function NarratorEditor() {
     setSaving(true)
     setError(null)
     try {
-      const payload: Partial<Narrator> = { name: draft.name }
+      const payload: Partial<Narrator> = { name: draft.name, voiceSampleTranscript: transcript }
       const saved = draft.id
         ? await api.narrators.update(draft.id, payload)
         : await api.narrators.create(payload)

@@ -72,6 +72,11 @@ export function personasRouter(ctx: AppContext): Router {
         name: body.name !== undefined ? asString(body.name) : undefined,
         description: body.description !== undefined ? asString(body.description) : undefined,
         gender: body.gender !== undefined ? parseGender(body.gender, current.gender) : undefined,
+        // Transcripts are editable without re-uploading the sample.
+        voiceSampleTranscript:
+          body.voiceSampleTranscript !== undefined ? asString(body.voiceSampleTranscript) || null : undefined,
+        thoughtSampleTranscript:
+          body.thoughtSampleTranscript !== undefined ? asString(body.thoughtSampleTranscript) || null : undefined,
       });
       res.json(updated);
     }),

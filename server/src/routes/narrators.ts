@@ -62,6 +62,9 @@ export function narratorsRouter(ctx: AppContext): Router {
       const body = readJsonBody<Partial<Narrator>>(req);
       const updated = narrators.update(idParam(req), {
         name: body.name !== undefined ? asString(body.name) : undefined,
+        // Transcript is editable without re-uploading the sample.
+        voiceSampleTranscript:
+          body.voiceSampleTranscript !== undefined ? asString(body.voiceSampleTranscript) || null : undefined,
       });
       res.json(updated);
     }),
