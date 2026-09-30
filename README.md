@@ -45,7 +45,14 @@ The server serves the built web app (`web/dist`) plus uploaded media under `/med
 
 Vite is only needed at build time. To run the app in a production environment:
 
-1. Build both workspaces:
+1. Install dependencies (including dev tools — both `tsc` and `vite` are
+   devDependencies and the build needs them):
+   ```sh
+   npm install
+   ```
+   (Run plain `npm install`; do **not** set `NODE_ENV=production` or use
+   `--omit=dev` here, or `tsc`/`vite` will be missing.)
+2. Build both workspaces:
    ```sh
    npm run build        # or per workspace:
    npm run build -w @zd-rps/web
