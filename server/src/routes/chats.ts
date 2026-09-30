@@ -740,6 +740,7 @@ export function chatsRouter(ctx: AppContext): Router {
       let attributing = false;
       const releaseHeldSlots = () => {
         const jobs = heldSlots.splice(0);
+        if (jobs.length > 0) console.log(`[tts-hold] releasing ${jobs.length} held slot(s)`);
         for (const j of jobs) {
           const speakerNow = speakerChar;
           const voiceChar = j.isSpeech ? speakerNow : narratorChar ?? speakerNow;
@@ -946,6 +947,7 @@ export function chatsRouter(ctx: AppContext): Router {
           audioEnabled && ttsConn && activeChars.length > 1 && !roundsMode &&
           (!blockSpeaker || blockSpeaker.characterId === null)
         ) {
+          console.log(`[tts-hold] holding sentence (${heldSlots.length + 1} held)`);
           heldSlots.push({ idx, isSpeech, text: trimmed });
           return;
         }
@@ -1110,6 +1112,13 @@ export function chatsRouter(ctx: AppContext): Router {
           if (!streamErrorBox.err) streamErrorBox.err = err as Error;
         }
         paragraphs.finish();
+        // Safety net: if held opener slots never got released (attribution
+        // raced or resolved without draining), release them now so the audio
+        // queue can always reach idle and the stream can close with `done`.
+        if (heldSlots.length > 0) {
+          console.log(`[tts-hold] draining ${heldSlots.length} unreleased held slot(s)`);
+          releaseHeldSlots();
+        }
         if (getConfig().debug !== false) {
           mkdirSync(path.join(ROOT, 'debug-rounds'), { recursive: true });
           writeFileSync(path.join(ROOT, 'debug-rounds', 'response.txt'), rawText.trim());
