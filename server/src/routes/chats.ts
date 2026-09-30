@@ -1115,7 +1115,10 @@ export function chatsRouter(ctx: AppContext): Router {
         // Safety net: if held opener slots never got released (attribution
         // raced or resolved without draining), release them now so the audio
         // queue can always reach idle and the stream can close with `done`.
-        if (heldSlots.length > 0) {
+        if (heldSlots.length > 0 && !attributing) {
+          // Only drain when attribution is NOT in flight: its own release
+          // path uses the resolved voice; overriding it would un-voice the
+          // opener. waitIdle naturally waits for the attribution to land.
           console.log(`[tts-hold] draining ${heldSlots.length} unreleased held slot(s)`);
           releaseHeldSlots();
         }
