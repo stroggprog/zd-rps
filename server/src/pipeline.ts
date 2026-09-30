@@ -170,24 +170,31 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
       );
     }
   }
-  if (!override && !target && activeCharacters.length > 1) {
+  if (!override && !target) {
     const allNames = activeCharacters.map((c) => c.name).join(', ');
     systemParts.push(
-      `Turn handovers (required): when another character speaks after you, end your paragraph and start ` +
-        `a NEW paragraph that BEGINS with their name label, exactly \`Name: "speech"\`, followed by their ` +
-        `narration paragraphs. A paragraph may contain only one character's content — never merge ` +
-        `characters or put another character's narration into your own paragraph. ` +
-        `When everyone appropriate has spoken for this reply, simply stop — never continue writing ` +
-        `for characters beyond the one named.`,
+      `Reply framing (required, no exceptions): EVERY reply — even in single-character scenes — ` +
+        `BEGINS with a name label on its own line, exactly \`Name: "speech"\`, naming the character ` +
+        `who speaks first. Never open a reply without the label. A reply that starts with dialogue, ` +
+        `narration, a quotation mark, or any other text before the label violates this rule.`,
     );
-    systemParts.push(
-      `ALL PARTICIPANTS RESPOND (mandatory): every participant in this scene — ${allNames} — MUST ` +
-        `contribute at least one paragraph in every reply. Every paragraph a participant contributes ` +
-        `must begin with their \`Name:\` label (including the very first paragraph of the reply — ` +
-        `do not start unlabeled). A reply that contains fewer labeled paragraphs than there are ` +
-        `participants is INCOMPLETE and violates this rule. This applies even to short exchanges like ` +
-        `check-ins or acknowledgements: one labeled line per participant is still required.`,
-    );
+    if (activeCharacters.length > 1) {
+      systemParts.push(
+        `Turn handovers (required): when another character speaks after you, end your paragraph and start ` +
+          `a NEW paragraph that BEGINS with their name label, exactly \`Name: "speech"\`, followed by their ` +
+          `narration paragraphs. A paragraph may contain only one character's content — never merge ` +
+          `characters or put another character's narration into your own paragraph. ` +
+          `When everyone appropriate has spoken for this reply, simply stop — never continue writing ` +
+          `for characters beyond the one named.`,
+      );
+      systemParts.push(
+        `ALL PARTICIPANTS RESPOND (mandatory): every participant in this scene — ${allNames} — MUST ` +
+          `contribute at least one paragraph in every reply. Every paragraph a participant contributes ` +
+          `must begin with their \`Name:\` label. A reply that contains fewer labeled paragraphs than ` +
+          `there are participants is INCOMPLETE and violates this rule. This applies even to short ` +
+          `exchanges like check-ins or acknowledgements: one labeled line per participant is still required.`,
+      );
+    }
   }
   for (const character of target ? [target] : activeCharacters) {
     systemParts.push(`${characterBlock(character, userName)}\n`);
