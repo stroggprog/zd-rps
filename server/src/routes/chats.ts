@@ -729,6 +729,91 @@ export function chatsRouter(ctx: AppContext): Router {
       let blockSpeaker: SpeakerSnapshot | null = null;
       const sentenceOwner = new Map<number, string>();
 
+      // Unlabeled-opener handling: while the reply's first block has no known
+      // speaker (characterId === null) in a multi-character ensemble reply, TTS
+      // slots are HELD instead of synthesized — voice selection needs the
+      // speaker. Once the paragraph completes, attribution resolves (name
+      // heuristic, else one tiny LLM call) and the held slots are released with
+      // the right voice. Ordering is untouched: slots only advance past a
+      // submitted index when its finish() arrives.
+      const heldSlots: { idx: number; isSpeech: boolean; text: string }[] = [];
+      let attributing = false;
+      const releaseHeldSlots = () => {
+        const jobs = heldSlots.splice(0);
+        for (const j of jobs) {
+          const speakerNow = speakerChar;
+          const voiceChar = j.isSpeech ? speakerNow : narratorChar ?? speakerNow;
+          const canSpeak =
+            audioEnabled && ttsConn && voiceChar && (voiceChar.voiceSamplePath || ttsConn.modelOrVoice) &&
+            /[\p{L}\p{N}]/u.test(j.text);
+          if (!canSpeak) {
+            audioQueue.finish(j.idx, { text: j.text, path: '' }, emitAudio);
+            continue;
+          }
+          void (async () => {
+            try {
+              const audio = await synthesizeCharacterSpeech(ttsConn!, voiceChar!, j.text, ctx.voiceCache);
+              await ensureDir(DIR.audio);
+              const filename = `${assistantId}-${j.idx}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
+              await fs.writeFile(path.join(DIR.audio, filename), audio);
+              audioQueue.finish(j.idx, { text: j.text, path: `/media/audio/${filename}` }, emitAudio);
+            } catch (err) {
+              console.warn('[sentence-tts]', (err as Error).message);
+              audioQueue.finish(j.idx, { text: j.text, path: '' }, emitAudio);
+            }
+          })();
+        }
+      };
+      const attributeUnlabeledLeader = async (): Promise<void> => {
+        if (attributing || roundsMode || activeChars.length <= 1) return;
+        const firstBlockId = orderedBlocks[0] ?? null;
+        if (!firstBlockId || !blockSpeaker || blockSpeaker.characterId !== null) return;
+        const firstSpec = blockSpecs.get(firstBlockId)!;
+        attributing = true;
+        try {
+          const lower = firstSpec.content.slice(0, 120).toLowerCase();
+          const namesList = activeChars.map((c) => c.name);
+          let attribution: string | null = null;
+          let match = activeChars.find((c) => c.name.length >= 3 && lower.includes(c.name.toLowerCase()));
+          if (!match) {
+            attribution = await callLlm(
+              llmConn,
+              [
+                {
+                  role: 'system',
+                  content: `You resolve speaker attribution from roleplay text. Answer with EXACTLY one name from the list and nothing else: ${namesList.join(', ')}.`,
+                },
+                {
+                  role: 'user',
+                  content: `Reply text:\n"""\n${firstSpec.content.slice(0, 1500)}\n"""\nWhich of these characters is speaking here? ${namesList.join(', ')}`,
+                },
+              ],
+              { temperature: 0, topP: 1, maxTokens: 16, disableThinking: true },
+            );
+            const guessed = attribution.trim().split('\n')[0].trim();
+            match = activeChars.find((c) => c.name.toLowerCase() === guessed.toLowerCase());
+          }
+          if (match) {
+            firstSpec.speaker = {
+              characterId: match.id,
+              name: match.name,
+              avatarPath: match.avatarPath,
+              voiceSamplePath: match.voiceSamplePath,
+            };
+            speakerChar = match;
+            speaker = firstSpec.speaker;
+            send('speaker', { messageId: firstBlockId, name: match.name, characterId: match.id, avatarPath: match.avatarPath });
+            console.log(`[sp-attribution] unlabeled opener attributed to ${match.name}`);
+          } else {
+            console.log('[sp-attribution] leader unresolved; releasing slots as narration');
+          }
+        } catch (err) {
+          console.warn('[sp-attribution] attribution call failed:', (err as Error).message);
+        }
+        releaseHeldSlots();
+        attributing = false;
+      };
+
       const resolveSpeaker = () => {
         if (speaker) return;
         const speakerName = activeStream?.speaker ?? null;
@@ -848,6 +933,16 @@ export function chatsRouter(ctx: AppContext): Router {
         sepDebug += `block=${blockId.slice(0, 8)} isSpeech=${isSpeech} blockState=${blockSpeechState} sep=${JSON.stringify(sep)} :: ${trimmed.slice(0, 40).replace(/\n/g, ' ')}\n`;
         if (spec) spec.content = spec.content ? `${spec.content}${sep}${trimmed}` : trimmed;
         send('sentence', { messageId: blockId, index: idx, text: trimmed, isLast, isSpeech });
+        // While the leading block's speaker is still unknown (multi-char
+        // ensemble reply with an unlabeled opener), HOLD the TTS slot: the
+        // voice can't be chosen until attribution resolves.
+        if (
+          audioEnabled && ttsConn && activeChars.length > 1 && !roundsMode &&
+          (!blockSpeaker || blockSpeaker.characterId === null)
+        ) {
+          heldSlots.push({ idx, isSpeech, text: trimmed });
+          return;
+        }
         const canSpeak =
           audioEnabled &&
           ttsConn &&
@@ -921,6 +1016,11 @@ export function chatsRouter(ctx: AppContext): Router {
         activeStream = new SentenceStream({ activeNames, onSentence: handleSentence });
         activeStream.push(p);
         activeStream.finish();
+        // First paragraph done and the leader still unknown → resolve now, so
+        // held TTS slots release with the right voice instead of staying mute.
+        if (heldSlots.length > 0 && !attributing) {
+          void attributeUnlabeledLeader();
+        }
       });
 
       const streamErrorBox: { err: Error | null } = { err: null };
