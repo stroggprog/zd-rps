@@ -97,21 +97,35 @@ Vite is only needed at build time. To run the app in a production environment:
    npm run build -w @zd-rps/web
    npm run build -w server
    ```
-2. The server embeds the built SPA: `node server/dist/index.js` serves
+3. The server embeds the built SPA: `node server/dist/index.js` serves
    `web/dist` on its port (default 3000) — that is the whole app; there is
    nothing else to serve and the browser talks only to this port.
-3. Run the server:
+4. Run the server:
    ```sh
    npm start -w server      # = node server/dist/index.js
    ```
    (from the repo root; or `npm start` inside `server/`)
-4. Keep the process alive with your normal tooling (systemd, pm2, a docker
+5. Keep the process alive with your normal tooling (systemd, pm2, a docker
    container …). `config.json` and `data/` live next to it (or wherever
    `ZD_RPS_CONFIG`/`ZD_RPS_DATA` point).
 
 Tip: `npm run dev` stays the tool for development — it recompiles on save and
 proxies to the running server; production only ever consumes the artifacts
 produced by the two build commands above.
+
+If you have set the production server up with a service file using systemd, you can create a batch file to automate an update process:
+```sh
+#!/bin/bash
+sudo systemctl stop zd-rps
+# change to the correct path!
+cd "$HOME/Software/zd-rps"
+git pull
+npm use 22 # if using nvm
+npm install
+npm run build
+sudo systemctl start zd-rps
+sudo systemctl status zd-rps
+```
 
 ## Quick start
 
