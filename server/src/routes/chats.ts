@@ -767,14 +767,17 @@ export function chatsRouter(ctx: AppContext): Router {
       const attributeUnlabeledLeader = async (): Promise<void> => {
         if (attributing || roundsMode || activeChars.length <= 1) return;
         const firstBlockId = orderedBlocks[0] ?? null;
-        if (!firstBlockId || !blockSpeaker || blockSpeaker.characterId !== null) return;
+        if (!firstBlockId) return;
         const firstSpec = blockSpecs.get(firstBlockId)!;
         attributing = true;
         try {
           const lower = firstSpec.content.slice(0, 120).toLowerCase();
           const namesList = activeChars.map((c) => c.name);
           let attribution: string | null = null;
-          let match = activeChars.find((c) => c.name.length >= 3 && lower.includes(c.name.toLowerCase()));
+          let match: Character | undefined =
+            firstSpec.speaker.characterId !== null
+              ? activeChars.find((c) => c.id === firstSpec.speaker.characterId)
+              : activeChars.find((c) => c.name.length >= 3 && lower.includes(c.name.toLowerCase()));
           if (!match) {
             attribution = await callLlm(
               llmConn,
@@ -807,6 +810,9 @@ export function chatsRouter(ctx: AppContext): Router {
           } else {
             console.log('[sp-attribution] leader unresolved; releasing slots as narration');
           }
+          // Label-based early resolution: if the block already found its
+          // speaker some other way (e.g. the streamed prefix), match exists
+          // and the speaker assignment above is a no-op.
         } catch (err) {
           console.warn('[sp-attribution] attribution call failed:', (err as Error).message);
         }
