@@ -113,6 +113,42 @@ Tip: `npm run dev` stays the tool for development — it recompiles on save and
 proxies to the running server; production only ever consumes the artifacts
 produced by the two build commands above.
 
+### Systemd
+To create a systemd service file:
+```sh
+# use xed or nano
+sudo xed /etc/systemd/system/zd-rps.service
+```
+ Enter these details, replacing 'USER' with the proper value and amend any paths as necessary:
+```sh
+[Unit]
+Description=zd-rps Node.js Application Managed by NVM with HTTPS
+After=network.target
+
+[Service]
+Type=simple
+User=USER
+# set your working directory here (the root of the repo)
+WorkingDirectory=/home/USER/Software/zd-rps
+
+# If using Option 1 (Wrapper Script):
+# ExecStart=/home/youruser/myapp/start.sh
+# If using Option 2 (Direct Path):
+ExecStart=/home/USER/.nvm/versions/node/v22.23.3/bin/npm start -w server
+Restart=on-failure
+
+# HTTPS Environment Variables
+Environment=NODE_ENV=production
+Environment=ZD_RPS_ROOT=/home/USER/Software/zd-rps
+# certificates needed to allow the use of a microphone across a network
+# when accessing the server via localhost, certs not needed
+Environment=ZD_RPS_CERT=/home/USER/.security/localhost+3.pem
+Environment=ZD_RPS_KEY=/home/USER/.security/localhost+3-key.pem
+
+[Install]
+WantedBy=multi-user.target
+```
+
 If you have set the production server up with a service file using systemd, you can create a batch file to automate an update process:
 ```sh
 #!/bin/bash
