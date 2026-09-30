@@ -171,6 +171,7 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
     }
   }
   if (!override && !target && activeCharacters.length > 1) {
+    const allNames = activeCharacters.map((c) => c.name).join(', ');
     systemParts.push(
       `Turn handovers (required): when another character speaks after you, end your paragraph and start ` +
         `a NEW paragraph that BEGINS with their name label, exactly \`Name: "speech"\`, followed by their ` +
@@ -178,6 +179,14 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
         `characters or put another character's narration into your own paragraph. ` +
         `When everyone appropriate has spoken for this reply, simply stop — never continue writing ` +
         `for characters beyond the one named.`,
+    );
+    systemParts.push(
+      `ALL PARTICIPANTS RESPOND (mandatory): every participant in this scene — ${allNames} — MUST ` +
+        `contribute at least one paragraph in every reply, each introduced with their \`Name:\` label ` +
+        `on its own line. Start with the first speaker unlabeled, then hand over to each remaining ` +
+        `participant in turn. A reply that contains fewer paragraphs than there are participants is ` +
+        `INCOMPLETE and violates this rule. This applies even to short exchanges like check-ins or ` +
+        `acknowledgements: one line per remaining participant with their label is still required.`,
     );
   }
   for (const character of target ? [target] : activeCharacters) {
