@@ -1155,23 +1155,30 @@ export function chatsRouter(ctx: AppContext): Router {
       if (firstBlockId && blockSpecs.get(firstBlockId)!.speaker.characterId === null && activeChars.length > 0) {
         const firstSpec = blockSpecs.get(firstBlockId)!;
         try {
-          const namesList = activeChars.map((c) => c.name);
-          const attribution = await callLlm(
-            llmConn,
-            [
-              {
-                role: 'system',
-                content: `You resolve speaker attribution from roleplay text. Answer with EXACTLY one name from the list and nothing else: ${namesList.join(', ')}.`,
-              },
-              {
-                role: 'user',
-                content: `Reply text:\n"""\n${firstSpec.content.slice(0, 1500)}\n"""\nWhich of these characters is speaking here? ${namesList.join(', ')}`,
-              },
-            ],
-            { temperature: 0, topP: 1, maxTokens: 16, disableThinking: true },
-          );
-          const guessed = attribution.trim().split('\n')[0].trim();
-          const match = activeChars.find((c) => c.name.toLowerCase() === guessed.toLowerCase());
+          // Cheap heuristic first: a participant name in the opening line
+          // (e.g. the reply starts with "Li Mei, reading you loud and clear.")
+          // almost certainly names the actual speaker — skip the LLM call.
+          const lower = firstSpec.content.slice(0, 120).toLowerCase();
+          let match = activeChars.find((c) => c.name.length >= 3 && lower.includes(c.name.toLowerCase()));
+          if (!match) {
+            const namesList = activeChars.map((c) => c.name);
+            const attribution = await callLlm(
+              llmConn,
+              [
+                {
+                  role: 'system',
+                  content: `You resolve speaker attribution from roleplay text. Answer with EXACTLY one name from the list and nothing else: ${namesList.join(', ')}.`,
+                },
+                {
+                  role: 'user',
+                  content: `Reply text:\n"""\n${firstSpec.content.slice(0, 1500)}\n"""\nWhich of these characters is speaking here? ${namesList.join(', ')}`,
+                },
+              ],
+              { temperature: 0, topP: 1, maxTokens: 16, disableThinking: true },
+            );
+            const guessed = attribution.trim().split('\n')[0].trim();
+            match = activeChars.find((c) => c.name.toLowerCase() === guessed.toLowerCase());
+          }
           if (match) {
             firstSpec.speaker = {
               characterId: match.id,
