@@ -77,6 +77,7 @@ export const omnivoice: TtsProvider = {
     // instances with the same character names) must not share one profile.
     const cleaned = name.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
     const slug = subjectId ? `${cleaned}-${subjectId.slice(0, 8)}` : cleaned;
+    console.log(`[cloneVoice] creating profile ${slug} (${name})`);
     const form = new FormData();
     form.append('profile_id', slug);
     form.append('overwrite', 'true');
