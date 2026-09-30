@@ -132,6 +132,12 @@ export const api = {
       return http<Narrator>(`/api/narrators/${id}/voice`, { method: 'POST', body: form })
     },
     removeVoice: (id: string) => http<Narrator>(`/api/narrators/${id}/voice`, { method: 'DELETE' }),
+    exportZdnUrl: (id: string) => `/api/narrators/${id}/export-zdn`,
+    importZdn: (file: File) => {
+      const form = new FormData()
+      form.append('file', file)
+      return http<Narrator>('/api/narrators/import', { method: 'POST', body: form })
+    },
   },
 
   personas: {

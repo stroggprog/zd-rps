@@ -23,6 +23,7 @@ export function NarratorEditor() {
   const [saving, setSaving] = useState(false)
   const avatarInput = useRef<HTMLInputElement>(null)
   const voiceInput = useRef<HTMLInputElement>(null)
+  const importInput = useRef<HTMLInputElement>(null)
 
   const activeNarrator = draft?.id ? narrators.find((n) => n.id === draft.id) ?? null : null
 
@@ -64,6 +65,17 @@ export function NarratorEditor() {
     await api.narrators.remove(id)
     if (draft?.id === id) setDraft(null)
     await refreshAll()
+  }
+
+  const importZdn = async (file: File) => {
+    setError(null)
+    try {
+      const created = await api.narrators.importZdn(file)
+      await refreshAll()
+      openDraft({ id: created.id, name: created.name, transcript: created.voiceSampleTranscript ?? '' })
+    } catch (e) {
+      setError((e as Error).message)
+    }
   }
 
   /** Returns the saved narrator for the open draft, creating it first if needed (media can attach before first save). */
@@ -112,6 +124,20 @@ export function NarratorEditor() {
             <button className="primary" style={{ marginBottom: 8 }} onClick={beginCreate}>
               ＋ New narrator
             </button>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button onClick={() => importInput.current?.click()}>Import file (.zdn)</button>
+              <input
+                ref={importInput}
+                type="file"
+                accept=".zdn,application/zip"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void importZdn(f)
+                  e.target.value = ''
+                }}
+              />
+            </div>
             <div className="pick-list">
               {narrators.map((n) => (
                 <div
@@ -190,9 +216,14 @@ export function NarratorEditor() {
                     {saving ? 'Saving…' : draft.id ? 'Save changes' : 'Create narrator'}
                   </button>
                   {draft.id && (
-                    <button className="danger" onClick={() => void remove(draft.id as string, draft.name)}>
-                      Delete
-                    </button>
+                    <>
+                      <a className="button-link" href={api.narrators.exportZdnUrl(draft.id)} target="_blank" rel="noreferrer">
+                        Export as .zdn file
+                      </a>
+                      <button className="danger" onClick={() => void remove(draft.id as string, draft.name)}>
+                        Delete
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

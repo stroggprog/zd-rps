@@ -219,6 +219,31 @@ export async function parseZdFile(zipBuffer: Buffer): Promise<{
   return { payload, parsed, voiceSample, transcript };
 }
 
+/** Parses a `.zdn` export zip for narrators: narrator.json + avatar + sample. */
+export async function parseZdnFile(zipBuffer: Buffer): Promise<{
+  meta: { name: string };
+  avatarBuffer: Buffer | null;
+  avatarName: string | null;
+  voiceSample: Buffer | null;
+  transcript: string | null;
+}> {
+  const entries = await readZip(zipBuffer);
+  const metaRaw = entries.get('narrator.json');
+  if (!metaRaw) throw new ApiError('The .zdn file contains no narrator.json', 400);
+  const meta = isObject(JSON.parse(metaRaw.toString('utf8')))
+    ? (JSON.parse(metaRaw.toString('utf8')) as { name?: unknown })
+    : {};
+  const avatarName =
+    [...entries.keys()].find((n) => /^avatar\./i.test(n) && !n.includes('/')) ?? null;
+  return {
+    meta: { name: typeof meta.name === 'string' && meta.name.trim() !== '' ? meta.name : 'Unnamed narrator' },
+    avatarBuffer: avatarName ? (entries.get(avatarName) ?? null) : null,
+    avatarName,
+    voiceSample: entries.get('voice-sample.wav') ?? null,
+    transcript: entries.get('transcript.txt')?.toString('utf8') ?? null,
+  };
+}
+
 export function buildImportResult(parsed: ParsedCard): ImportResult {
   // Spec v2 cards nest the fields under `data`; flat exports (SillyTavern v1
   // style or our own older exports) keep them at the top level.
