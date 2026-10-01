@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useApp } from '../store'
 import { api, bustAvatar } from '../lib/api'
-import type { Narrator } from '../lib/types'
+import type { Narrator, ZdnImportDraft } from '../lib/types'
 
 interface Draft {
   id: string | null
@@ -25,6 +25,8 @@ export function NarratorEditor() {
   const avatarInput = useRef<HTMLInputElement>(null)
   const voiceInput = useRef<HTMLInputElement>(null)
   const importInput = useRef<HTMLInputElement>(null)
+  const [importPreview, setImportPreview] = useState<ZdnImportDraft | null>(null)
+  const [importName, setImportName] = useState('')
 
   const activeNarrator = draft?.id ? narrators.find((n) => n.id === draft.id) ?? null : null
 
@@ -71,7 +73,24 @@ export function NarratorEditor() {
   const importZdn = async (file: File) => {
     setError(null)
     try {
-      const created = await api.narrators.importZdn(file)
+      const preview = await api.narrators.importZdn(file)
+      setImportPreview(preview)
+      setImportName(preview.narrator.name)
+      setDraft(null)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const finalizeZdn = async () => {
+    if (!importPreview || !importName.trim()) {
+      setError('Narrator name is required')
+      return
+    }
+    setError(null)
+    try {
+      const created = await api.narrators.finalizeZdn(importPreview.importId, importName.trim())
+      setImportPreview(null)
       await refreshAll()
       openDraft({ id: created.id, name: created.name, transcript: created.voiceSampleTranscript ?? '' })
     } catch (e) {
@@ -156,7 +175,31 @@ export function NarratorEditor() {
           </div>
 
           <div>
-            {!draft && <div className="hint">Select a narrator or create a new one.</div>}
+            {importPreview && (
+              <div className="form-grid">
+                <div className="field full">
+                  <h4>Imported narrator (.zdn)</h4>
+                  {importPreview.avatarDataUrl && <img src={importPreview.avatarDataUrl} className="avatar-big" alt="" />}
+                  {!importPreview.hasAvatar && <span className="hint">No avatar in this package.</span>}
+                  {importPreview.voiceSampleDataUrl && (
+                    <div style={{ marginTop: 4 }}>
+                      <div className="hint">Voice sample</div>
+                      <audio src={importPreview.voiceSampleDataUrl} controls style={{ width: '100%' }} />
+                    </div>
+                  )}
+                </div>
+                <div className="field full">
+                  <label>Name</label>
+                  <input value={importName} onChange={(e) => setImportName(e.target.value)} />
+                </div>
+                {importPreview.transcript && <div className="field full"><label>Sample transcript</label><div className="desc prewrap">{importPreview.transcript}</div></div>}
+                <div className="row full">
+                  <button className="primary" onClick={() => void finalizeZdn()}>Import narrator</button>
+                  <button onClick={() => setImportPreview(null)}>Cancel</button>
+                </div>
+              </div>
+            )}
+            {!draft && !importPreview && <div className="hint">Select a narrator or create a new one.</div>}
             {draft && (
               <div className="form-grid">
                 <div className="field full">

@@ -229,6 +229,32 @@ export interface ImportDraft {
   hasAvatar: boolean
   avatarDataUrl: string | null
   cardKind: 'png' | 'json'
+  /** Present in .zdc imports: playable preview of the bundled voice sample. */
+  voiceSampleDataUrl?: string | null
+  transcript?: string | null
+  voiceSample?: boolean
+}
+
+/** Preview payload from a .zdn import (audio/image as inline data URLs). */
+export interface ZdnImportDraft {
+  importId: Id
+  narrator: { name: string }
+  transcript: string | null
+  hasAvatar: boolean
+  avatarDataUrl: string | null
+  voiceSampleDataUrl: string | null
+}
+
+/** Preview payload from a .zdp import (both samples as inline data URLs). */
+export interface ZdpImportDraft {
+  importId: Id
+  persona: { name: string; description: string; gender: PersonaGender }
+  voiceTranscript: string | null
+  thoughtTranscript: string | null
+  hasAvatar: boolean
+  avatarDataUrl: string | null
+  voiceSampleDataUrl: string | null
+  thoughtSampleDataUrl: string | null
 }
 
 export interface ChatDetail {

@@ -6,8 +6,10 @@ import type { AppContext } from '../context.js';
 import type { Narrator } from '../types.js';
 import { parseZdnFile } from '../cards.js';
 import { DIR } from '../paths.js';
-import { ApiError, asString, ensureDir } from '../util.js';
+import { ApiError, asString, ensureDir, uuid } from '../util.js';
 import { asyncHandler, idParam, readJsonBody } from './helpers.js';
+
+const TTL_MS = 10 * 60 * 1000;
 
 const MIME_EXT: Record<string, string> = {
   'image/png': 'png',
@@ -193,14 +195,42 @@ export function narratorsRouter(ctx: AppContext): Router {
     }),
   );
 
-  // zdn import: a single-step restore. Creates the narrator and copies the
-  // bundled avatar/voice sample/transcript next to it.
+  // zdn import: a two-step preview flow. `import` parses and stages the
+  // bundle (returning previewable data URLs), `finalize` creates the narrator
+  // and copies the bundled avatar/voice sample/transcript next to it.
+  const pendingZdn = new Map<string, { zd: Awaited<ReturnType<typeof parseZdnFile>>; expires: number }>();
   router.post(
     '/import',
     asyncHandler(async (req, res) => {
       const file = (req.files as Express.Multer.File[] | undefined)?.[0] ?? (req.file as Express.Multer.File | undefined);
       if (!file) throw new ApiError('Expected a .zdn file field', 400);
       const zd = await parseZdnFile(file.buffer);
+      const importId = uuid();
+      pendingZdn.set(importId, { zd, expires: Date.now() + TTL_MS });
+      res.json({
+        importId,
+        narrator: { name: zd.meta.name },
+        transcript: zd.transcript,
+        hasAvatar: zd.avatarBuffer !== null,
+        avatarDataUrl: zd.avatarBuffer
+          ? `data:image/${zd.avatarName?.split('.').pop()?.toLowerCase() === 'jpg' ? 'jpeg' : zd.avatarName?.split('.').pop()?.toLowerCase() ?? 'png'};base64,${zd.avatarBuffer.toString('base64')}`
+          : null,
+        voiceSampleDataUrl: zd.voiceSample ? `data:audio/wav;base64,${zd.voiceSample.toString('base64')}` : null,
+      });
+    }),
+  );
+
+  router.post(
+    '/finalize',
+    asyncHandler(async (req, res) => {
+      const body = readJsonBody<{ importId?: string; name?: string }>(req);
+      const entry = pendingZdn.get(asString(body.importId));
+      if (!entry || entry.expires < Date.now()) {
+        pendingZdn.delete(asString(body.importId));
+        throw new ApiError('Unknown or expired import — import the .zdn again', 400);
+      }
+      pendingZdn.delete(asString(body.importId));
+      const zd = entry.zd;
       const narrator = narrators.create({
         name: zd.meta.name,
         avatarPath: null,

@@ -216,10 +216,9 @@ export function charactersRouter(ctx: AppContext): Router {
         const zd = await parseZdFile(file.buffer);
         const importId = uuid();
         pendingImports.set(importId, { payload: zd.payload, expires: Date.now() + TTL_MS, voiceSample: zd.voiceSample });
-        const avatarDataUrl =
-          zd.payload.avatarBuffer && zd.parsed.imageBuffer === null
-            ? `data:image/png;base64,${zd.payload.avatarBuffer.toString('base64')}`
-            : null;
+        const avatarDataUrl = zd.payload.avatarBuffer
+          ? `data:image/png;base64,${zd.payload.avatarBuffer.toString('base64')}`
+          : null;
         res.json({
           importId,
           character: zd.payload.character,
@@ -227,6 +226,10 @@ export function charactersRouter(ctx: AppContext): Router {
           scenario: zd.payload.scenario,
           hasAvatar: zd.payload.avatarBuffer !== null,
           avatarDataUrl,
+          voiceSampleDataUrl: zd.voiceSample
+            ? `data:audio/wav;base64,${zd.voiceSample.toString('base64')}`
+            : null,
+          transcript: zd.transcript,
           cardKind: 'png',
           voiceSample: true,
         });
@@ -236,10 +239,9 @@ export function charactersRouter(ctx: AppContext): Router {
       const payload = buildImportResult(parsed);
       const importId = uuid();
       pendingImports.set(importId, { payload, expires: Date.now() + TTL_MS, voiceSample: null });
-      const avatarDataUrl =
-        payload.avatarBuffer && parsed.imageBuffer === null
-          ? `data:image/png;base64,${payload.avatarBuffer.toString('base64')}`
-          : null;
+      const avatarDataUrl = payload.avatarBuffer
+        ? `data:image/png;base64,${payload.avatarBuffer.toString('base64')}`
+        : null;
       res.json({
         importId,
         character: payload.character,

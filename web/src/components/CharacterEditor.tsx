@@ -471,6 +471,12 @@ export function CharacterEditor() {
                   {!imported.avatarDataUrl && !imported.hasAvatar && (
                     <span className="hint">This card has no embedded avatar.</span>
                   )}
+                  {imported.voiceSampleDataUrl && (
+                    <div style={{ marginTop: 8 }}>
+                      <div className="hint">Voice sample</div>
+                      <audio src={imported.voiceSampleDataUrl} controls style={{ width: '100%' }} />
+                    </div>
+                  )}
                 </div>
                 <div className="field full">
                   <label>Name</label>

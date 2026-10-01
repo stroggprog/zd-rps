@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useApp } from '../store'
 import { api, bustAvatar } from '../lib/api'
-import type { Persona, PersonaGender } from '../lib/types'
+import type { Persona, PersonaGender, ZdpImportDraft } from '../lib/types'
 
 interface Draft {
   id: string | null
@@ -37,6 +37,8 @@ export function PersonaEditor() {
   const { personas, closeOverlay, refreshAll, setError } = useApp()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [voiceTranscript, setVoiceTranscript] = useState('')
+  const [importPreview, setImportPreview] = useState<ZdpImportDraft | null>(null)
+  const [importName, setImportName] = useState('')
   const [thoughtTranscript, setThoughtTranscript] = useState('')
   const [saving, setSaving] = useState(false)
   const avatarInput = useRef<HTMLInputElement>(null)
@@ -91,7 +93,24 @@ export function PersonaEditor() {
   const importZdp = async (file: File) => {
     setError(null)
     try {
-      const created = await api.personas.importZdp(file)
+      const preview = await api.personas.importZdp(file)
+      setImportPreview(preview)
+      setImportName(preview.persona.name)
+      setDraft(null)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const finalizeZdp = async () => {
+    if (!importPreview || !importName.trim()) {
+      setError('Persona name is required')
+      return
+    }
+    setError(null)
+    try {
+      const created = await api.personas.finalizeZdp(importPreview.importId, importName.trim())
+      setImportPreview(null)
       await refreshAll()
       beginEdit(created)
     } catch (e) {
@@ -238,7 +257,39 @@ export function PersonaEditor() {
           </div>
 
           <div>
-            {!draft && <div className="hint">Select a persona or create a new one.</div>}
+            {importPreview && (
+              <div className="form-grid">
+                <div className="field full">
+                  <h4>Imported persona (.zdp)</h4>
+                  {importPreview.avatarDataUrl && <img src={importPreview.avatarDataUrl} className="avatar-big" alt="" />}
+                  {!importPreview.hasAvatar && <span className="hint">No avatar in this package.</span>}
+                  {importPreview.voiceSampleDataUrl && (
+                    <div style={{ marginTop: 4 }}>
+                      <div className="hint">Voice sample</div>
+                      <audio src={importPreview.voiceSampleDataUrl} controls style={{ width: '100%' }} />
+                    </div>
+                  )}
+                  {importPreview.thoughtSampleDataUrl && (
+                    <div style={{ marginTop: 8 }}>
+                      <div className="hint">Thought sample</div>
+                      <audio src={importPreview.thoughtSampleDataUrl} controls style={{ width: '100%' }} />
+                    </div>
+                  )}
+                </div>
+                <div className="field full">
+                  <label>Name</label>
+                  <input value={importName} onChange={(e) => setImportName(e.target.value)} />
+                </div>
+                <div className="field full desc">{importPreview.persona.description || '—'}</div>
+                {importPreview.voiceTranscript && <div className="field full"><label>Voice transcript</label><div className="desc prewrap">{importPreview.voiceTranscript}</div></div>}
+                {importPreview.thoughtTranscript && <div className="field full"><label>Thought transcript</label><div className="desc prewrap">{importPreview.thoughtTranscript}</div></div>}
+                <div className="row full">
+                  <button className="primary" onClick={() => void finalizeZdp()}>Import persona</button>
+                  <button onClick={() => setImportPreview(null)}>Cancel</button>
+                </div>
+              </div>
+            )}
+            {!draft && !importPreview && <div className="hint">Select a persona or create a new one.</div>}
             {draft && (
               <div className="form-grid">
                 <div className="field">

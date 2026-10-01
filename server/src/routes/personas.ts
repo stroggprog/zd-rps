@@ -6,7 +6,7 @@ import type { AppContext } from '../context.js';
 import type { Persona, PersonaGender } from '../types.js';
 import { parseZdpFile } from '../cards.js';
 import { DIR } from '../paths.js';
-import { ApiError, asString, ensureDir } from '../util.js';
+import { ApiError, asString, ensureDir, uuid } from '../util.js';
 import { asyncHandler, idParam, readJsonBody } from './helpers.js';
 
 const MIME_EXT: Record<string, string> = {
@@ -224,14 +224,46 @@ export function personasRouter(ctx: AppContext): Router {
     }),
   );
 
-  // zdp import: one-step restore (creates the persona, copies avatar + both
-  // samples and their transcripts).
+  // zdp import: a two-step preview flow. `import` stages the bundle and
+  // returns previewable data URLs; `finalize` creates the persona and copies
+  // avatar + both samples and their transcripts.
+  const pendingZdp = new Map<string, { zd: Awaited<ReturnType<typeof parseZdpFile>>; expires: number }>();
+  const TTL_MS = 10 * 60 * 1000;
   router.post(
     '/import',
     asyncHandler(async (req, res) => {
       const file = firstFile(req);
       if (!file) throw new ApiError('Expected a .zdp file field', 400);
       const zd = await parseZdpFile(file.buffer);
+      const importId = uuid();
+      pendingZdp.set(importId, { zd, expires: Date.now() + TTL_MS });
+      const ext = zd.avatarName?.split('.').pop()?.toLowerCase() ?? 'png';
+      res.json({
+        importId,
+        persona: zd.meta,
+        voiceTranscript: zd.voiceTranscript,
+        thoughtTranscript: zd.thoughtTranscript,
+        hasAvatar: zd.avatarBuffer !== null,
+        avatarDataUrl: zd.avatarBuffer
+          ? `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${zd.avatarBuffer.toString('base64')}`
+          : null,
+        voiceSampleDataUrl: zd.voiceSample ? `data:audio/wav;base64,${zd.voiceSample.toString('base64')}` : null,
+        thoughtSampleDataUrl: zd.thoughtSample ? `data:audio/wav;base64,${zd.thoughtSample.toString('base64')}` : null,
+      });
+    }),
+  );
+
+  router.post(
+    '/finalize',
+    asyncHandler(async (req, res) => {
+      const body = readJsonBody<{ importId?: string; name?: string }>(req);
+      const entry = pendingZdp.get(asString(body.importId));
+      if (!entry || entry.expires < Date.now()) {
+        pendingZdp.delete(asString(body.importId));
+        throw new ApiError('Unknown or expired import — import the .zdp again', 400);
+      }
+      pendingZdp.delete(asString(body.importId));
+      const zd = entry.zd;
       const persona = personas.create({
         name: zd.meta.name,
         avatarPath: null,

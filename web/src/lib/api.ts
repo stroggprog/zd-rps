@@ -6,6 +6,8 @@ import type {
   Connection,
   ImportDraft,
   Lorebook,
+  ZdpImportDraft,
+  ZdnImportDraft,
   MessageAudio,
   Narrator,
   CharacterGroup,
@@ -15,7 +17,7 @@ import type {
   Scenario,
   Story,
   TestResult,
-} from './types'
+ } from './types'
 import { rebuildMessageAudioSse } from './sseRebuild'
 
 async function http<T>(url: string, init?: RequestInit): Promise<T> {
@@ -136,8 +138,10 @@ export const api = {
     importZdn: (file: File) => {
       const form = new FormData()
       form.append('file', file)
-      return http<Narrator>('/api/narrators/import', { method: 'POST', body: form })
+      return http<ZdnImportDraft>('/api/narrators/import', { method: 'POST', body: form })
     },
+    finalizeZdn: (importId: string, name: string) =>
+      http<Narrator>('/api/narrators/finalize', jsonInit('POST', { importId, name })),
   },
 
   personas: {
@@ -170,8 +174,10 @@ export const api = {
     importZdp: (file: File) => {
       const form = new FormData()
       form.append('file', file)
-      return http<Persona>('/api/personas/import', { method: 'POST', body: form })
+      return http<ZdpImportDraft>('/api/personas/import', { method: 'POST', body: form })
     },
+    finalizeZdp: (importId: string, name: string) =>
+      http<Persona>('/api/personas/finalize', jsonInit('POST', { importId, name })),
   },
 
   stories: {
