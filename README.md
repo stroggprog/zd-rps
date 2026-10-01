@@ -168,8 +168,9 @@ npm use 22 # if using nvm
 npm install
 npm run build
 sudo systemctl start zd-rps
-sudo systemctl status zd-rps --no-pager
+SYSTEMD_COLORS=1 systemctl status zd-rps --no-pager | grep "Active:"
 ```
+The last line will output he running (active) status to confirm nothing broke (hopefully).
 
 ## Quick start
 
