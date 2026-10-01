@@ -183,7 +183,7 @@ npm install
 npm run dev
 
 # for production
-npm run build
+npm start -w server
 ```
 
 - Server: http://localhost:3000
