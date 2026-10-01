@@ -126,6 +126,11 @@ export function charactersRouter(ctx: AppContext): Router {
             ? asString(body.post_history_instructions)
             : undefined,
         mes_example: body.mes_example !== undefined ? asString(body.mes_example) : undefined,
+        // Transcript is editable without re-uploading the sample.
+        voiceSampleTranscript:
+          body.voiceSampleTranscript !== undefined
+            ? asString(body.voiceSampleTranscript) || null
+            : undefined,
         tags: body.tags !== undefined
           ? body.tags.map((t) => asString(t)).filter(Boolean)
           : undefined,

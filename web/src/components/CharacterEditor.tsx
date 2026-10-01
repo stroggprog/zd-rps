@@ -60,10 +60,11 @@ export function CharacterEditor() {
   const [importing, setImporting] = useState(false)
   const avatarInput = useRef<HTMLInputElement>(null)
   const voiceInput = useRef<HTMLInputElement>(null)
-  const voiceText = useRef<HTMLInputElement>(null)
+  const [voiceTranscript, setVoiceTranscript] = useState('')
   const importInput = useRef<HTMLInputElement>(null)
 
-  const pickImport = () => importInput.current?.click()
+
+    const pickImport = () => importInput.current?.click()
 
   const runImport = async (file: File) => {
     setImporting(true)
@@ -117,6 +118,7 @@ export function CharacterEditor() {
         post_history_instructions: draft.post_history_instructions,
         mes_example: draft.mes_example,
         tags: draft.tags.split(',').map((t) => t.trim()).filter(Boolean),
+        voiceSampleTranscript: voiceTranscript,
       }
       const saved = draft.id
         ? await api.characters.update(draft.id, payload)
@@ -161,7 +163,7 @@ export function CharacterEditor() {
   const uploadVoice = async () => {
     const file = voiceInput.current?.files?.[0]
     if (!file) return
-    const transcript = voiceText.current?.value ?? ''
+    const transcript = voiceTranscript
     setError(null)
     try {
       const target = await ensureSaved()
@@ -175,6 +177,11 @@ export function CharacterEditor() {
   }
 
   const activeCharacter = draft?.id ? characters.find((c) => c.id === draft.id) ?? null : null
+
+  useEffect(() => {
+    setVoiceTranscript(activeCharacter?.voiceSampleTranscript ?? '')
+    // Rehydrate the transcript field when a different character is opened.
+  }, [activeCharacter?.id, activeCharacter?.voiceSampleTranscript])
   const showMedia = !!activeCharacter
 
   return (
@@ -348,8 +355,8 @@ export function CharacterEditor() {
                         <input ref={voiceInput} type="file" accept="audio/wav,.wav,audio/*" />
                       </div>
                       <input
-                        ref={voiceText}
-                        defaultValue={activeCharacter?.voiceSampleTranscript ?? ''}
+                        value={voiceTranscript}
+                        onChange={(e) => setVoiceTranscript(e.target.value)}
                         placeholder="Transcript of the sample (recommended)"
                         style={{ marginTop: 6 }}
                       />
