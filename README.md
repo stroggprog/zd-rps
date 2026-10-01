@@ -8,9 +8,9 @@ Multiple characters can be used in each chat, and characters can be added/remove
 
 The idea is to make characters reusable in different scenarios and worlds, so if you really want Gandalf, Freiren and Hermione Granger arguing with Obi-Wan Kenobi about Force vs Magic down at the Dog & Duck in Chelmsford watching live TV coverage of England winning the World Cup in 1966, then you can.
 
-SillyTavern cards are supported, although it's not been tested with cards that contain multiple characters. You can also export SillyTavern compatible cards, embedding any lorebook or scenario you want.
+SillyTavern cards are supported. It's not been tested with cards that contain multiple characters, the whole point is in creating a separation of characters. You can also export SillyTavern compatible cards, embedding any lorebook or scenario you want.
 
-zd-rps also features exporting its own characters, narrators and personas. These come as packed archives with the extensions zdc (character), zdn (narrator), zdp (persona), and contain any necessary image (with character, lorebook, scenario info embedded), any audio samples and their transcriptions and configuration file, which can be shared and imported.
+zd-rps also features exporting its own format characters, narrators and personas. These come as packed archives with the extensions .zdc (character), .zdn (narrator), .zdp (persona), and contain any necessary image (with character, lorebook, scenario info embedded), any audio samples and their transcriptions and configuration file, which can be shared and imported.
 
 ## Features
 
