@@ -178,7 +178,12 @@ Requires Node 20.19+ or 22.12+ (Vite 8 requirement; uses native `fetch`/web-stre
 
 ```sh
 npm install
+
+# for development & testing
 npm run dev
+
+# for production
+npm run build
 ```
 
 - Server: http://localhost:3000
