@@ -174,13 +174,15 @@ npm run build
 sudo systemctl start zd-rps
 SYSTEMD_COLORS=1 systemctl status zd-rps --no-pager | grep "Active:"
 ```
-The last line will output he running (active) status to confirm nothing broke (hopefully).
+The last line will output the running (active) status to confirm nothing broke (hopefully).
 
 ## Quick start
 
 Requires Node 20.19+ or 22.12+ (Vite 8 requirement; uses native `fetch`/web-streams).
 
 ```sh
+git clone https://github.com/stroggprog/zd-rps
+cd zd-rps
 npm install
 
 # for development & testing
