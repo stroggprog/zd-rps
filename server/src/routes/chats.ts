@@ -754,7 +754,7 @@ export function chatsRouter(ctx: AppContext): Router {
       print(
         'help',
         'Available commands:' +
-          '\n• [echo:Name] text — speak the entered text verbatim in that participant\'s voice (ephemeral)' +
+          '\n• [echo:Name] text — speak the entered text verbatim in that participant\'s voice (persisted as their message)' +
           '\n• [echo] text — same, using the selected respondent (or the sole participant)' +
           '\n• /scenario — print the scenario text and opening message' +
           '\n• /help — list the available slash commands',
