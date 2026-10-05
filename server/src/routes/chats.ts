@@ -690,19 +690,36 @@ export function chatsRouter(ctx: AppContext): Router {
       await ensureDir(DIR.audio);
       const filename = `echo-${Date.now()}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
       await fs.writeFile(path.join(DIR.audio, filename), audio);
-      send('audio', {
-        messageId: blockId,
-        index: 0,
-        id: `${blockId}-0`,
-        text: body,
-        path: `/media/audio/${filename}`,
+      const clip: MessageAudio = { id: `${blockId}-0`, text: body, path: `/media/audio/${filename}`, ts: now() };
+      send('audio', { messageId: blockId, index: 0, ...clip });
+      // Persisted: the line becomes part of the transcript/LLM context and
+      // carries its clip (so the 🎧 download button works) like any other
+      // character message.
+      const echoMsg: ChatMessage = {
+        id: blockId,
+        role: 'assistant',
+        speaker: {
+          characterId: echoChar.id,
+          name: echoChar.name,
+          avatarPath: echoChar.avatarPath,
+          voiceSamplePath: echoChar.voiceSamplePath,
+        },
+        content: body,
+        audioPath: null,
+        audio: [clip],
+        images: [],
         ts: now(),
-      });
+      };
+      const updated = chats.update(chat.id, { messages: [...chat.messages, echoMsg] });
+      send('done', { chat: updated ?? chats.getOrThrow(chat.id) });
+      res.end();
+      return;
     } catch (err) {
+      // Synthesis failed: keep the print ephemeral (not in the transcript).
       send('error', { message: `[echo] synthesis failed: ${(err as Error).message}` });
+      send('done', { chat: chats.getOrThrow(chat.id) });
+      res.end();
     }
-    send('done', { chat: chats.getOrThrow(idParam(req)) });
-    res.end();
   }
 
   function handleSlashCommand(

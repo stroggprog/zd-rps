@@ -171,10 +171,10 @@ export function CenterColumn() {
                       {message.audioPath ? '▶' : '🔊'}
                     </button>
                   )}
-                  {message.audio.length > 1 && (
+                  {message.audio.length > 0 && (
                     <button
                       className="icon"
-                      title="Download this message's audio merged into one file"
+                      title="Download this message's audio as one file"
                       onClick={() => void downloadBubbleAudio(message)}
                     >
                       🎧
