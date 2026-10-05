@@ -28,7 +28,7 @@ import { ParagraphStream, SentenceStream } from '../streaming.js';
 import { QuotationTracker } from '../speech.js';
 import { SpeechFormatter } from '../formatting.js';
 import { OrderedAudio, type AudioResult } from '../orderedAudio.js';
-import { ApiError, asString, ensureDir, now, uuid } from '../util.js';
+import { ApiError, asBoolean, asNumber, asString, ensureDir, now, resolveBinary, uuid } from '../util.js';
 import { asyncHandler, idParam, readJsonBody } from './helpers.js';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
@@ -461,7 +461,7 @@ export function chatsRouter(ctx: AppContext): Router {
       const outPath = path.join(os.tmpdir(), `zdbubble-${mid}-${stamp}.mp3`);
       await fs.writeFile(playlistPath, files.join('\n') + '\n', 'utf8');
       await new Promise<void>((resolve) => {
-        execFile('sox', [playlistPath, outPath], { timeout: 10 * 60_000 }, (err) => {
+        execFile(resolveBinary('sox'), [playlistPath, outPath], { timeout: 10 * 60_000 }, (err) => {
           if (err) console.error('[bubble-concat] sox failed:', (err as Error).message);
           resolve();
         });
@@ -1765,7 +1765,7 @@ export function chatsRouter(ctx: AppContext): Router {
       const mp3Path = path.join(DIR.audio, mp3Name);
       if (playlistLines.length > 0) {
         await new Promise<void>((resolve) => {
-          execFile('sox', [playlistPath, mp3Path], { cwd: DIR.audio, timeout: 10 * 60_000 }, (err) => {
+          execFile(resolveBinary('sox'), [playlistPath, mp3Path], { cwd: DIR.audio, timeout: 10 * 60_000 }, (err) => {
             if (err) console.error('[audiobook] sox failed:', (err as Error).message);
             else console.log(`[audiobook] created ${mp3Path} (${synthesized} synthesized, ${playlistLines.length} segments)`);
             resolve();

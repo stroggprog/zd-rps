@@ -3,7 +3,7 @@ import { promises as fs, existsSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
-import { ApiError, asBoolean, asNumber, asString, isObject, uuid } from './util.js';
+import { ApiError, asBoolean, asNumber, asString, isObject, resolveBinary, uuid } from './util.js';
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const CARA_KEYWORD = 'chara';
@@ -183,7 +183,7 @@ async function readZip(zipBuffer: Buffer): Promise<Map<string, Buffer>> {
   const zipPath = path.join(dir, 'in.zdc');
   await fs.writeFile(zipPath, zipBuffer);
   await new Promise<void>((resolve) => {
-    execFile('unzip', ['-o', zipPath, '-d', dir], { cwd: dir, timeout: 60_000 }, (err) => {
+    execFile(resolveBinary('unzip'), ['-o', zipPath, '-d', dir], { cwd: dir, timeout: 60_000 }, (err) => {
       if (err) console.error('[zdimport] unzip failed:', (err as Error).message);
       resolve();
     });

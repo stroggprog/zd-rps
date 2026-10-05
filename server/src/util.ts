@@ -1,9 +1,28 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { statSync } from 'node:fs';
 import path from 'node:path';
 
 export function uuid(): string {
   return randomUUID();
+}
+
+/**
+ * Resolves a shared external binary (sox, unzip) to an absolute path.
+ * Service contexts (systemd etc.) run with a minimal PATH that often misses
+ * /usr/local/bin; probe the common locations instead.
+ */
+export function resolveBinary(bin: string): string {
+  const candidates = [`/usr/local/bin/${bin}`, `/usr/bin/${bin}`, `/bin/${bin}`];
+  for (const p of candidates) {
+    try {
+      statSync(p);
+      return p;
+    } catch {
+      /* keep looking */
+    }
+  }
+  return bin;
 }
 
 export function now(): string {
