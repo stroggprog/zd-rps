@@ -267,6 +267,18 @@ export const api = {
       ),
     rebuildMessageAudio: (id: string, messageId: string, handlers: { onAudio?: (messageId: string | null, clip: MessageAudio) => void; onDone?: (chat: Chat) => void }) =>
       rebuildMessageAudioSse(id, messageId, handlers),
+    /** Downloads a bubble's audio chips merged into one MP3 (server temp file, deleted after send). */
+    bubbleAudioDownload: async (id: string, messageId: string): Promise<{ blob: Blob; filename: string }> => {
+      const res = await fetch(`/api/chats/${id}/messages/${messageId}/concat-audio`)
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(text || `HTTP ${res.status}`)
+      }
+      const blob = await res.blob()
+      const disposition = res.headers.get('Content-Disposition') ?? ''
+      const match = /filename="([^"]+)"/.exec(disposition)
+      return { blob, filename: match?.[1] ?? 'message.mp3' }
+    },
     messageStream: (
       id: string,
       content: string,

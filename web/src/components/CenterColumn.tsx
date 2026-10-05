@@ -24,7 +24,7 @@ async function speakViaApi(message: ChatMessage) {
 }
 
 export function CenterColumn() {
-  const { chat, sending, setViewer, updateMessage, removeMessage, rebuildMessageAudio, refreshChat } = useApp()
+  const { chat, sending, setViewer, updateMessage, removeMessage, rebuildMessageAudio, refreshChat, setError } = useApp()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
@@ -53,6 +53,22 @@ export function CenterColumn() {
       enqueueAudio(message.audioPath)
     } else {
       void speakViaApi(message)
+    }
+  }
+
+  const downloadBubbleAudio = async (message: ChatMessage) => {
+    try {
+      const { blob, filename } = await api.chats.bubbleAudioDownload(chat!.chat.id, message.id)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError((e as Error).message)
     }
   }
 
@@ -153,6 +169,15 @@ export function CenterColumn() {
                   {!isUser && (
                     <button className="icon" title={message.audioPath ? 'Play audio' : 'Speak'} onClick={() => play(message)}>
                       {message.audioPath ? '▶' : '🔊'}
+                    </button>
+                  )}
+                  {message.audio.length > 1 && (
+                    <button
+                      className="icon"
+                      title="Download this message's audio merged into one file"
+                      onClick={() => void downloadBubbleAudio(message)}
+                    >
+                      🎧
                     </button>
                   )}
                 </div>

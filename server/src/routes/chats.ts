@@ -1,4 +1,5 @@
-import { promises as fs, existsSync } from 'node:fs';
+import { promises as fs, existsSync, createReadStream } from 'node:fs';
+import os from 'node:os';
 import { execFile } from 'node:child_process';
 import { statSync } from 'node:fs';
 import path from 'node:path';
@@ -437,6 +438,49 @@ export function chatsRouter(ctx: AppContext): Router {
       if (removed.length === chat.messages.length) throw new ApiError('Message not found', 404);
       const updated = chats.update(chat.id, { messages: removed });
       res.json(chats.get(updated!.id));
+    }),
+  );
+
+  // Merge a bubble's audio chips into one file, stream it as a download, then
+  // delete the temp from the server. The chips themselves stay untouched.
+  router.get(
+    '/:id/messages/:mid/concat-audio',
+    asyncHandler(async (req, res) => {
+      const chat = chats.getOrThrow(idParam(req));
+      const mid = req.params.mid as Id;
+      const message = chat.messages.find((m) => m.id === mid);
+      if (!message) throw new ApiError('Message not found', 404);
+      const clips = message.audio.filter((clip) => clip.path);
+      if (clips.length === 0) throw new ApiError('This message has no audio to merge', 400);
+      const files = clips.map((clip) => path.join(DIR.audio, clip.path.replace(/^\/media\/audio\//, '')));
+      const missing = files.filter((f) => !existsSync(f));
+      if (missing.length > 0) throw new ApiError(`Audio file missing on disk (*.${missing.length} clip(s)); use ♻ to rebuild first`, 404);
+
+      const stamp = Date.now();
+      const playlistPath = path.join(os.tmpdir(), `zdbubble-${mid}-${stamp}.m3u`);
+      const outPath = path.join(os.tmpdir(), `zdbubble-${mid}-${stamp}.mp3`);
+      await fs.writeFile(playlistPath, files.join('\n') + '\n', 'utf8');
+      await new Promise<void>((resolve) => {
+        execFile('sox', [playlistPath, outPath], { timeout: 10 * 60_000 }, (err) => {
+          if (err) console.error('[bubble-concat] sox failed:', (err as Error).message);
+          resolve();
+        });
+      });
+      if (!existsSync(outPath)) throw new ApiError('Audio merge failed (sox)', 500);
+      const safe = message.speaker.name.replace(/[^\w.-]+/g, '_') || 'message';
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Disposition', `attachment; filename="${safe}.mp3"`);
+      const stream = createReadStream(outPath);
+      stream.pipe(res);
+      res.on('close', () => {
+        stream.unpipe();
+        void fs.rm(outPath, { force: true });
+        void fs.rm(playlistPath, { force: true });
+      });
+      res.on('finish', () => {
+        void fs.rm(outPath, { force: true });
+        void fs.rm(playlistPath, { force: true });
+      });
     }),
   );
 
