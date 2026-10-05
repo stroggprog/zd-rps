@@ -458,18 +458,41 @@ export function chatsRouter(ctx: AppContext): Router {
 
       const stamp = Date.now();
       const playlistPath = path.join(os.tmpdir(), `zdbubble-${mid}-${stamp}.m3u`);
-      const outPath = path.join(os.tmpdir(), `zdbubble-${mid}-${stamp}.mp3`);
+      let outPath = path.join(os.tmpdir(), `zdbubble-${mid}-${stamp}.mp3`);
+      let mime = 'audio/mpeg';
+      let ext = '.mp3';
       await fs.writeFile(playlistPath, files.join('\n') + '\n', 'utf8');
+      // MP3 needs libsox-fmt-mp3; fall back to WAV when the host's sox
+      // can't encode it, and surface the real failure text to the client.
+      let stderr = '';
       await new Promise<void>((resolve) => {
-        execFile(resolveBinary('sox'), [playlistPath, outPath], { timeout: 10 * 60_000 }, (err) => {
-          if (err) console.error('[bubble-concat] sox failed:', (err as Error).message);
+        execFile(resolveBinary('sox'), [playlistPath, outPath], { timeout: 10 * 60_000 }, (err, _stdout, errText) => {
+          stderr = errText ?? '';
+          if (err) console.error('[bubble-concat] sox(mp3) failed:', stderr.slice(0, 400));
           resolve();
         });
       });
-      if (!existsSync(outPath)) throw new ApiError('Audio merge failed (sox)', 500);
+      if (!existsSync(outPath)) {
+        const wavPath = outPath.slice(0, -4) + '.wav';
+        await new Promise<void>((resolve) => {
+          execFile(resolveBinary('sox'), [playlistPath, wavPath], { timeout: 10 * 60_000 }, (err, _o, errText) => {
+            if (err) {
+              stderr = `${stderr}\n${errText ?? ''}`;
+              console.error('[bubble-concat] sox(wav) failed:', stderr.slice(0, 400));
+            }
+            resolve();
+          });
+        });
+        if (!existsSync(wavPath)) {
+          throw new ApiError(`Audio merge failed (sox): ${stderr.trim().split('\n').filter(Boolean).slice(-2).join(' | ') || 'unknown error'}`, 500);
+        }
+        outPath = wavPath;
+        mime = 'audio/wav';
+        ext = '.wav';
+      }
       const safe = message.speaker.name.replace(/[^\w.-]+/g, '_') || 'message';
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Disposition', `attachment; filename="${safe}.mp3"`);
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Content-Disposition', `attachment; filename="${safe}${ext}"`);
       const stream = createReadStream(outPath);
       stream.pipe(res);
       res.on('close', () => {
