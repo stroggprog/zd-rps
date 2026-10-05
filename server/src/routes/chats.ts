@@ -603,6 +603,108 @@ export function chatsRouter(ctx: AppContext): Router {
   );
 
   // Slash commands: server-side, ephemeral (never stored in chat history).
+  /**
+   * [echo] / [echo:Name] text — speaks the exact text with the chosen
+   * character's voice and prints it as an ephemeral block (never persisted).
+   * Without a name the selected respondent (Reply control) or the single
+   * active participant is used.
+   */
+  async function handleEchoCommand(
+    req: ERequest<{ id: string }>,
+    res: EResponse,
+    nameRaw: string | null,
+    body: string,
+  ): Promise<void> {
+    const chat = chats.getOrThrow(idParam(req));
+    const send = (event: string, data: unknown) => {
+      if (res.writableEnded) return;
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    const activeChars = chat.participantIds
+      .map((pid) => ctx.store.characters.get(pid))
+      .filter((c): c is Character => c !== undefined);
+
+    // Resolve the speaker BEFORE headers so validation errors can use HTTP.
+    const echoBody = readJsonBody<{ replyMode?: string; replyIds?: Id[] }>(req as unknown as ERequest);
+    const selectedIds = echoBody.replyMode === 'selected' && Array.isArray(echoBody.replyIds) ? echoBody.replyIds : [];
+    const echoChar = nameRaw
+      ? activeChars.find((c) => c.name.toLowerCase() === nameRaw.trim().toLowerCase()) ?? null
+      : (selectedIds.length > 0
+          ? activeChars.find((c) => c.id === selectedIds[0]) ?? null
+          : activeChars.length === 1
+            ? activeChars[0]
+            : null);
+    // Validation order: text, character, TTS connection.
+    let ttsConn: Connection | null = null;
+    try {
+      ttsConn = resolveKindConnection('tts', chat.runtime.ttsConnectionId);
+    } catch {
+      ttsConn = null;
+    }
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    if (nameRaw && !echoChar) {
+      send('error', { message: `[echo:${nameRaw}]: "${nameRaw}" is not an active participant in this chat.` });
+      res.end();
+      return;
+    }
+    if (!echoChar) {
+      send('error', {
+        message:
+          '[echo]: with multiple participants, specify who speaks: [echo:Name] text, ' +
+          'or select one character in the Reply control and use [echo].',
+      });
+      res.end();
+      return;
+    }
+    if (!body) {
+      send('error', { message: '[echo]: provide the text to speak.' });
+      res.end();
+      return;
+    }
+    if (!ttsConn) {
+      send('error', { message: '[echo]: no TTS connection available.' });
+      res.end();
+      return;
+    }
+
+    const blockId = uuid();
+    send('speaker', {
+      messageId: blockId,
+      name: echoChar.name,
+      characterId: echoChar.id,
+      avatarPath: echoChar.avatarPath,
+    });
+    send('sentence', {
+      messageId: blockId,
+      index: 0,
+      text: body,
+      isLast: true,
+      isSpeech: true,
+    });
+    try {
+      const audio = await synthesizeCharacterSpeech(ttsConn, echoChar, body, ctx.voiceCache);
+      await ensureDir(DIR.audio);
+      const filename = `echo-${Date.now()}-${uuid().slice(0, 8)}.${audioExt(audio)}`;
+      await fs.writeFile(path.join(DIR.audio, filename), audio);
+      send('audio', {
+        messageId: blockId,
+        index: 0,
+        id: `${blockId}-0`,
+        text: body,
+        path: `/media/audio/${filename}`,
+        ts: now(),
+      });
+    } catch (err) {
+      send('error', { message: `[echo] synthesis failed: ${(err as Error).message}` });
+    }
+    send('done', { chat: chats.getOrThrow(idParam(req)) });
+    res.end();
+  }
+
   function handleSlashCommand(
     req: ERequest<{ id: string }>,
     res: EResponse,
@@ -676,6 +778,13 @@ export function chatsRouter(ctx: AppContext): Router {
       // Slash commands: begin with '/' and are handled server-side.
       if (text.startsWith('/')) {
         await handleSlashCommand(req as unknown as ERequest<{ id: string }>, res, text);
+        return;
+      }
+      // [echo] / [echo:Name]​ commands: speak the exact text in a chosen
+      // character's voice; never persisted.
+      const echoMatch = /^\[echo(?::([^\]]{1,60}))?\]\s*([\s\S]+)$/i.exec(text);
+      if (echoMatch) {
+        await handleEchoCommand(req as unknown as ERequest<{ id: string }>, res, echoMatch[1] ?? null, echoMatch[2].trim());
         return;
       }
       const audioEnabled = body.audioEnabled === true;
