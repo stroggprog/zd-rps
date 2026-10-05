@@ -46,6 +46,12 @@ export function CenterColumn() {
 
   const messages = chat.chat.messages
 
+  // Bubble avatars bust against the character's CURRENT updated stamp so a
+  // replaced avatar image shows up without a page refresh (old messages keep
+  // their snapshot path; only the lookup key changes).
+  const avatarStamp = (characterId: string | null): string | null =>
+    characterId ? chat.characters.find((c) => c.id === characterId)?.updated ?? null : null;
+
   const play = (message: ChatMessage) => {
     if (message.audio.length > 0) {
       for (const clip of message.audio) enqueueAudio(clip.path)
@@ -97,7 +103,7 @@ export function CenterColumn() {
               {message.speaker.avatarPath ? (
                 <img
                   className="avatar"
-                  src={bustAvatar(message.speaker.avatarPath) ?? undefined}
+                  src={bustAvatar(message.speaker.avatarPath, avatarStamp(message.speaker.characterId)) ?? undefined}
                   alt={message.speaker.name}
                   title="View avatar"
                   style={{ cursor: 'zoom-in' }}
