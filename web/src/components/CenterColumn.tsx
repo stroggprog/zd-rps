@@ -24,7 +24,7 @@ async function speakViaApi(message: ChatMessage) {
 }
 
 export function CenterColumn() {
-  const { chat, sending, setViewer, updateMessage, removeMessage, rebuildMessageAudio, refreshChat, setError } = useApp()
+  const { chat, characters, sending, setViewer, updateMessage, removeMessage, rebuildMessageAudio, refreshChat, setError } = useApp()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
@@ -50,7 +50,7 @@ export function CenterColumn() {
   // replaced avatar image shows up without a page refresh (old messages keep
   // their snapshot path; only the lookup key changes).
   const avatarStamp = (characterId: string | null): string | null =>
-    characterId ? chat.characters.find((c) => c.id === characterId)?.updated ?? null : null;
+    characterId ? characters.find((c) => c.id === characterId)?.updated ?? null : null;
 
   const play = (message: ChatMessage) => {
     if (message.audio.length > 0) {
