@@ -63,6 +63,7 @@ export function normalizeChat(chat: Chat): Chat {
           audioPath: typeof m.audioPath === 'string' ? m.audioPath : null,
           audio: Array.isArray((m as { audio?: unknown }).audio) ? (m as { audio: MessageAudio[] }).audio : [],
           images: Array.isArray(m.images) ? m.images : [],
+          echo: (m as { echo?: unknown }).echo === true,
         }))
       : [],
     runtime: (() => {

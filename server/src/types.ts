@@ -116,6 +116,8 @@ export interface ChatMessage {
   audio: MessageAudio[];
   images: string[];
   ts: string;
+  /** True for `[echo]` command lines: spoken entirely in the speaker's voice. */
+  echo?: boolean;
 }
 
 export interface MessageAudio {

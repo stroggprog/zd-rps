@@ -584,18 +584,23 @@ export function chatsRouter(ctx: AppContext): Router {
             }
           : null;
         const personaMessage = message.speaker.characterId === null;
+        // Echo lines speak EVERYTHING in the speaker's voice — labels,
+        // quoting and narration classification don't apply.
+        const echoMessage = message.echo === true;
         const thought = part.text.endsWith('*');
-        const voiceShare = personaMessage
-          ? part.isSpeech
-            ? personaVoice
-            : thought
-              ? personaThought ?? personaVoice
-              : narratorChar ?? personaVoice
-          : part.isSpeech
-            ? speakerChar
-            : thought
-              ? personaThought ?? personaVoice
-              : narratorChar ?? speakerChar;
+        const voiceShare = echoMessage
+          ? speakerChar
+          : personaMessage
+            ? part.isSpeech
+              ? personaVoice
+              : thought
+                ? personaThought ?? personaVoice
+                : narratorChar ?? personaVoice
+            : part.isSpeech
+              ? speakerChar
+              : thought
+                ? personaThought ?? personaVoice
+                : narratorChar ?? speakerChar;
         const subject: VoiceSubject = voiceShare ?? {
           id: `user-${message.speaker.name}`,
           name: message.speaker.name,
@@ -731,6 +736,7 @@ export function chatsRouter(ctx: AppContext): Router {
         audioPath: null,
         audio: [clip],
         images: [],
+        echo: true,
         ts: now(),
       };
       const updated = chats.update(chat.id, { messages: [...chat.messages, echoMsg] });
