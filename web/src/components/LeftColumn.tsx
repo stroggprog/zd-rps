@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { bustAvatar } from '../lib/api'
 import { useApp } from '../store'
 
@@ -14,6 +14,10 @@ export function LeftColumn() {
     }
   }
   const image = viewerIndex >= 0 ? viewerImages[viewerIndex] : null
+  // Bust the viewer's src per image so a replaced avatar never shows the old
+  // bytes from the browser's in-memory cache.
+  const bustStamp = useMemo(() => (image ? `${image.includes('?') ? '&' : '?'}v=${Date.now()}` : ''), [image])
+  const busted = image ? `${image}${bustStamp}` : null;
 
   const [chatsOpen, setChatsOpen] = useState(true)
   // A chat starting/resuming collapses the list to free space.
@@ -66,7 +70,7 @@ export function LeftColumn() {
         <div className="image-viewer">
           <img
             className="main"
-            src={image}
+            src={busted ?? image}
             alt="Clicked image"
             title="Click to open at full size in a new window"
             style={{ cursor: 'zoom-in' }}
