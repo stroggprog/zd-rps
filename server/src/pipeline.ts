@@ -117,18 +117,19 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
         `Active characters may each respond. Speak only as one of the active characters; never speak for ${userName}.`,
     );
   }
-  // Anti-echo applies to every framing (built-in, target-scoped, or user
-  // override): the user's words are input, never material to copy.
-  systemParts.push(
+  // Anti-echo + inner-monologue restrictions apply to every framing
+  // (built-in, target-scoped, or user override). Also repeated in the STRICT
+  // REMINDER at the prompt tail — models drift back to copying the user or
+  // inventing thoughts otherwise.
+  const CORE_RULES =
     `Never repeat, restate, narrate or echo ${userName}'s words, thoughts or actions back to them — ` +
-      `characters speak and act only for themselves. If the user just said something, treat it as ` +
-      `already said and shown in the transcript; do not write it again. Once is enough.
-` +
-      `Inner monologue (private thoughts) only when the character definition explicitly requires it. ` +
-      `When it does appear, only one character's inner voice may appear: their OWN. Write it in ` +
-      `single quotes in the character's OWN paragraph of speech or narration. Never write another ` +
-      `character's thoughts, and never write the user's thoughts or inner voice.`,
-  );
+    `characters speak and act only for themselves. If the user just said something, treat it as ` +
+    `already said and shown in the transcript; do not write it again. Once is enough.\n` +
+    `Inner monologue (private thoughts) only when the character definition explicitly requires it. ` +
+    `When it does appear, only one character's inner voice may appear: their OWN. Write it in ` +
+    `single quotes in the character's OWN paragraph of speech or narration. Never write another ` +
+    `character's thoughts, and never write the user's thoughts or inner voice.`;
+  systemParts.push(CORE_RULES);
   if (story && story.summary.trim()) {
     systemParts.push(
       `Story so far (${story.name}):\n${story.summary}\n` +
@@ -264,6 +265,7 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
     system.content += `\n\nWorld knowledge (relevant lore):\n${lore.before.join('\n\n')}`;
   }
 
+  system.content += `\n\nSTRICT REMINDER: ${CORE_RULES}`;
   if (lastSystemRule) {
     system.content += `\n\nSTRICT REMINDER: ${lastSystemRule}`;
   }
