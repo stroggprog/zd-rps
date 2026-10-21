@@ -314,6 +314,33 @@ export function historyTailFor(chat: Chat, contextTokens: number, maxTokens: num
 
 const NAME_PREFIX = /^([A-Za-z0-9 _.'-]{1,60}):\s*(.+)$/s;
 
+/**
+ * Heuristic: does any character text explicitly ask for an inner voice?
+ * Scans description/personality/examples/system prompt for thought-related
+ * keywords; used to decide whether the output filter may strip single-quoted
+ * thought paragraphs.
+ */
+export function wantsThoughts(character: Character): boolean {
+  const text = [
+    character.description,
+    character.personality,
+    character.system_prompt,
+    character.mes_example,
+    character.post_history_instructions,
+  ]
+    .join(' ')
+    .toLowerCase();
+  return (
+    text.includes('thought') ||
+    text.includes('internal monologue') ||
+    text.includes('inner voice') ||
+    text.includes('inner monologue') ||
+    text.includes('monologue') ||
+    text.includes('thinks to herself') ||
+    text.includes('says silently')
+  );
+}
+
 export function attributeReply(reply: string, activeNames: string[]): Reply {
   const match = NAME_PREFIX.exec(reply.trim());
   if (match) {

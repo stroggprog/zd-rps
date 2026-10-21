@@ -23,6 +23,7 @@ import { DATA_DIR, DIR, ROOT } from '../paths.js';
 import { getConfig, patchConfig } from '../config.js';
 import { buildLlmMessages, callLlm, historyTailFor, streamLlm, userNameFor, USER_NAME } from '../pipeline.js';
 import { chatPersona, chatRuntimeDefaults } from '../store.js';
+import { wantsThoughts } from '../pipeline.js';
 import { synthesizeCharacterSpeech, audioExt } from '../ttsService.js';
 import { ParagraphStream, SentenceStream } from '../streaming.js';
 import { QuotationTracker } from '../speech.js';
@@ -42,6 +43,14 @@ function resolveKindConnection(kind: 'llm' | 'stt' | 'tts', runtimeValue: Id | n
   const conn = id ? config.connections.find((c) => c.id === id && c.kind === kind) : undefined;
   if (!conn) throw new ApiError(`No ${kind.toUpperCase()} connection selected. Configure one and set it as default.`, 400);
   return conn;
+}
+
+/** A paragraph that is wrapped entirely in single quotes = private thought. */
+function measureThought(p: string): boolean {
+  const t = p.trim();
+  if (t.length < 3) return false;
+  const inner = t.slice(1, -1);
+  return t.startsWith("'") && t.endsWith("'") && !inner.includes("'");
 }
 
 /** The chat's scenario: library entity when referenced, otherwise its ad-hoc inline one. */
@@ -907,6 +916,11 @@ export function chatsRouter(ctx: AppContext): Router {
       });
 
       const activeNames = activeChars.map((c) => c.name);
+      // Single-quoted thought paragraphs are stripped unless a character's
+      // definition explicitly asks for an inner voice.
+      const thoughtsAllowed = chat.participantIds
+        .map((pid) => ctx.store.characters.get(pid))
+        .some((c) => c !== undefined && wantsThoughts(c));
       const assistantId = uuid();
       let speaker: SpeakerSnapshot | null = null;
       let speakerChar: Character | null = null;
@@ -1227,6 +1241,7 @@ export function chatsRouter(ctx: AppContext): Router {
             }
           }
         }
+        if (!thoughtsAllowed && measureThought(p)) return;
         paraSpeech = quotation.isSpeech(p);
         activeStream = new SentenceStream({ activeNames, onSentence: handleSentence });
         activeStream.push(p);
@@ -1292,6 +1307,10 @@ export function chatsRouter(ctx: AppContext): Router {
           // Only the reply's FIRST paragraph may lose its leading speaker
           // label: later paragraphs' labels must survive to the handover
           // detector, or they'd be swallowed and no new block would start.
+          // Output filter: pure single-quoted paragraphs are private
+          // thoughts; drop them unless some character definition requires
+          // an inner voice.
+          if (!thoughtsAllowed && measureThought(p)) return;
           paraSpeech = roundQuotation.isSpeech(p);
           paraDebug += `speech=${paraSpeech} :: ${p.slice(0, 60).replace(/\n/g, ' ')}\n`;
           activeStream = new SentenceStream({
