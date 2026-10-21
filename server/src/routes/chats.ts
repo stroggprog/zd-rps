@@ -49,8 +49,10 @@ function resolveKindConnection(kind: 'llm' | 'stt' | 'tts', runtimeValue: Id | n
 function measureThought(p: string): boolean {
   const t = p.trim();
   if (t.length < 3) return false;
-  const inner = t.slice(1, -1);
-  return t.startsWith("'") && t.endsWith("'") && !inner.includes("'");
+  // Paragraphs that BEGIN and END with a single-quote pair are private
+  // thoughts. Inner apostrophes/contractions ("He's") must not disqualify;
+  // genuine single-quoted quotations inside prose never span whole paragraphs.
+  return t.startsWith("'") && t.endsWith("'") && (t.match(/'/g)?.length ?? 0) >= 2;
 }
 
 /** The chat's scenario: library entity when referenced, otherwise its ad-hoc inline one. */
@@ -1065,6 +1067,8 @@ export function chatsRouter(ctx: AppContext): Router {
       };
 
       let blockSpeechState: boolean | null = null;
+      // Paragraph boundary bridge across streamed paragraphs (thought filter).
+      let pendingParaBreak = false;
       let paraSpeech = false;
       let activeQuotation: QuotationTracker | null = null;
       let sepDebug = '';
@@ -1150,7 +1154,11 @@ export function chatsRouter(ctx: AppContext): Router {
         sentenceOwner.set(idx, blockId);
         emitted += 1;
         const spec = blockSpecs.get(blockId);
-        const sep = blockSpeechState === null ? '' : isSpeech === blockSpeechState ? ' ' : '\n\n';
+        let sep = blockSpeechState === null ? '' : isSpeech === blockSpeechState ? ' ' : '\n\n';
+        if (sep === ' ' && pendingParaBreak) {
+          sep = '\n\n';
+          pendingParaBreak = false;
+        }
         blockSpeechState = isSpeech;
         sepDebug += `block=${blockId.slice(0, 8)} isSpeech=${isSpeech} blockState=${blockSpeechState} sep=${JSON.stringify(sep)} :: ${trimmed.slice(0, 40).replace(/\n/g, ' ')}\n`;
         if (spec) spec.content = spec.content ? `${spec.content}${sep}${trimmed}` : trimmed;
@@ -1309,8 +1317,13 @@ export function chatsRouter(ctx: AppContext): Router {
           // detector, or they'd be swallowed and no new block would start.
           // Output filter: pure single-quoted paragraphs are private
           // thoughts; drop them unless some character definition requires
-          // an inner voice.
-          if (!thoughtsAllowed && measureThought(p)) return;
+          // an inner voice. The boundary bridge keeps the following
+          // paragraph's blank-line break intact.
+          if (!thoughtsAllowed && measureThought(p)) {
+            pendingParaBreak = true;
+            return;
+          }
+          pendingParaBreak = !isFirstParagraph;
           paraSpeech = roundQuotation.isSpeech(p);
           paraDebug += `speech=${paraSpeech} :: ${p.slice(0, 60).replace(/\n/g, ' ')}\n`;
           activeStream = new SentenceStream({
