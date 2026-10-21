@@ -1155,7 +1155,10 @@ export function chatsRouter(ctx: AppContext): Router {
         emitted += 1;
         const spec = blockSpecs.get(blockId);
         let sep = blockSpeechState === null ? '' : isSpeech === blockSpeechState ? ' ' : '\n\n';
-        if (sep === ' ' && pendingParaBreak) {
+        // A stripped paragraph's boundary is honored once by the next
+        // sentence (real state transitions already break, so this only
+        // replaces a plain space).
+        if (pendingParaBreak) {
           sep = '\n\n';
           pendingParaBreak = false;
         }
@@ -1323,7 +1326,6 @@ export function chatsRouter(ctx: AppContext): Router {
             pendingParaBreak = true;
             return;
           }
-          pendingParaBreak = !isFirstParagraph;
           paraSpeech = roundQuotation.isSpeech(p);
           paraDebug += `speech=${paraSpeech} :: ${p.slice(0, 60).replace(/\n/g, ' ')}\n`;
           activeStream = new SentenceStream({
