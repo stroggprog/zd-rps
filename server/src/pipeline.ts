@@ -122,7 +122,12 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
   systemParts.push(
     `Never repeat, restate, narrate or echo ${userName}'s words, thoughts or actions back to them — ` +
       `characters speak and act only for themselves. If the user just said something, treat it as ` +
-      `already said and shown in the transcript; do not write it again. Once is enough.`,
+      `already said and shown in the transcript; do not write it again. Once is enough.
+` +
+      `Inner monologue (private thoughts) only when the character definition explicitly requires it. ` +
+      `When it does appear, only one character's inner voice may appear: their OWN. Write it in ` +
+      `single quotes in the character's OWN paragraph of speech or narration. Never write another ` +
+      `character's thoughts, and never write the user's thoughts or inner voice.`,
   );
   if (story && story.summary.trim()) {
     systemParts.push(
