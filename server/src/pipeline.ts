@@ -117,6 +117,13 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
         `Active characters may each respond. Speak only as one of the active characters; never speak for ${userName}.`,
     );
   }
+  // Anti-echo applies to every framing (built-in, target-scoped, or user
+  // override): the user's words are input, never material to copy.
+  systemParts.push(
+    `Never repeat, restate, narrate or echo ${userName}'s words, thoughts or actions back to them — ` +
+      `characters speak and act only for themselves. If the user just said something, treat it as ` +
+      `already said and shown in the transcript; do not write it again. Once is enough.`,
+  );
   if (story && story.summary.trim()) {
     systemParts.push(
       `Story so far (${story.name}):\n${story.summary}\n` +
