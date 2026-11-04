@@ -1041,8 +1041,9 @@ export function chatsRouter(ctx: AppContext): Router {
       const resolveSpeaker = () => {
         if (speaker) return;
         const speakerName = activeStream?.speaker ?? null;
+        const nameLower = speakerName?.toLowerCase() ?? '';
         speakerChar = speakerName
-          ? activeChars.find((c) => c.name.toLowerCase() === speakerName.toLowerCase()) ?? null
+          ? activeChars.find((c) => nameLower === c.name.toLowerCase() || nameLower.endsWith(' ' + c.name.toLowerCase())) ?? null
           : activeChars.length === 1
             ? activeChars[0]
             : null;
@@ -1093,8 +1094,12 @@ export function chatsRouter(ctx: AppContext): Router {
         // its prefix junk to hold no sentence-ending punctuation.
         const pm = /^([^\n.!?\u2026]{0,40}?)([A-Za-z0-9 _.'-]{1,60}):\s*/.exec(trimmed);
         if (pm) {
-          const cand = pm[2].trim();
-          const match = activeChars.find((c) => c.name.toLowerCase() === cand.toLowerCase());
+          const cand = pm[2].trim().toLowerCase();
+          // Honorific-prefixed labels ("Queen Mildred:", "Lady Kiara:") end
+          // with the participant's name; treat them as that participant.
+          const match = activeChars.find(
+            (c) => cand === c.name.toLowerCase() || cand.endsWith(' ' + c.name.toLowerCase()),
+          );
           if (match && roundsMode && blockSpeaker && blockSpeaker.name !== match.name) {
             // Sequential rounds: the model ignored the single-character framing
             // and started writing another participant — cut the remainder of

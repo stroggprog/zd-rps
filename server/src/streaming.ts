@@ -46,6 +46,16 @@ export class SentenceStream {
 
   private readonly stripLabels: boolean;
 
+  /**
+   * A label counts as this participant (or another active one) when it is the
+   * name exactly, or ends with it after an honorific/title prefix
+   * ("Queen Mildred:", "Princess Eli:"). Case-insensitive.
+   */
+  private labelMatches(prefix: string): string | boolean {
+    const cand = prefix.trim().toLowerCase();
+    return this.names.some((n) => cand === n || cand.endsWith(' ' + n));
+  }
+
   constructor(options: SentenceStreamOptions) {
     this.names = options.activeNames.map((n) => n.toLowerCase());
     this.stripLabels = options.stripLabels ?? true;
@@ -101,7 +111,7 @@ export class SentenceStream {
   private tryStripPrefix(): void {
     if (this.stripped || !this.stripLabels) return;
     const m = PREFIX.exec(this.buffer);
-    if (m && this.names.includes(m[1].trim().toLowerCase())) {
+    if (m && this.labelMatches(m[1].trim())) {
       this.detectedSpeaker = m[1].trim();
       this.buffer = this.buffer.slice(m[0].length);
       this.stripped = true;
