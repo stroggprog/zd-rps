@@ -110,15 +110,9 @@ export function RightColumn() {
           </label>
           <label>
             Sequential turns (one reply per character)
-            <select
-              value={c.runtime.sequentialTurns ? '1' : '0'}
-              onChange={(e) => void patchRuntime({ sequentialTurns: e.target.value === '1' })}
-            >
-              <option value="1">On</option>
-              <option value="0">Off</option>
-            </select>
             <span className="hint" style={{ padding: 0 }}>
-              Ask the LLM once per participant so labels never bleed between speakers.
+              Always on for multi-character chats: each participant gets their own LLM call and can react to earlier
+              participants' lines from the same round.
             </span>
           </label>
           <label>
