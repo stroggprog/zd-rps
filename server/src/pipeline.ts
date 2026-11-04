@@ -87,6 +87,19 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
   // placeholders {{user}} and {{characters}} are substituted if present.
   const override = getConfig().systemPromptOverride;
 
+  const TARGET_FRAMING = target
+    ? `Roleplay turn. You are ${target.name}'s agent: the ONLY character you may write for is ${target.name}. ` +
+      `Other participants exist in the transcript (their turns were written by separate agents before you), ` +
+      `but they receive their own prompts — never write their speech, narration, or dialogue. ` +
+      `Never speak for ${userName} either. ` +
+      `Your turn: ${target.name}'s speech in double quotes first, then ${target.name}'s narration; ` +
+      `do not add any name label. ` +
+      `Structure your turn as SEPARATE paragraphs: one paragraph of speech (in double quotes), ` +
+      `then a paragraph of narration about ${target.name}'s actions — never merge speech and narration ` +
+      `into one paragraph, and repeat that pattern if you speak more than once. ` +
+      `If you cannot add anything meaningful as ${target.name}, reply with a single short paragraph (still only ${target.name}).`
+    : null;
+
   if (override !== null && override !== undefined && override.trim() !== '') {
     // Custom framing: substitute placeholders, then paste everything else.
     systemParts.push(
@@ -94,22 +107,16 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
         .replace(/\{\{user\}\}/g, userName)
         .replace(/\{\{characters\}\}/g, names.join(', ')),
     );
-  } else if (target) {
+    if (TARGET_FRAMING) {
+      // The user override replaces the built-in framing; the per-character
+      // agent scope is essential though and must survive overrides.
+      systemParts.push(TARGET_FRAMING);
+    }
+  } else if (TARGET_FRAMING) {
     // Sequential-turns mode: this call owns exactly one character. The framing
     // must leave no room for the model to script the whole ensemble (it will
     // otherwise, happily, write everyone's lines).
-    systemParts.push(
-      `Roleplay turn. You are ${target.name}'s agent: the ONLY character you may write for is ${target.name}. ` +
-        `Other participants exist in the transcript (their turns were written by separate agents before you), ` +
-        `but they receive their own prompts — never write their speech, narration, or dialogue. ` +
-        `Never speak for ${userName} either. ` +
-        `Your turn: ${target.name}'s speech in double quotes first, then ${target.name}'s narration; ` +
-        `do not add any name label. ` +
-        `Structure your turn as SEPARATE paragraphs: one paragraph of speech (in double quotes), ` +
-        `then a paragraph of narration about ${target.name}'s actions — never merge speech and narration ` +
-        `into one paragraph, and repeat that pattern if you speak more than once. ` +
-        `If you cannot add anything meaningful as ${target.name}, reply with a single short paragraph (still only ${target.name}).`,
-    );
+    systemParts.push(TARGET_FRAMING);
   } else {
     systemParts.push(
       `You are running a roleplay chat between multiple characters and the user. ` +
