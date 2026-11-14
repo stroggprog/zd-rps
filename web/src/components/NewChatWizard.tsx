@@ -57,7 +57,7 @@ export function NewChatWizard() {
         <h2>Start New Chat</h2>
         <button onClick={closeOverlay}>✕ Close</button>
       </div>
-      <div className="overlay-body">
+      <div className="overlay-body wizard">
         <div className="wizard-steps" style={{ alignItems: 'center' }}>
           <button disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
             ← Back
@@ -72,6 +72,8 @@ export function NewChatWizard() {
           ))}
           <div style={{ flex: 1 }} />
         </div>
+
+        <div className="wizard-content">
 
         {step === 0 && (
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -334,6 +336,7 @@ export function NewChatWizard() {
             </div>
           </div>
         )}
+        </div>
       </div>
       {step === STEPS.length - 1 && (
         <div className="overlay-foot" style={{ justifyContent: 'flex-end', borderBottom: 'none' }}>
