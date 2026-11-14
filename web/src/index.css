@@ -570,6 +570,13 @@ button.toggle.on {
   display: flex;
   gap: 6px;
   margin-bottom: 14px;
+  /* Stay pinned while long option lists scroll underneath. */
+  position: sticky;
+  top: 0; /* overlay-body padding */
+  margin: -16px -16px 14px;
+  padding: 16px;
+  background: var(--bg2);
+  z-index: 2;
 }
 .wizard-step {
   padding: 4px 10px;
