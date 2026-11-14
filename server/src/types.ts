@@ -96,6 +96,8 @@ export interface Scenario extends Stamped {
   first_mes: string;
   scenario: string;
   alternate_greetings: string[];
+  /** High-priority system instructions attached to this scenario. */
+  system_prompt: string;
 }
 
 export type Role = 'system' | 'user' | 'assistant';
@@ -153,6 +155,8 @@ export interface InlineScenario {
   name: string;
   scenario: string;
   first_mes: string;
+  /** High-priority system instructions (ad-hoc scenario). */
+  system_prompt: string;
 }
 
 export interface Chat extends Stamped {

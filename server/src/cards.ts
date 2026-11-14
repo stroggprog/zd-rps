@@ -38,6 +38,7 @@ export interface ImportResult {
     first_mes: string;
     scenario: string;
     alternate_greetings: string[];
+    system_prompt?: string;
   } | null;
 }
 
@@ -321,7 +322,7 @@ export function buildImportResult(parsed: ParsedCard): ImportResult {
 }
 
 export function normalizeScenario(
-  raw: { scenario?: unknown; first_mes?: unknown; alternate_greetings?: unknown },
+  raw: { scenario?: unknown; first_mes?: unknown; alternate_greetings?: unknown; system_prompt?: unknown },
   charName: string,
 ): ImportResult['scenario'] {
   const firstMes = asString(raw.first_mes);
@@ -336,6 +337,7 @@ export function normalizeScenario(
     first_mes: firstMes,
     scenario: scenarioText,
     alternate_greetings: alts,
+    system_prompt: typeof raw.system_prompt === 'string' ? raw.system_prompt : '',
   };
 }
 

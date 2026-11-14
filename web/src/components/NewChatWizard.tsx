@@ -18,6 +18,8 @@ export function NewChatWizard() {
   const [adhoc, setAdhoc] = useState(false)
   const [adhocScenario, setAdhocScenario] = useState('')
   const [adhocOpening, setAdhocOpening] = useState('')
+  const [adhocPrompt, setAdhocPrompt] = useState('')
+  const [scenarioPrompt, setScenarioPrompt] = useState('')
   const [title, setTitle] = useState('')
   const [creating, setCreating] = useState(false)
 
@@ -38,7 +40,7 @@ export function NewChatWizard() {
         storyId,
         scenarioInline:
           adhoc && adhocScenario.trim()
-            ? { scenario: adhocScenario, first_mes: adhocOpening }
+            ? { scenario: adhocScenario, first_mes: adhocOpening, system_prompt: adhocPrompt.trim() || undefined }
             : null,
       })
     } finally {
@@ -280,6 +282,7 @@ export function NewChatWizard() {
                 onChange={(e) => {
                   setScenarioId(e.target.value || null)
                   if (e.target.value) setAdhoc(false)
+                  setScenarioPrompt(scenarios.find((s) => s.id === e.target.value)?.system_prompt ?? '')
                 }}
               >
                 <option value="">None</option>
@@ -290,6 +293,19 @@ export function NewChatWizard() {
                 ))}
               </select>
             </div>
+            {scenarioId && (
+              <div className="field">
+                <label style={{ marginBottom: 0 }}>
+                  Scenario system prompt (optional, high priority — saved to the scenario)
+                </label>
+                <textarea
+                  rows={3}
+                  value={scenarioPrompt}
+                  placeholder="Rules the LLM must follow in this chat — they override character and general instructions"
+                  onChange={(e) => setScenarioPrompt(e.target.value)}
+                />
+              </div>
+            )}
             {!scenarioId && (
               <div>
                 <div className="row" style={{ marginBottom: 6 }}>
@@ -322,6 +338,17 @@ export function NewChatWizard() {
                         value={adhocOpening}
                         placeholder="First message in the chat, spoken by the first participant"
                         onChange={(e) => setAdhocOpening(e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label style={{ marginBottom: 0 }}>
+                        System prompt (optional, high priority)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={adhocPrompt}
+                        placeholder="Rules the LLM must follow in this chat — they override character and general instructions"
+                        onChange={(e) => setAdhocPrompt(e.target.value)}
                       />
                     </div>
                   </div>

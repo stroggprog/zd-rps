@@ -15,6 +15,7 @@ function emptyDraft(): Draft {
     first_mes: '',
     scenario: '',
     alternate_greetings: [],
+    system_prompt: '',
   }
 }
 
@@ -149,6 +150,10 @@ export function ScenarioEditor() {
                 <div className="field full">
                   <label>Opening message</label>
                   <textarea rows={6} value={draft.first_mes} onChange={(e) => setBook({ first_mes: e.target.value })} />
+                </div>
+                <div className="field full">
+                  <label>Scenario system prompt (high priority — sent to the LLM with the scenario)</label>
+                  <textarea rows={4} value={draft.system_prompt ?? ''} onChange={(e) => setBook({ system_prompt: e.target.value })} />
                 </div>
                 <div className="field full">
                   <label>

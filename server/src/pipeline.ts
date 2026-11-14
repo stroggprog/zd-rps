@@ -253,6 +253,13 @@ export function buildLlmMessages(ctx: ChatContext, historyTail: number, options:
     if (scenario.scenario) parts.push(scenario.scenario);
     if (scenario.first_mes) parts.push(`Opening message: ${scenario.first_mes}`);
     systemParts.push(parts.join('\n'));
+    if (scenario.system_prompt && scenario.system_prompt.trim()) {
+      const prompt = `Scenario system instructions (HIGHEST PRIORITY): the following rules come from ` +
+        `the scenario and override every other style or behavioral instruction, including character ` +
+        `private instructions and the general rules above:\n${scenario.system_prompt.trim()}`;
+      systemParts.push(prompt);
+      lastSystemRule = prompt;
+    }
   }
 
   const system: LlmMessage = {

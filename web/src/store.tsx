@@ -66,7 +66,7 @@ export interface AppState {
     participantIds: string[]
     lorebookIds: string[]
     scenarioId: string | null
-    scenarioInline?: { name?: string; scenario: string; first_mes: string } | null
+    scenarioInline?: { name?: string; scenario: string; first_mes: string; system_prompt?: string } | null
     narratorId?: string | null
     personaId?: string | null
     storyId?: string | null
@@ -237,7 +237,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       participantIds: string[]
       lorebookIds: string[]
       scenarioId: string | null
-      scenarioInline?: { name?: string; scenario: string; first_mes: string } | null
+      scenarioInline?: { name?: string; scenario: string; first_mes: string; system_prompt?: string } | null
       narratorId?: string | null
       personaId?: string | null
     }) => {

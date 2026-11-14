@@ -34,6 +34,7 @@ export function scenariosRouter(ctx: AppContext): Router {
         alternate_greetings: Array.isArray(body.alternate_greetings)
           ? body.alternate_greetings.map((a) => asString(a)).filter(Boolean)
           : [],
+        system_prompt: typeof body.system_prompt === 'string' ? body.system_prompt : '',
       });
       res.status(201).json(scenario);
     }),
@@ -53,6 +54,7 @@ export function scenariosRouter(ctx: AppContext): Router {
           body.alternate_greetings !== undefined
             ? body.alternate_greetings.map((a) => asString(a)).filter(Boolean)
             : undefined,
+        system_prompt: body.system_prompt !== undefined ? asString(body.system_prompt) : undefined,
       });
       res.json(updated);
     }),
@@ -98,6 +100,7 @@ export function scenariosRouter(ctx: AppContext): Router {
         alternate_greetings: Array.isArray(obj.alternate_greetings)
           ? (obj.alternate_greetings as unknown[]).map((g) => asString(g)).filter(Boolean)
           : [],
+        system_prompt: typeof obj.system_prompt === 'string' ? obj.system_prompt : '',
       });
       res.status(201).json(scenario);
     }),

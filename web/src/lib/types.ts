@@ -60,6 +60,8 @@ export interface InlineScenario {
   name: string
   scenario: string
   first_mes: string
+  /** High-priority system instructions (ad-hoc scenario). */
+  system_prompt?: string
 }
 
 export interface LoreEntry {
@@ -94,6 +96,8 @@ export interface Scenario extends Stamped {
   first_mes: string
   scenario: string
   alternate_greetings: string[]
+  /** High-priority system instructions attached to this scenario. */
+  system_prompt?: string
 }
 
 export type Role = 'user' | 'assistant'
@@ -221,6 +225,7 @@ export interface ScenarioDraft {
   first_mes: string
   scenario: string
   alternate_greetings: string[]
+  system_prompt?: string
 }
 
 export interface ImportDraft {

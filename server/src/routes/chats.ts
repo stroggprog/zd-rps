@@ -66,6 +66,7 @@ function scenarioFor(ctx: AppContext, chat: Chat): Scenario | null {
       scenario: chat.scenarioInline.scenario,
       first_mes: chat.scenarioInline.first_mes,
       alternate_greetings: [],
+      system_prompt: chat.scenarioInline.system_prompt ?? '',
       created: chat.created,
       updated: chat.updated,
     };
@@ -126,7 +127,7 @@ export function chatsRouter(ctx: AppContext): Router {
         participantIds?: Id[];
         lorebookIds?: Id[];
         scenarioId?: Id | null;
-        scenarioInline?: { name?: string; scenario?: string; first_mes?: string } | null;
+        scenarioInline?: { name?: string; scenario?: string; first_mes?: string; system_prompt?: string } | null;
         narratorId?: Id | null;
         personaId?: Id | null;
         storyId?: Id | null;
@@ -154,6 +155,7 @@ export function chatsRouter(ctx: AppContext): Router {
             name: typeof body.scenarioInline.name === 'string' && body.scenarioInline.name.trim() ? body.scenarioInline.name.trim() : 'Ad-hoc scenario',
             scenario: body.scenarioInline.scenario.trim(),
             first_mes: typeof body.scenarioInline.first_mes === 'string' ? body.scenarioInline.first_mes : '',
+            system_prompt: typeof body.scenarioInline.system_prompt === 'string' ? body.scenarioInline.system_prompt : '',
           }
         : null;
       const scenarioName = scenario?.name ?? inlineScenario?.name ?? 'Ad-hoc scenario';

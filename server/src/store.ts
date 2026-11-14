@@ -32,13 +32,14 @@ function defaultRuntime(): Chat['runtime'] {
 function normalizeInlineScenario(chat: Chat): Chat['scenarioInline'] {
   const raw = (chat as { scenarioInline?: unknown }).scenarioInline;
   if (!raw || typeof raw !== 'object') return null;
-  const obj = raw as { name?: unknown; scenario?: unknown; first_mes?: unknown };
+  const obj = raw as { name?: unknown; scenario?: unknown; first_mes?: unknown; system_prompt?: unknown };
   const scenario = typeof obj.scenario === 'string' ? obj.scenario : '';
   if (!scenario.trim()) return null;
   return {
     name: typeof obj.name === 'string' && obj.name.trim() ? obj.name : 'Ad-hoc scenario',
     scenario,
     first_mes: typeof obj.first_mes === 'string' ? obj.first_mes : '',
+    system_prompt: typeof obj.system_prompt === 'string' ? obj.system_prompt : '',
   };
 }
 
@@ -227,6 +228,21 @@ export async function migrateLegacyNarrators(): Promise<void> {
   }
 }
 
+
+function normalizeScenario(scenario: Scenario): Scenario {
+  return {
+    ...scenario,
+    name: typeof scenario.name === 'string' ? scenario.name : '',
+    description: typeof scenario.description === 'string' ? scenario.description : '',
+    first_mes: typeof scenario.first_mes === 'string' ? scenario.first_mes : '',
+    scenario: typeof scenario.scenario === 'string' ? scenario.scenario : '',
+    alternate_greetings: Array.isArray(scenario.alternate_greetings) ? scenario.alternate_greetings : [],
+    system_prompt: typeof (scenario as { system_prompt?: unknown }).system_prompt === 'string'
+      ? (scenario as { system_prompt: string }).system_prompt
+      : '',
+  };
+}
+
 export class JsonCollection<T extends Stamped> {
   private items = new Map<Id, T>();
 
@@ -345,7 +361,7 @@ export function createStore(): DataStore {
     groups: new JsonCollection<CharacterGroup>(DIR.groups, 'group', 'name' as keyof CharacterGroup, normalizeGroup),
     stories: new JsonCollection<Story>(DIR.stories, 'story', 'name' as keyof Story, normalizeStory),
     lorebooks: new JsonCollection<Lorebook>(DIR.lorebooks, 'lorebook'),
-    scenarios: new JsonCollection<Scenario>(DIR.scenarios, 'scenario'),
+    scenarios: new JsonCollection<Scenario>(DIR.scenarios, 'scenario', 'name' as keyof Scenario, normalizeScenario),
     chats: new JsonCollection<Chat>(DIR.chats, 'chat', 'title' as keyof Chat, normalizeChat),
   };
 }

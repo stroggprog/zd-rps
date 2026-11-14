@@ -304,7 +304,7 @@ export function charactersRouter(ctx: AppContext): Router {
         suggestions.push({ kind: 'lorebook', accepted: false, entityId: null, name: payload.lorebook.name });
       }
       if (payload.scenario && asBoolean(body.acceptScenario, false)) {
-        const scenario = ctx.store.scenarios.create(payload.scenario);
+        const scenario = ctx.store.scenarios.create({ ...payload.scenario, system_prompt: payload.scenario.system_prompt ?? '' });
         suggestions.push({ kind: 'scenario', accepted: true, entityId: scenario.id, name: scenario.name });
       } else if (payload.scenario) {
         suggestions.push({ kind: 'scenario', accepted: false, entityId: null, name: payload.scenario.name });
