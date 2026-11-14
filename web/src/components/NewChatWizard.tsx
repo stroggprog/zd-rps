@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { bustAvatar } from '../lib/api'
+import { api, bustAvatar } from '../lib/api'
 import { useApp } from '../store'
 
 const STEPS = ['Characters', 'Story (optional)', 'Persona', 'Narrator (optional)', 'Lorebooks', 'Scenario']
@@ -30,6 +30,13 @@ export function NewChatWizard() {
   const finish = async () => {
     setCreating(true)
     try {
+      // Library scenario: persist prompt edits to the scenario entity.
+      if (scenarioId && scenarioPrompt.trim()) {
+        const current = scenarios.find((s) => s.id === scenarioId)
+        if (current && (current.system_prompt ?? '') !== scenarioPrompt.trim()) {
+          void api.scenarios.update(scenarioId, { system_prompt: scenarioPrompt.trim() }).catch(() => {})
+        }
+      }
       await createChat({
         title,
         participantIds,
@@ -39,7 +46,7 @@ export function NewChatWizard() {
         scenarioId,
         storyId,
         scenarioInline:
-          adhoc && adhocScenario.trim()
+          !scenarioId && adhoc && (adhocScenario.trim() || adhocPrompt.trim())
             ? { scenario: adhocScenario, first_mes: adhocOpening, system_prompt: adhocPrompt.trim() || undefined }
             : null,
       })
@@ -340,19 +347,21 @@ export function NewChatWizard() {
                         onChange={(e) => setAdhocOpening(e.target.value)}
                       />
                     </div>
-                    <div className="field">
-                      <label style={{ marginBottom: 0 }}>
-                        System prompt (optional, high priority)
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={adhocPrompt}
-                        placeholder="Rules the LLM must follow in this chat — they override character and general instructions"
-                        onChange={(e) => setAdhocPrompt(e.target.value)}
-                      />
-                    </div>
                   </div>
                 )}
+              </div>
+            )}
+            {!scenarioId && (
+              <div className="field">
+                <label style={{ marginBottom: 0 }}>
+                  System prompt (optional, high priority)
+                </label>
+                <textarea
+                  rows={3}
+                  value={adhocPrompt}
+                  placeholder="Rules the LLM must follow in this chat — they override character and general instructions. Leave empty when no rules are needed."
+                  onChange={(e) => setAdhocPrompt(e.target.value)}
+                />
               </div>
             )}
             <div className="field">

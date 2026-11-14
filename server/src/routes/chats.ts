@@ -149,13 +149,18 @@ export function chatsRouter(ctx: AppContext): Router {
       const firstChar = participantIds.length > 0 ? ctx.store.characters.get(participantIds[0]) ?? null : null;
       const userName = persona?.name ?? USER_NAME;
 
-      // Ad-hoc scenario: only when no library scenario was chosen.
-      const inlineScenario = !scenario && body.scenarioInline && typeof body.scenarioInline.scenario === 'string' && body.scenarioInline.scenario.trim()
+      // Ad-hoc scenario: only when no library scenario was chosen. A bare
+      // system prompt (no scenario text) is enough to create one.
+      const inlineSource = body.scenarioInline;
+      const hasInlineText = typeof inlineSource?.scenario === 'string' && inlineSource.scenario.trim() !== '';
+      const hasInlinePrompt =
+        typeof inlineSource?.system_prompt === 'string' && inlineSource.system_prompt.trim() !== '';
+      const inlineScenario = !scenario && inlineSource && (hasInlineText || hasInlinePrompt)
         ? {
-            name: typeof body.scenarioInline.name === 'string' && body.scenarioInline.name.trim() ? body.scenarioInline.name.trim() : 'Ad-hoc scenario',
-            scenario: body.scenarioInline.scenario.trim(),
-            first_mes: typeof body.scenarioInline.first_mes === 'string' ? body.scenarioInline.first_mes : '',
-            system_prompt: typeof body.scenarioInline.system_prompt === 'string' ? body.scenarioInline.system_prompt : '',
+            name: typeof inlineSource.name === 'string' && inlineSource.name.trim() ? inlineSource.name.trim() : 'Ad-hoc scenario',
+            scenario: hasInlineText ? inlineSource.scenario.trim() : '',
+            first_mes: typeof inlineSource?.first_mes === 'string' ? inlineSource.first_mes : '',
+            system_prompt: hasInlinePrompt ? inlineSource.system_prompt.trim() : '',
           }
         : null;
       const scenarioName = scenario?.name ?? inlineScenario?.name ?? 'Ad-hoc scenario';
